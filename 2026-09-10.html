@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LWN 周刊 - 2026年9月10日</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+        <span class="theme-icon">🌙</span>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">LWN 周刊中文版</div>
+            <h1>LWN.net Weekly Edition</h1>
+            <p class="edition-date">2026年9月10日</p>
+            <p class="edition-desc">Linux 和自由软件周刊 - 中文翻译</p>
+            <a href="index.html" class="back-link">← 返回期刊列表</a>
+        </header>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-09-10.html">📰 最新</a>
+            <a class="nav-btn" href="2026-09-03.html">← 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 →</span>
+            <span class="nav-current-label">2026年9月10日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <main class="content">
+            <!-- 目录 -->
+            <div class="toc">
+                <h2>📑 目录</h2>
+                <ul>
+                    <li><a href="#article1">稳定 Rust 的 never 类型</a></li>
+                    <li><a href="#article2">CERN 从 CentOS Linux 到 Debian 的迁移之路</a></li>
+                    <li><a href="#article3">内存分层的近期工作</a></li>
+                    <li><a href="#article4">为多线程 Python 做确定性测试</a></li>
+                    <li><a href="#article5">用 RSEQ 操作修复 TCMalloc 回归问题</a></li>
+                    <li><a href="#article6">Typst 的大步前进</a></li>
+                    <li><a href="#briefs">📝 Brief items（社区简讯）</a></li>
+                    <li><a href="#announcements">📢 Announcements（公告）</a></li>
+                </ul>
+            </div>
+
+            <!-- 专题文章 1 -->
+            <div class="article" id="article1">
+                <div class="article-header">
+                    <span class="article-category">编程语言 / Rust</span>
+                    <h2>稳定 Rust 的 never 类型</h2>
+                    <div class="article-meta">
+                        <span>作者：Daroc Alden</span>
+                        <span>2026年9月8日</span>
+                        <span><a href="https://lwn.net/Articles/1091015/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <p>函数的返回类型本应说明它会产生什么样的数据。Rust 的 <strong>"never" 类型</strong>（写作感叹号 <code>!</code>）是该语言用来标记<strong>永不返回的函数</strong>以及其他"值永远不可能出现"之处所用的类型。长期以来，never 类型只在编译器内部使用，被视作不稳定特性。2026 年 8 月 24 日，经过两年多的工作，Rust 编译器贡献者 <strong>"waffle"</strong> 终于把它稳定了下来。耗时如此之久，部分原因在于它涉及对旧 Rust edition 的一处小型破坏性变更，编译器维护者需要确认这不会影响太多真实代码。</p>
+                    <div class="info-box note">
+                        <p><strong>说明</strong>：Rust 也用感叹号表示宏调用。就语法构造方式而言，可以使用 never 类型的位置并非放置宏调用的合法位置，反之亦然。</p>
+                    </div>
+
+                    <h3>为什么需要 never 类型？</h3>
+                    <p>Rust 拥有 never 类型有两个理由：一个是实用的，一个是哲学性的。实用理由是它能让泛型代码更高效。例如标准库中的 <code>FromStr</code> trait，用于那些可以从字符串实例化的类型：</p>
+                    <pre><code>trait FromStr: Sized {
+        type Err;
+        fn from_str(s: &amp;str) -&gt; Result&lt;Self, Self::Err&gt;;
+    }</code></pre>
+                    <p><code>FromStr::from_str()</code> 要么返回转换后的结果，要么返回一个自定义错误类型。比如把 <code>"foo"</code> 转成整数会返回 <code>ParseIntError</code>。但有些类型的转换是<strong>不可能失败的</strong>，例如字符串总能转成 <code>ByteString</code>。这种 <code>FromStr</code> 实现可以把 <code>Err</code> 设为 never 类型。这样编译器就知道返回的 <code>Result</code> 中错误分支永远不存在，从而可以把所有涉及它或检查它的代码全部优化掉。</p>
+                    <pre><code>impl FromStr for ByteString {
+        type Err = !;
+        fn from_str(s: &amp;str) -&gt; Result&lt;Self, !&gt; { ... }
+        // 保持相同的泛型接口，
+        // 但生成的代码等价于：
+        // fn from_str(s: &amp;str) -&gt; Self { ... }
+    }</code></pre>
+                    <p>哲学性的理由则涉及正确的<strong>类型推断</strong>。在 Rust 中，<code>if</code> 语句和 <code>while</code> 循环这类构造都是<em>表达式</em>，它们的结果可以赋给变量。如果程序员写了一个无限循环，编译器需要为它的结果推断出一个类型。这在真实代码中并不常出现，但事实证明，能够统一处理这种情况会简化类型推断，而不必为此专门增加规则。</p>
+                    <p>特别值得一提的是，never 类型有一个对简化代码很有用的性质：它会<strong>自动强制转换（coerce）为任何其他类型</strong>。这听起来很怪，但它是安全的——因为 never 类型代表的是"永不产生值"的计算的结果。所以，任何代码声称自己有一个 never 类型的值的地方，编译器都知道它根本<em>不可能执行到</em>那段代码，因此忽略它是安全的。这是一种由类型系统驱动的死代码消除。</p>
+                    <p>基于以上两个理由，Rust 程序员一直希望能在语言的稳定版本中使用 never 类型。而实现这一点，需要先解决一个格外棘手的边界情况。</p>
+
+                    <h3>Never 回退（never fallback）</h3>
+                    <p>由于从 never 类型到其他类型的转换实现方式，编译器有时会陷入无法朴素推断表达式具体类型的境地。考虑下面这个例子：它定义了一个永不返回的匿名函数（用 <code>||</code>，类似 Python 或 LISP 的 lambda），然后以一种期望具体错误类型的方式调用它（使用 <code>?</code> 运算符）：</p>
+                    <pre><code>let function_that_never_returns = || { loop {} };
+    function_that_never_returns()?;</code></pre>
+                    <p>那个无限循环被赋予 <code>!</code> 类型，随后被隐式转换为函数本应返回的任何类型。但由于该函数是局部定义且没有显式类型，编译器没有足够信息来判断这个类型究竟是什么。问题可以通过给函数加上显式返回类型来解决：</p>
+                    <pre><code>let function_that_never_returns = || -&gt; Foo { loop {} };</code></pre>
+                    <p>然而，只有当函数不可能返回任何东西时才需要这种标注，因此强迫程序员给它指派一个虚构类型有点没意义。于是编译器内置了一条特殊规则：如果在所有其他类型推断完成之后，仍有无法确定的歧义类型，就假定它应为指定的<strong>回退类型</strong>。在 Rust 2024 edition 之前，回退类型是 <code>()</code>（unit 类型，只有一个可能取值）。在 2024 edition 中，回退类型被改为 <code>!</code> 本身，这实际上抵消了那次隐式转换。在编译器内部，never 类型仍然会被转换为未知类型然后回退，但从程序员视角看，其行为等同于"只在为让类型说得通而必需时才让 never 类型参与隐式转换"。</p>
+                    <p>从技术上讲，这一行为改变是<strong>破坏性变更</strong>。某些代码的类型推断可能改变，进而导致编译错误。这正是 Rust edition 机制存在的目的：允许在语言前端设计中做破坏性变更，而不破坏旧代码，也不要求整个生态立刻更新。但在这一例中，有一些理由希望把新行为<strong>回溯到旧 edition</strong>。</p>
+
+                    <h3>Never 与 Infallible</h3>
+                    <p>多年来，标准库一直有一个 <code>Infallible</code> 类型，用来绕开 never 类型的不稳定状态。它在语义上与 never 类型目的相同，但没有任何编译器特殊支持。因此使用它的代码虽然正确却不够优化（例如枚举里多出一层标签，或产生死代码），因为优化器并不总能消除对 <code>Infallible</code> 的引用。原本的计划是：当 never 类型最终稳定后，<code>Infallible</code> 会成为 <code>!</code> 的类型别名，那些旧代码就会默默变得更高效。然而有人指出，重新定义 <code>Infallible</code> 会在一些地方意外变成破坏性变更。由于 <code>!</code> 带有隐式转换，改变 <code>Infallible</code> 的定义可能导致已有代码需要通过额外的类型标注才能通过类型检查。</p>
+                    <p>幸运的是，改变 <code>Infallible</code> 的定义与改变默认回退类型虽然都是破坏性变更，但两者<strong>几乎正好相互抵消</strong>。任何按名字引用标准库 <code>Infallible</code> 的代码都会继续工作；只有在那些隐式期望类型推断产生 <code>Infallible</code> 的地方才有破坏风险。考虑到 Rust 在多数情况下没有隐式转换，这种情况最常出现在原先会由 never 类型隐式转换为 <code>Infallible</code> 的位置。如果让 <code>Infallible</code> 成为 never 类型的别名，那些地方就可能触发 never 回退，进而改变被推断的类型；如果不同时更新 never 回退类型，就会导致编译错误。</p>
+                    <p>两个变更同时发生时，Rust 维护者相信几乎所有现有 Rust 代码仍能编译——但在处理向后不兼容变更时，"几乎所有"并不让人安心。Rust 社区对此确有一套解决方案：<a href="https://github.com/rust-lang/crater">crater</a>，它可以从 <a href="https://crates.io">crates.io</a> 下载并编译所有公开可用的 Rust 库，以查找被编译器变更破坏的代码。</p>
+
+                    <h3>永远别说"永不"</h3>
+                    <p>Waffle 在 4 月运行了 crater，发现虽然有 <strong>3,300 个 crate 受到负面影响</strong>，但只有 <strong>7 个被完全破坏</strong>，其余都是因为依赖了那些后来已被修复的旧版本库。对后一种情况，理论上可以通过为少数核心库发布回溯修复来解决问题。这并非偶然：自 2024 年起，只要代码以会因新变更而失效的方式触发 never 回退，Rust 就会发出警告，因此大多数库有充足时间自行更新。crater 观察到的最常见剩余错误，是调用泛型函数时没有提供足够类型信息让编译器挑选具体返回类型。考虑这个函数：</p>
+                    <pre><code>fn foo&lt;T: Default&gt;() -&gt; Result&lt;T, Error&gt; { ... }</code></pre>
+                    <p>它要么返回某个由调用者选定、必须实现 <code>Default</code> trait 的 <code>T</code> 类型的值，要么返回错误。但如果调用时没有指定 <code>T</code> 的值，类型回退就会介入：</p>
+                    <pre><code>// 未指定类型。
+    foo()?;</code></pre>
+                    <p>以前，这会让编译器假定 <code>T</code> 应该是 <code>()</code>，而 <code>()</code> 实现了 <code>Default</code>，所以代码能编译。在此变更之后（以及在 2024 edition 上），编译器会假定 <code>T</code> 应该是 <code>!</code>，而 <code>!</code> 不实现 <code>Default</code>，因此产生编译错误。修复方式是显式指定 <code>foo()</code> 应返回的类型，无论是在调用处还是通过模式匹配赋值：</p>
+                    <pre><code>foo::&lt;()&gt;()?;
+    // 或
+    () = foo()?;</code></pre>
+                    <p>尽管这不是复杂的改动，Rust 维护者并不愿意破坏 3,300 个 crate。Waffle 被要求与常用库的维护者合作，把类似上面的简单修改回溯下去（发布新的补丁版本，许多 Rust 构建环境会自动采用），以减少依赖已破坏依赖项的库数量。若干库作者愿意做回溯，但有些以"那些旧版本已过生命周期终点（EOL）"为由拒绝；这些维护者指出用户可以选择停留在旧版 Rust，或升级到仍在维护的库版本。即便如此，成功的回溯修复了 <strong>1,553 个</strong>失败的 crate。</p>
+                    <p>在修复了一批相关问题、进一步减少被破坏 crate 的数量之后，Rust 维护者最终同意：即使仍会有一些代码被破坏，为简化语言而做这个变更也是值得的。因此，<strong>从 Rust 1.100 开始</strong>，never 类型将成为稳定特性，而 <code>Infallible</code> 将成为 never 类型的类型别名。</p>
+                    <p>一方面，这是破坏性变更，人们可能看到原本稳定可用的代码突然编译失败，这可以被视为违反 Rust 对向后兼容的承诺。另一方面，该问题相对罕见，有多种简单修法，多年来一直有警告提示，而且它本来就是语言规划的一部分。此外，Rust 维护者直接与社区合作查找并解决问题，甚至帮助把修复回溯到流行库早已"死亡"的版本。因此，整个过程也可以看作是 Rust 对向后兼容承诺的一次<strong>重申</strong>。</p>
+                    <p>未来，学习这门语言的人或许会觉得 never 类型只是稍稍不那么特殊了。无论如何，多数 Rust 用户很可能完全不受影响——但永远别说"永不"。</p>
+                </div>
+            </div>
+
+            <!-- 专题文章 2 -->
+            <div class="article" id="article2">
+                <div class="article-header">
+                    <span class="article-category">会议 / 发行版</span>
+                    <h2>CERN 从 CentOS Linux 到 Debian 的迁移之路</h2>
+                    <div class="article-meta">
+                        <span>作者：Joe Brockmeier</span>
+                        <span>2026年9月7日</span>
+                        <span><a href="https://lwn.net/Articles/1092512/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <p>欧洲核子研究组织（通常简称 <strong>CERN</strong>）不仅是万维网的诞生地，也是<strong>大型强子对撞机（LHC）</strong>——世界上最大、能量最高的粒子加速器——的所在地。因此，它的计算环境既真正独一无二，又让 CERN 之外的人极感兴趣，希望从中找到适用于自身计算需求的借鉴。CERN 部分系统即将从 CentOS Linux 迁移到 Debian，这正是近期 <strong>MiniDebConf Winterthur 2026</strong> 上一场演讲的主题，因而格外引人关注。</p>
+                    <p>两位 CERN 员工 <strong>Federico Vaga</strong> 和 <strong>Nikos Tsipinakis</strong> 在 8 月 30 日做了题为"用 Debian 控制 CERN 的加速器"（Controlling CERN's Accelerators with Debian）的演讲（有视频与幻灯片）。作者未能亲临现场，但随后观看了演讲视频。</p>
+
+                    <h3>启动</h3>
+                    <p>Vaga 自 2014 年起在 CERN 工作，自称是软件工程师和 FOSS 爱好者，但"没多少空闲时间做具体贡献"。Tsipinakis 在 CERN 做系统工程师约五年。他说自己是"一些东西"的开源维护者，使用 Debian 约十年，做 Debian 包维护者约七年，并希望将来某天成为正式的 Debian 开发者。</p>
+                    <p>他说，CERN 的主要目标并非发明像 Web 这样的东西，而是"运行这个星球上最大的加速器综合体"，并承载涉及 LHC 的实验。他展示了一页幻灯片，照片里有人站在对撞机某些机械旁："你可以通过看那些走动的人来判断它的尺寸。这些都是真正巨大的系统，用来发现比'看不见'还要不可见的东西——它们是亚原子的。"这些系统产生大量数据，随后被流送到 CERN 的数据中心："我们只存储传感器实际采集内容的一部分，否则数据量就太大了。"最终，有 PB 级的数据被保存下来供分析。</p>
+                    <p>不过 Vaga 表示，他不会讲 CERN 的数据中心——那里主要使用 Red Hat Enterprise Linux（RHEL）或其衍生的 AlmaLinux。他关注的是那些真正运行加速器链、然后"把粒子撞碎以看清内部"的计算机和操作系统。加速器综合体分布在一片超过 <strong>43 平方公里</strong>的区域中，最深处在<strong>地下 100 米</strong>。加速器主体位于地下，因为如果靠地面道路从一端到另一端会很麻烦："我们需要为束流粒子和汽车分别设置交叉路口，免得它们互相撞上。"</p>
+                    <p>由于这是一个"非常特殊的系统"，没有工厂能批量生产合适的部件；CERN 有大量为运行该综合体而定制的设备，先由内部设计，再与产业伙伴协作生产。这里有<strong>超过 36 公里的束流管</strong>，遍布综合体的<strong>17,000 台设备</strong>，以及约 <strong>70,000 条电缆</strong>把这些设备连接到约 <strong>2,200 台计算机</strong>上，以实现远程操作。Vaga 说，这些数字还在持续增长，因为 CERN 总有新需求。与组成加速器设备的部件一样，控制所有设备的 PCI 卡之类通常也在 CERN 设计。他说，CERN 不只是它的硬件、电缆和管道，它也是由人组成的。</p>
+                    <blockquote>
+                        <p>"我们的人员构成非常异质。有像我们这样的软件工程师、系统管理员，有机械工程师、化学工程师，还有设计隧道洞穴和我们自己建筑的土木工程师。所以我们要做各种各样的事。当然还有科学家、物理学家——最终他们需要分析所有这些数据，并告诉我们生命的意义。"</p>
+                    </blockquote>
+                    <p>正因为 CERN 拥有如此多样的人才和如此庞大、需求特殊的机器，它追求<strong>稳定性</strong>。"所以我们需要一个非常稳定的系统，而保持它稳定有时很有挑战。"</p>
+
+                    <h3>CERN 与 Linux</h3>
+                    <p>CERN 从 2008 年开始使用 Linux，"在上面叠加实时补丁"；此前它用的是 Microware OS-9 和 LynxOS，两者都是实时操作系统。起初 CERN 基于 RHEL 5 做了自己的发行版，与费米实验室（Fermilab，位于伊利诺伊州巴达维亚的 6,000 英亩粒子物理与加速器实验室）合作开发，后来演变为基于 RHEL 6 的 <strong>Scientific Linux</strong>。</p>
+                    <p>Vaga 说，最终大家认为与其自己重建，不如<strong>向上游项目如 CentOS Linux 贡献</strong>，"因为它并没有什么特别之处"。费米实验室的 Pat Riehecky 于 2022 年 4 月宣布终止 Scientific Linux，转向 CentOS Linux 8："我们将与 CERN 及其他实验室合作，让 CentOS 成为更好的高能物理计算平台。"</p>
+                    <p>此后，Vaga 说，"我们在 RHEL 衍生版上基本处于自动巡航状态"。不幸的是，CentOS Linux 8 的寿命被缩短：Red Hat 宣布终止 CentOS Linux，转向 <strong>CentOS Stream</strong>。这引出了下一步该做什么的问题。他说，发行版有成千上万，但哪一个才符合 CERN 的需求？"重要的是评估我们在运维和配置一个操作系统上能负担多少控制与维护，以及它与现有基础设施的集成程度。"</p>
+                    <p>CERN 首先考虑了基于 RHEL 的系统。CentOS Stream 是第一个显而易见的选择；它不保证同样的稳定性，但也没有 Fedora 那么前沿。当时决定从 CentOS Stream 9 开始，并计划过渡到 10。"但我们知道再也承受不起更多意外了，所以我们做的第一件事就是让基础设施更容易移植到其他发行版，把 Debian 作为 B 计划。"</p>
+
+                    <h3>从 RHEL 到 Debian</h3>
+                    <p>然而 Debian 很快就变成了 A 计划。他说，压垮骆驼的最后一根稻草是"一个简单的编译器标志"。具体而言，是 Red Hat 决定为 RHEL 9 针对 <strong>x86-64-v2</strong> 微架构优化，而 RHEL 10 则针对 <strong>x86-64-v3</strong>。打开 gcc 的 <code>-march=x86-64-v2</code> 标志会给 CERN 带来重大后果。</p>
+                    <p>Vaga 分析发现，CERN 有 <strong>47% 的系统</strong>（使用 Intel Core Duo 系列等较老 CPU）无法运行 v2 优化的二进制文件，系统将无法启动。"你会收到来自 glibc 的消息：'除了告诉你我无法继续之外，我无法再做什么。'"另有 <strong>17%</strong> 的系统无法用 v3 优化的二进制文件启动。这意味着将近 <strong>65%</strong> 的系统会无法工作。</p>
+                    <p>对 CERN 来说，直接升级到更新的系统并不现实。2010 年以前生产的 PC 慷慨地提供了很多 PCI 插槽，而今天的 PC 则不然。他说，台式机系统"你能有一个插槽就算走运"。工业系统或许有两个插槽，"如果你多花点钱的话"，但这仍然不够。"这意味着一些系统必须重新改造，一个系统可能需要三台计算机，占用的机架空间比以前更多。"</p>
+                    <p>CERN 还使用 <strong>VMEbus 单板计算机</strong>，这些会被 CentOS 弄成过时产品。"这是控制系统的老黄牛。"CERN 已经设计了新一代产品，"但生产可能因为某处的战争、另一处的 AI 而变慢，价格也在上涨，等等。"正如 Tsipinakis 在演讲后段解释的，CERN 电子设备的规格是公开的，"但我不确定除了想造粒子加速器的人以外，还有谁会用到它们"。这也意味着 CERN 有若干针对自家硬件的<strong>定制内核驱动</strong>，这使维持系统稳定性比只有自定义用户态应用"困难得多"，因为驱动中的任何 bug 都会影响系统整体稳定性。</p>
+                    <p>因此 CERN 面临的是升级大量系统，且后勤问题比多数组织替换旧设备要复杂得多。他提醒听众，CERN 的系统分布在 43 平方公里范围内，而且常常在地下。把新计算机装上车后，"你下到地下，替换机器、重新布线，也许还会（不小心）把两根电缆接反，而你只会在之后的调试阶段才发现这个问题"——这比正常维护时发生的概率更高。</p>
+                    <p>更糟的是，新增系统可能需要额外的机架空间，而这可能需要真的再挖出空间来。这还需要两名电子工程师重新设计控制板、两名软件工程师开发新驱动、以及两名额外技术员实地更换系统。"事情开始变得一团糟，同时还得让这些人都满意，否则他们就没法干活。所以这非常有挑战。"Vaga 说，升级的估计总成本约为 <strong>540 万瑞士法郎</strong>，约合 667 万美元。</p>
+                    <p>最终，对控制 CERN 加速器的计算机来说，从 RHEL 系迁移到 Debian——"一个试图在尽可能多硬件上运行的通用操作系统"——更有意义。CERN 现在将使用 Debian，但会从 kernel.org 源码自行构建内核，并内置所有需要的驱动。</p>
+
+                    <h3>长停机期</h3>
+                    <p>转向基于 Debian 的系统还要求 CERN 修订系统的供应（provisioning）方式。他说，CERN 的系统<strong>无盘</strong>，GRUB 引导程序通过 FTP 下发，其他组件通过 HTTP 下发；所有产物都存放在 GitLab 包注册表中，另有一个配置服务指明系统所需的操作系统版本、内核版本和软件包。</p>
+                    <p>Tsipinakis 说，一旦决定切换到 Debian，他们首先要做的就是研究<strong>发布日程</strong>。加速器 24×7 全天候运行，在此期间不能部署任何更新。他说，每年会有几次短暂的"技术停机"（technical stops），但这些空档不足以容纳一次大版本升级。"所以你可能有一份五年计划，"他对听众说，"但在 CERN，我们的计划最短也是 15 年，所以我们知道机器一直到 2041 年的状态。"他展示了一页幻灯片，上面是 CERN 加速器综合体的长期日程。</p>
+                    <p>图中的绿色部分表示加速器运行期间，蓝色部分是短期维护技术停机，红色部分是"我们所说的长停机（long shutdown），那时我们做更换硬件的大维护、重大软件更新等等"。到目前为止，CERN 一直运行 CentOS Linux 7，计划在 <strong>2027 年初部署 Debian</strong>，并尽可能保持稳定，直到 <strong>2033 年底</strong>加速器再次进入长停机。</p>
+                    <p>随后他讨论了 Debian 的发布周期、长期支持（LTS）周期，以及由 Freexian 管理的<strong>延长长期支持（ELTS）</strong>项目。一个版本的常规生命周期是三年，再加两年 LTS，之后还有五年 ELTS。这意味着 CERN 如有需要可以把 Debian 13（"trixie"）用到 2035 年。"这对我们非常有价值，因为如果我们发现运行期间无法做大版本更新，这就是非常宝贵的后备方案——我们可以在整个期间停留在同一个发行版上。"</p>
+
+                    <h3>CERN 的分层基础设施</h3>
+                    <p>在把 Debian 的发布与自身日程对齐之后，CERN 还得解决如何在其基础设施上实际构建和部署 Debian。由于此前 CERN 是清一色基于 RPM 系统的同质环境，大多数 CERN 人员对 Debian 几乎或完全没有经验。Tsipinakis 说他们联系了 Freexian 寻求帮助："于是他们把 Seb（Sébastien Delafond）派来，做了为期四天的 Debian 培训"，内容包括构建软件包、托管 APT 仓库、管理构建仓库等。</p>
+                    <p>Tsipinakis 指出，CERN 的基础设施分为三层，并非所有系统都要迁到 Debian。第一层是所谓"控制台"（consoles），即"散布在 CERN 各房间里的台式机"。物理学家或加速器操作员使用它们，上面跑着用 Java 或 Python 写的、用于向加速器发送命令的应用。"可能是'我需要把磁场强度提升到这个值，或者把束流强度提高到那个值'。"这些系统运行 AlmaLinux 10 加 Xfce 桌面。"它们保持原样。"</p>
+                    <p>下一层位于 CERN 的数据中心；操作员向加速器发出命令后，命令会在数据中心被记录、认证并分析，以确保其在系统安全参数范围之内。他说这些系统目前运行 RHEL 9，很可能会迁移到 AlmaLinux 10。</p>
+                    <p>要迁到 Debian 的是<strong>第三层</strong>，Tsipinakis 说：那些位于地下 100 米的系统。</p>
+                    <blockquote>
+                        <p>"它们被矛盾地称作前端计算机（frontend computers）。不过如果你是电子工程师，你插磁铁的那台计算机才是前端，其他都是后端。这些要迁到 Debian 的前端计算机，负责接收来自数据中心的命令，然后用硬件信号去执行。比如你收到一条'把磁场强度提升到这个值'的命令，这意味着它们会向电源发送指令，把电流提升到某个值从而增强磁场。所以它们基本上是电子世界和软件世界之间的接口。"</p>
+                    </blockquote>
+
+                    <h3>构建与部署</h3>
+                    <p>在引入 Debian 之前，CERN 的"传统"基础设施（2005 年设计，早于 LHC 首次运行）只有一台裸机硬件服务器充当引导服务器：它通过 FTP 提供 GRUB 和内核引导配置，通过 NFS 提供根目录和应用。他说这种模式有些优点，比如知道每个系统都有相同的根目录。但它也有一个大缺点。</p>
+                    <blockquote>
+                        <p>"这台服务器是数据中心的圣杯。你不能靠近它，不能对着它喘气，因为如果它挂了，CERN 的很多人都会度过非常漫长的一天，因为这意味着 2,000 个嵌入式系统会突然丢失它们的根驱动器。"</p>
+                    </blockquote>
+                    <p>Tsipinakis 指出，CERN 的基础设施是"刻意保持简单"的：设计上尽量少留活动部件。而现在，"我们有新技术，可以做得更好"。由于 CERN 大部分基础设施仍将留在类 RHEL 系统上，他们必须解决如何在 RHEL 上编译 Debian 软件的问题。他说 <strong>ELBE</strong>（Embedded Linux Build Environment，嵌入式 Linux 构建环境）表现出色："你运行脚本，整个环境、GCC 以及所需的其他构建工具都来自 Debian 镜像，所以你基本上可以在 Red Hat 上编译 Debian 软件。"</p>
+                    <p>这还意味着要引入基于 Kubernetes 的多服务器引导系统，来替换那台"我们碰不得的大型裸机服务器"，并为通过 GitLab 包注册表分发的应用引入 Debian 软件包仓库。</p>
+
+                    <h3>挑战</h3>
+                    <p>Tsipinakis 说，过程中也遇到了一些挑战。第一个问题是<strong>没有标准工具来自动化软件包的构建与发布</strong>。他说，Debian 确实有自用的构建发布软件，比如 buildd 和 Debian Archive Kit（dak）："但这些是非常专用的 Debian 工具，我想大家都知道，想在自己的系统上跑 dak 并不容易架设或使用。"</p>
+                    <p>他认为 <strong>Debusine</strong>——一个面向基于 Debian 的发行版、用于打包与分发相关工作流的持续集成平台——看起来非常有前景。但遗憾的是，"它有一些阻断问题，目前我们的基础设施无法支持"，不过他没有细说是什么阻断问题。</p>
+                    <p>他还抱怨许多工具不支持在同一仓库中存在同一软件包的多个版本，而 CERN 需要能向不同系统分发同一软件包的不同版本。Tsipinakis 提到 <strong>reprepro</strong>（一个管理 APT 仓库的工具）有一个分支支持多版本软件包，但它目前仍在 Debian 的 experimental 仓库中。</p>
+                    <p>CERN 已经有围绕 RPM 包构建的大规模基础设施，基于 Fedora 的 <strong>Koji</strong> 构建系统软件。既然 Debian 目前不是 CERN 包构建基础设施的主要部分，他说，"为什么我们不把 Debian 引入 RPM 基础设施呢？"这最终就是他们的做法。Tsipinakis 特意感谢了 Erick Andrei Vilcica，他做了创建一个 Koji 插件的工作，使其能够构建 Debian 软件包并为其创建仓库。</p>
+                    <p>Tsipinakis 说，最终的经验是：假定某系统在发行版的一个版本上能工作，升级到下一个大版本后就仍能工作，这是错误的。"这正是我们出现在这里的原因。"不被绑定到某个特定发行版、具备切换能力，非常重要。他补充说，演讲后几天的 <strong>9 月 1 日</strong>加速器将停机，之后 CERN 全部 <strong>2,200 台</strong>嵌入式工业计算机都将迁移到 Debian trixie。</p>
+
+                    <h3>问答</h3>
+                    <p>第一个问题来自前 Debian 项目负责人 Andreas Tille，他想知道能否在 CERN 举办下一届 MiniDebConf Switzerland。Vaga 说这"绝对是个选项"，但需要先走完官僚流程。他说自己会在稍后"带着消息回来"。</p>
+                    <p>另一位与会者问他们是否考虑过在没有 v2、v3 编译器标志的情况下重新构建 CentOS Stream。Vaga 说这与 AlmaLinux 团队讨论过，但当时"没人愿意为它负责"。"并不是把标志去掉就万事大吉了；你需要走一遍验证流程，而我们在 CERN 的主要目标是做粒子物理。"此后 AlmaLinux 宣布提供了用 v2 编译器标志构建的 AlmaLinux 10 版本，但仍未提供不带 v2/v3 标志的版本。</p>
+                    <p>有人想知道为什么 CERN 在意让前端服务器保持最新，难道不能跑一个"老古董"版本的操作系统吗？"有什么安全问题需要处理吗？"Tsipinakis 确认这些系统"不在公共互联网上，甚至不在 CERN 网络上"。它们处于完全不同的网络域，这更安全，因为"你必须穿过两层"才能到达它们。尽管如此，他说保持补丁级别较新仍然有好处，只是不必"和最新前沿保持同一水平"。这些系统的安全更新大约每年在技术停机期间做一次。</p>
+                    <p>Vaga 补充说，更新系统之所以重要，还在于 CERN 需要使用更现代的技术。他说，直到几个月前，所有东西都跑在 CentOS 7 上，意味着他们被困在 GCC 4 版本。"你身处一个冻结在过去的环境里。"有些人已经开始自己维护编译器以便向前推进。</p>
+                    <p>最后发言的是 reprepro 的维护者 Bastian Germann。他说 reprepro 的 experimental 分支还需要更多测试，上次上传到 Debian unstable 仓库时，他收到大量抱怨它破坏了别人仓库的邮件。他说如果 CERN 能切到 experimental 分支，他很希望得到 CERN 的反馈。Tsipinakis 说这正是计划，等切换完成后会回复他。</p>
+                </div>
+            </div>
+
+            <!-- 专题文章 3 -->
+            <div class="article" id="article3">
+                <div class="article-header">
+                    <span class="article-category">内核 / 内存管理</span>
+                    <h2>内存分层的近期工作</h2>
+                    <div class="article-meta">
+                        <span>作者：Jonathan Corbet</span>
+                        <span>2026年9月3日</span>
+                        <span><a href="https://lwn.net/Articles/1092001/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <p>分层内存（tiered-memory）系统由多种类型的内存构成，每种内存具有不同的性能特征。除了常规的 DRAM，分层系统还可能提供更快的高带宽内存（HBM）或较慢的 CXL 内存。在这类系统上，内存分配的位置会显著影响工作负载能获得的性能。虽然分层内存的改进工作已进行多年，但近来节奏似乎有所放缓。即便如此，仍有若干工作在推进，只是它们正面临"分层设计是否说得通"的质疑。</p>
+
+                    <h3>热页提升</h3>
+                    <p>"降级（demotion）"指把一页数据从较快的层级移到较慢的层级，而"提升（promotion）"则是反方向移动。如果内核判断某页未被积极使用，它最可能被降级；而当<em>正在使用</em>的内存恰好位于慢速内存时，就需要提升。降级决策相对容易（类似于换出一页的决策），效果也还算不错，但<strong>检测慢速内存中的热页要困难得多</strong>。结果要么是内核把热页留在慢速内存里，要么是提升了那些事后发现并不热的页；两种情况都会导致性能变差。</p>
+                    <p>Bharata B Rao 已经研究热页检测与提升的基础设施有一段时间了，LWN 在 2025 年报道过这项工作。该补丁集建立在一个想法之上：关于慢速内存中哪些页活动频繁、应当被提升，可能存在多个数据来源。例如内核可以通过把页面标记为不可访问、跟踪工作负载尝试使用它们时产生的缺页来生成这类数据。CXL 系统也支持访问跟踪与上报，能在不增加 CPU 开销的情况下提供相对细粒度的信息。Rao 提出的 <strong>"pghot" 机制</strong>整合来自可用数据源的跟踪数据，用它来决定哪些页应被提升到更快的内存。一个名为 <strong>kmigrated</strong> 的新内核线程利用这些数据尝试迁移最热的页。</p>
+                    <p>上一篇文章介绍的是该系列的第三版；此后又出了五个新版本。核心跟踪机制在概念上仍然类似，但有各种改进。该子系统现在可以使用来自 AMD <strong>基于指令的采样（IBS）</strong>的剖析数据，并新增了"精度模式"。默认情况下，pghot 用每个低层级页一字节的内存来跟踪；在精度模式下，这一开销扩大到四字节，并且除其他能力外，还能跟踪是哪个 NUMA 节点在访问每个页。这一信息让 kmigrated 可以尝试把热页提升到正在使用它们的节点上。这又使 pghot 能够（可选地）接管目前由内核 NUMA 均衡代码处理的大部分工作。</p>
+                    <p>Andrew Morton 在讨论当前版本时首先提问：内核中已有的 <strong>DAMON</strong> 是否能承担这项功能。Rao 用一份 LLM 生成的对比来回答，结论是 DAMON 或许能做这件事，但前提是针对特定工作负载做过调优，而且工作负载还得先跑上一段时间。DAMON 作者 SJ Park 对这个回答有些不以为然，要求 Rao 先去真正了解 DAMON 再继续讨论。在另一份给 Morton 的回复中，Rao 描述了他认为 pghot 与 DAMON 之间的一些差异；Park 对其中一些不认同，但也表示某些 pghot 特有功能（比如整合多来源数据）目前正在为 DAMON 实现。</p>
+                    <p>Matthew Wilcox 对整个补丁集及其实现的思路有不同看法：</p>
+                    <blockquote>
+                        <p>"我认为我们不该做这件事。我不认为这是客户真正想要的使用场景；我认为这是 CPU 厂商以为他们的客户想要的东西。在这个补丁集开发的这几个月里我已反复说过。我的回答是'不'。"</p>
+                    </blockquote>
+                    <p>Gregory Price 迅速回应说，Meta"对这项工作有积极兴趣，并正在推动它的设计"。Yongting Lin 也表达了对这项工作的支持，虽然态度更温和一些。所以这项能力确实存在一些兴趣，只是并不广泛。</p>
+                    <p>David Hildenbrand 指出，即使已经到第八次修订，这些补丁仍没有任何 review 标签；他形容该系列"离可合并还很远"。他说，这项工作甚至没有被认为具有中等优先级，因此内存管理维护者尚未认真审视过它。而"这个使用场景能否由 DAMON 充分处理"这个问题也仍无定论。所以看来 pghot 很可能还要在"地面一层"停留一段时间。</p>
+
+                    <h3>层级感知的内存控制组</h3>
+                    <p>在 pghot 的讨论中，Price 提到分层内存系统上会出现的一个问题：最先运行的工作负载会用自己的数据把较快的内存填满；后来的工作负载只能落到较慢的内存里，因为剩下的只有那个。他说 pghot 可以让系统随时间纠正这个问题。但也有人希望能<strong>从一开始就防止它发生</strong>。</p>
+                    <p>带内存控制器的控制组（通常称"memcg"）看上去是这个问题合乎逻辑的解法，但内存控制器目前并非为分层内存设计的。它能把一个组的<em>总体</em>内存限制在某个量，却无法控制内存放在哪里。因此，自然的做法就是为内存控制器<strong>加入对分层的感知</strong>。目前有两个独立的补丁集在实现这个目标。</p>
+                    <p>Joshua Hahn 的这个系列采用了相对简单的配置方式。如果某系统 25% 的内存是 DRAM、75% 是较慢的 CXL 内存，那么任何控制组最多能用其内存限额的 25% 放 DRAM，其余必须用 CXL。这样就能防止最先出现的工作负载把系统 DRAM 填满，从而给其他工作负载留出空间。硬限额与软限额都按此比例缩放，使工作负载在内存争用较低时（若如此配置）能用更多 DRAM。</p>
+                    <p>限额的实现分散在若干位置。最显然的也许是在分配时：系统会尽可能从仍有空间的层级分配内存。如果不可能，而某次分配被放进一个已无剩余空间的层级，就会针对该层级启动定向回收（targeted reclaim）。其他可能耗尽某层级限额的操作（如页迁移）也会启动回收。当达到限额时，把页提升到更快层级的速度会被放慢。</p>
+                    <p>与此同时，Qiqi Liu 发布了另一个解决该问题的方案。与 Hahn 的系列一样，Liu 的方案也按系统中各类内存的比例为每个层级设置限额。但在该系列中，管理员可以在需要时调整这些限额。Liu 的方案没有实现低限额（即保证给该组的最小内存量），并且在很大程度上依赖回收来实施限额。</p>
+                    <p>两个系列似乎都能解决核心问题，但维护者肯定不会想两个都合并进来。Michal Hocko 询问两者的差异，同时对"在内存控制器中加入层级级控制"这个目标表示怀疑。Hahn 也询问了差异，并指出 Liu 系列中可设置每层级限额的能力似乎是最大的差异点。Liu 用更详细的对比作了回应，最后表示 Hahn 的方案看起来最值得继续推进。因此，尽管"内核的内存控制器是否真该获得层级级控制"这个问题仍需回答，感兴趣的开发者们似乎已经就"如何做到"达成了一致。</p>
+                    <div class="info-box note">
+                        <p><strong>结论</strong>：pghot 热页提升机制已迭代到第八版仍无 review 标签，被维护者形容为"离可合并还很远"，且面临"DAMON 能否替代"的质疑；而 memcg 层级感知方案出现两个竞争实现，作者之间倾向于收敛到 Hahn 的比例限额方案，但上游对是否引入层级级控制本身仍未表态。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 专题文章 4 -->
+            <div class="article" id="article4">
+                <div class="article-header">
+                    <span class="article-category">会议 / Python</span>
+                    <h2>为多线程 Python 做确定性测试</h2>
+                    <div class="article-meta">
+                        <span>作者：Jake Edge</span>
+                        <span>2026年9月4日</span>
+                        <span><a href="https://lwn.net/Articles/1090579/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <p>随着"自由线程（free-threaded）"版本的问世，Python 对多线程程序的支持在过去几年里有了显著改善。但<strong>测试多线程程序</strong>出了名地困难，因为底层宿主系统决定了线程的执行顺序，这就引入了不确定因素。在 PyCon US 上，<strong>Larry Hastings</strong> 做了一场演讲（有 YouTube 视频），介绍他的 <strong>blanket</strong> 项目——它旨在为多线程 Python 代码提供确定性测试的机制。</p>
+                    <p>他先从这样一个场景讲起：与会者正在开发一个新的 Python 库，大概是要发到 Python 包索引（PyPI）上。他们听说了"这个无 GIL 的东西"——即不带全局解释器锁（GIL）的自由线程 Python——想确保新库能在多线程环境里正常工作。于是他们研究了一下，意识到"我只要加几个锁就行"；他说在很多情况下这确实足够。</p>
+                    <p>但有时生活会变得更复杂：发现了<strong>竞态条件</strong>。他说这是可以解决的问题，通常只需要加一些代码来识别条件正在发生并以某种方式处理。然而处理完之后，另一个问题又冒出来了：<strong>测试覆盖率</strong>。</p>
+                    <p>Hastings 说，在 2026 年，项目应该有 100% 覆盖率的单元测试套件。但当代码中有一行只在极其罕见、完全不受开发者控制的怪异情形下运行时，这就很难做到。他展示了一份 99% 覆盖率的测试报告，说它"就摆在那儿嘲笑你"；"你夜里睡不着，你失败了，你的人生完了"。答案是："你会把它提升到 100%，因为你要用一个叫 blanket 的东西。"</p>
+
+                    <h3>Blanket</h3>
+                    <p>Blanket 是一个新库，新到他在演讲前一晚才做了首个发布。为什么起这个名字？"因为它是<em>用线程做的覆盖率</em>（coverage using threads）"，他说，换来一片哀嚎、笑声和掌声。</p>
+                    <p>他说，使用 Python 的 <code>threading</code> 模块就是"给自己找麻烦"。这话虽然"有点轻率"，但该模块里的七个同步原语（例如 <code>threading.Lock()</code>、<code>threading.RLock()</code>、<code>threading.Semaphore()</code>）全都是<strong>非确定性</strong>的。比如三个线程都想获取同一把锁，它们获取的顺序是未知的——取决于操作系统的调度器。"你无法预测线程会以什么顺序运行。"</p>
+                    <p>解决办法是使用 blanket 对同样这七种原语的<strong>确定性替代品</strong>，它们都能从模块的 <code>Scenario</code> 对象获得（例如 <code>scenario.Lock()</code>）。这会让程序变得确定，并允许开发者控制事件顺序。它将"让任何竞态条件都能按需复现"。</p>
+                    <p>他展示了一个出现在 blanket 文档"快速上手"部分的小程序。它创建三个线程（用 <code>threading.Thread</code> 对象），每个线程会 <code>acquire()</code> 和 <code>release()</code> 一把锁（隐式地通过 <code>with</code> 块），然后在一个 <code>Barrier</code> 对象上 <code>wait()</code>。屏障在初始化时给定一个等待者数量，当达到该数量的线程都调用了 <code>wait()</code> 后，所有等待者被允许运行——以某种顺序。在他的例子里，各线程把 <code>worker()</code> 函数作为线程体，它执行同步调用，并报告自己拿到了锁、以及自己已经越过等待：</p>
+                    <pre><code>import random
+    import threading
+    
+    lock = threading.Lock()
+    barrier = threading.Barrier(3)
+
+    def worker(name):
+        with lock:
+            print(f"worker {name} got the lock")
+        barrier.wait()
+        print(f"worker {name} is past the barrier")</code></pre>
+                    <p>三个线程分别命名为 "A"、"B"、"C"，被加入一个列表，该列表被<em>打乱</em>（用 <code>random.shuffle()</code>）、用于 <code>start()</code> 线程，最后用于通过 <code>join()</code> 等待它们完成：</p>
+                    <pre><code>A = threading.Thread(target=worker, args=('A',))
+    B = threading.Thread(target=worker, args=('B',))
+    C = threading.Thread(target=worker, args=('C',))
+
+    threads = [A, B, C]
+    random.shuffle(threads)
+    
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()</code></pre>
+                    <p>从连续几次运行中可以看到，哪个线程先拿到锁、哪个先越过屏障每次都不同，他用四页幻灯片强调了这一点。例如：</p>
+                    <pre><code>worker C got the lock
+    worker A got the lock
+    worker B got the lock
+    worker B is past the barrier
+    worker C is past the barrier
+    worker A is past the barrier</code></pre>
+                    <p>获取锁有六种不同顺序，越过屏障也有六种，因此整个测试共有 <strong>36 种</strong>可能的顺序。如果某个竞态条件只在其中一种顺序下出现，要可靠复现就很困难（或者说很痛苦），而 blanket 能帮上忙。</p>
+                    <p>他逐步修改这个程序以使用 blanket。第一步是导入 blanket，然后创建 scenario 对象、锁和屏障：</p>
+                    <pre><code>scenario = blanket.Scenario()
+    lock = scenario.Lock()
+    barrier = scenario.Barrier(3)</code></pre>
+                    <p><code>worker()</code>、线程创建和打乱操作都与前一版代码完全相同。思路是：worker 线程做的事和以前完全一样，但使用 blanket 版本的锁和屏障。</p>
+                    <p>变化更大的是后半部分：</p>
+                    <pre><code>lock_api = scenario.api(lock)
+    barrier_api = scenario.api(barrier)
+
+    with scenario:
+        for t in threads:
+            t.start()
+        list(lock_api.relay(B, A, C))
+        lock_api.unblock(lock.release, C)
+        with barrier_api.cycle(C, A, B):
+            pass
+    for t in threads:
+        t.join()</code></pre>
+                    <p><code>lock_api</code> 与 <code>barrier_api</code> 对象提供了管理底层对象行为的"控制面"。随后代码通过 <code>with scenario:</code> 块"进入场景"，并像之前一样启动线程。接下来四行是主要差异所在，它们使用了 blanket 的<strong>高层 API</strong>。</p>
+                    <p><code>lock_api</code> 的 <code>relay()</code> 函数返回一个迭代器，它按指定的线程顺序逐个处理其线程参数：先释放锁（若被持有），再获取锁。它在获取步骤之后确实会 yield 出每个线程，但代码里没有使用这一点，只是调用 <code>list()</code> 来迭代。这也意味着最后一次锁释放没有被执行，这正是 <code>unblock()</code> 调用处理的事情。<code>barrier_api</code> 上的 <code>cycle()</code> 调用为线程在屏障之后被唤醒作准备；在那个 <code>with</code> 块里可以做更复杂的事情，但默认情况下参数顺序决定了线程在屏障之后被唤醒的顺序。</p>
+                    <p>从这段代码最值得注意的是：锁应按 <strong>BAC</strong> 顺序获取，屏障应按 <strong>CAB</strong> 顺序退出。可以猜到，他下一张幻灯片展示的正是这个结果（后面三张幻灯片又重复强调）。</p>
+
+                    <h3>Scenario</h3>
+                    <p><code>Scenario</code> 类的对象是 blanket 中的顶层概念（例如 <code>scenario = blanket.Scenario()</code>），而全部七种 threading 同步原语都有可从该对象获得的 blanket 对应物（例如 <code>lock = scenario.Lock()</code>）。blanket 中原语的一个有趣之处是：它们是作为绑定到 scenario 实例上的<strong>绑定内部类</strong>存在的。他把它们比作方法——方法同样绑定到其实例——并相信它们解决了很多问题，尽管"我已经用了这些好多年，似乎没人在意"。</p>
+                    <p>blanket 返回的包装对象看起来与 threading 返回的一样，他称之为"伪装（masquerading）"。不过他为调试目的加了一种区分方法：</p>
+                    <pre><code>&gt;&gt;&gt; t_lock = threading.Lock()
+    &gt;&gt;&gt; b_lock = scenario.Lock()
+    &gt;&gt;&gt; t_lock
+    &lt;unlocked _thread.lock object at 0x7c62de036d10&gt;
+    &gt;&gt;&gt; b_lock
+    &lt;unlocked _thread.lock object at 0X7C62DE1CE510&gt;</code></pre>
+                    <p>blanket 锁的 ID 会以大写打印，所以这是一个"识别标志（tell）"，他说。除此之外，<code>t_lock</code> 和 <code>b_lock</code> 都是 <code>threading.Lock</code> 的实例，当然只有 <code>b_lock</code> 是 <code>scenario.Lock</code> 的实例。</p>
+                    <p>scenario 提供三个层级的 API：低层、中层和高层。Hastings 说，大多数情况下用户会坚持用高层 API，但他们也需要理解另外两层。高层抽象很方便，"但理解你之下的低层抽象很重要，因为所有抽象迟早都会泄漏"。</p>
+                    <p><strong>"事务（transaction）"</strong>是支撑 blanket 的"基础性低层概念"之一。它"是一个对象，表示在特定时间对特定原语上特定方法的一次特定调用"。如果线程调用 <code>Lock.acquire()</code>，事务就代表该线程、该锁对象以及调用类型（acquire）。事务会被频繁创建，"在幕后"；他通过创建一个 <code>scenario.Lock()</code>、获取它、再从 scenario 对象维护的日志中取出一条记录，展示了事务"长什么样"：</p>
+                    <pre><code>&lt;Lock.acquire RETURNED 'MainThread'
+    start_time=377537.982058657 result=True
+    blocking=False for Lock 1 0X79C14A4D2660&gt;</code></pre>
+                    <p>它显示出这是一次 acquire 的事务，处于 <code>RETURNED</code> 状态，运行在主线程上，并在某个特定时间开始。result 保存返回值，或者被抛出时的异常。该事务当前不在阻塞，且发生在 <code>Lock 1</code> 上——<code>Lock 1</code> 是 blanket 自动给锁起的内部名字。他说，测试套件可以给锁重命名，让测试输出更易读。</p>
+                    <p>事务是<strong>只能单向运行的状态机</strong>。"如果你处于某个特定状态，你就知道自己永远不会回到之前的状态。"在场景之外，事务只是从 <code>COMMIT</code> 状态（即底层方法已被调用）进入 <code>RETURNED</code> 状态。但在场景内部（即在 <code>with scenario:</code> 块中），事务会从"未受管制（unregulated）"切换为"受管制（regulated）"。原有的两个状态之前各插入一个额外状态，于是 <code>BLOCKED</code> 排在 <code>COMMIT</code> 之前，<code>PAUSED</code> 排在 <code>RETURNED</code> 之前。</p>
+                    <p>这两个新状态被称为"<strong>停车状态（parking states）</strong>"，正是它们让 blanket 得以控制行为。它们在对底层同步原语进行阻塞调用<em>之前</em>进入，以等待继续执行的许可。使用 blanket 的测试方式是：主线程充当使用同步原语的 worker 线程的<strong>调度器</strong>。主线程运行单元测试套件，在场景内部编排各 worker 线程之间的操作顺序。测试完成后，主线程退出场景并检查该测试用例的断言。</p>
+                    <p>Hastings 在开发 blanket 时发现的最令人惊讶的事是：他可以直接<strong>包装现有的同步原语</strong>，而不必模拟或重新实现它们。事实证明，所需要的只是两个停止点：block 与 pause。在每次方法调用前阻塞是"blanket 的看家本领"，它让"控制发生了什么"成为可能。"你不需要控制内部状态，只需要控制谁在什么顺序下调用锁。"这隐含地控制了锁的状态，Hastings 说。</p>
+                    <p>所以 blanket 使用真正的 threading 原语，但把它们包装起来。它在每次调用前阻塞，使 blanket 能确立线程调用原语的顺序；它还在调用后暂停，这使 blanket 能调整线程在使用 Barrier 之类原语之后恢复执行的顺序。</p>
+                    <p>blanket 中另一个基础概念是 <code>scenario.wait()</code>，它是 scenario 对象的一个方法，模仿自"一个来自 Win32 的绝妙 API"——<code>WaitForMultipleObjects()</code>。<code>wait()</code> 方法接收若干"信号对象"，它们代表一个真或假的二元信号。如果传入的所有对象都为假，调用者会休眠，直到其中至少一个变为真，这会让 <code>wait()</code> 返回一组已发出信号的传入对象。</p>
+                    <p>可传入多种信号对象，首先是线程句柄：若其上正有事务在运行，它就会发信号；这让主线程能看到该事务是什么。线程句柄可以包在 <code>Terminated()</code> 对象中，这样在线程终止时发信号。<code>Call()</code> 对象可用于在特定线程正在调用给定原语的某个特定方法时发信号（例如 <code>Call(thread, lock.acquire)</code>）。事务句柄可传入以等待事务完成；它们可以包在 <code>Paused()</code> 中，仅在该事务处于该状态时发信号。<code>Not()</code> 包装器则可用于将返回的信号取反。</p>
+
+                    <h3>从低层到高层</h3>
+                    <p>Hastings 展示了他起始示例的一个简化版，以说明 blanket API 的各个层级。示例的前半部分在连续五次重写中保持不变：</p>
+                    <pre><code>import blanket
+    scenario = blanket.Scenario()
+    lock = scenario.Lock()
+
+    def worker(name):
+        with lock:
+            print(f"worker {name} got the lock")
+
+    A = scenario.thread(worker, 'A')
+    B = scenario.thread(worker, 'B')
+    C = scenario.thread(worker, 'C')</code></pre>
+                    <p>简化版不再使用锁加屏障，而是简单地获取并释放锁，并报告自己这么做了。他在示例中使用的线程也略有不同：它们是"受管"线程，用 <code>scenario.thread()</code> 创建，包装了底层的 <code>threading.Thread</code> 对象。<code>scenario.thread()</code> 对象的一个显著特征是：它们在进入场景时被启动（即 <code>thread.start()</code>），在退出时被 join（<code>thread.join()</code>）。第一个低层版本是：</p>
+                    <pre><code>with scenario:
+        for thread in (B, A, C):
+            for i in range(2):
+                scenario.wait(thread)
+                tx = scenario.transaction(thread)
+                tx.unblock()
+                scenario.wait(tx)</code></pre>
+                    <p>这产生了预期的输出（所有示例都一样）："B"、然后"A"、然后"C"获取到锁。它按顺序遍历线程，然后对每个线程做两次操作——一次针对 acquire，第二次针对 release。它等待线程进入一个事务、取出该事务、解除其阻塞让它继续，并等待事务完成。下一个版本把这一点表达得更直接：</p>
+                    <pre><code>lock_api = scenario.api(lock)
+
+    with scenario:
+        for thread in (B, A, C):
+            lock_api.unblock(lock.acquire, thread)
+            scenario.wait(lock.release)
+            lock_api.unblock(lock.release, thread)</code></pre>
+                    <p>这一版使用锁的 API 对象来解除该线程上一次 acquire 操作的阻塞，然后等待一次 release 操作（任意线程，但测试中只有一种可能）并解除它的阻塞。下一个版本处于 blanket API 的<strong>中层</strong>：</p>
+                    <pre><code>lock_api = scenario.api(lock)
+
+    with scenario:
+        for thread in (B, A, C):
+            d = scenario.Driver(thread)
+            d()
+            d.skip()
+            d()
+            d.finish()
+            d()</code></pre>
+                    <p>它使用 <code>Driver</code> 对象把线程推过各个状态；每次调用 <code>d()</code> 都会驱动线程到下一个需要决策的点。<code>skip()</code> 和 <code>finish()</code> 调用提供了"解除 acquire 与 release 操作阻塞"的决策。再下一个中层 API 版本在下面使用了 driver：</p>
+                    <pre><code>lock_api = scenario.api(lock)
+    
+    with scenario:
+       for thread in (B, A, C):
+          scenario.skip(thread, lock.acquire, lock.release)</code></pre>
+                    <p><code>scenario.skip()</code> 调用接收一个线程和多个操作，会驱动该线程完成这些操作，实际上就是像上一例那样运行 driver。他最后一个版本使用<strong>高层</strong> blanket API，相当简洁：</p>
+                    <pre><code>lock_api = scenario.api(lock)
+
+    with scenario:
+        for thread in lock_api.relay(B, A, C):
+            pass</code></pre>
+                    <p>它使用了演讲开头示例中那个 <code>relay()</code> 机制，驱动线程走完锁上的 acquire 与 release 操作。这些高层 API 是针对原语类型定制的，所以 <code>relay()</code> 用于 <code>Lock</code> 和 <code>RLock</code> 对象，而 <code>cycle()</code> 用于 <code>Condition</code>、<code>Event</code> 和 <code>Barrier</code> 对象（第一个示例中也是如此）。<code>Semaphore</code> 和 <code>BoundedSemaphore</code> 则有 <code>allocate()</code> 函数来驱动它们的获取与释放。</p>
+
+                    <h3>更多特性</h3>
+                    <p>在这场 blanket 速览之后，Hastings 过了一遍其他特性，首先是<strong>超时管理</strong>。它允许程序让超时发生（用 <code>expire()</code>）、让超时不发生（用 <code>disregard()</code>），或把超时恢复到原始状态（<code>revert()</code>）。他还简要介绍了"原始句柄（raw handles）"，即绕过 blanket 提供的管理的同步对象，让调度器可以直接与底层原语交互。</p>
+                    <p>每个 blanket 原语（例如 <code>scenario.Lock()</code>）实际上由<strong>四个独立对象</strong>组成：伪装成 threading 原语的那个对象、API 对象（例如 <code>scenario.api(lock)</code>）、原始句柄（<code>scenario.raw(lock)</code>），以及一个仅供内部使用的核心对象。blanket 的每个方法在执行其工作之前都需要获取一把锁。那把锁位于 Scenario 核心（"score"）对象中，名为 <code>score.lock</code>。那把锁有点像 GIL，但争用很轻微；他说，这是为了让 blanket 具备确定性而刻意做的取舍。</p>
+                    <p>他用 blanket 支持的两种<strong>代码注入</strong>机制补完了清单。<code>scenario.inject()</code> 可用于把 blanket 猴子补丁（monkey-patch）进一个直接使用 threading 原语的模块，使该模块转而使用 blanket。写自己同步原语的"某些脑子开过光的家伙"可以用 <code>blanket.injector()</code> 把调用插入到这些原语的 Python 字节码中，从而对自定义同步机制进行 blanket 风格的测试。</p>
+                    <p>Hastings 以 blanket 的信条结束了他准备好的演讲：</p>
+                    <blockquote>
+                        <p>"你的测试应当实际上是单线程的。如果不是，那说明你 blanket 得还不够狠。把速度降下来。"</p>
+                    </blockquote>
+                    <p>在开放提问前，他还有几页额外幻灯片。第一页是关于是否存在类似 blanket 的其他技术。"只能说勉强算有"；在所谓的"<strong>无状态模型检查（stateless model checking, SMC）</strong>"方向上有一片"丰富的计算机科学研究领域"。它与 blanket 类似，但不是写一个调度器，而是系统性地或随机性地探索各种同步机制之间不同的顺序组合。按他的理解，当前研究的重点之一是如何缩小需要探索的空间，因为"它会迅速爆炸"。他提到了 CHESS、Shuttle 和 Loom 作为例子。最接近 blanket 的也许是 <strong>Coyote</strong>，Hastings 说。</p>
+                    <p>他的最后一页幻灯片是一张《幻想曲》中（或受其启发）的米老鼠魔法师形象。可以猜到，他用它作背景来讲他在项目中如何使用"AI"（想必是大语言模型）。这是他第一次使用这些工具；"工作量巨大，而我的效率提高了极多"。这个项目"由 AI 结对编程"；"测试算是一种 vibe testing，文档算是一种 vibe docking"。事实上效率如此之高，以至于他途中把 blanket 重写了<strong>五次</strong>，每次都让它更简单、API 更好。沿着这条线，Hastings 在 EuroPython 2026 上做了一场关于 <strong>blanket 2.0</strong> 的演讲（有 YouTube 视频），但目前尚未发布。</p>
+                    <p>有人问到性能，但 Hastings 说他并不太在意，因为速度并不是该项目的目标。Blanket 是为单元测试而做，不是用于生产；如果存在明显的低效，他会在不损害"故意不快"这一使用场景的前提下尽量修复。正如信条所说，其理念就是把速度降下来。</p>
+                    <div class="info-box note">
+                        <p><strong>结论</strong>：blanket 通过"包装而非重实现"现有 threading 原语，在每个方法调用前后插入 block/pause 两个停车点，让主线程充当调度器，从而把多线程测试从 36 种可能的执行顺序收敛为开发者指定的唯一顺序——把竞态条件从"偶发"变成"按需可复现"。它也引发了"是否会永久掩盖竞态"的讨论。</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 专题文章 5 -->
+            <div class="article" id="article5">
+                <div class="article-header">
+                    <span class="article-category">内核 / 内存分配</span>
+                    <h2>用 RSEQ 操作修复 TCMalloc 回归问题</h2>
+                    <div class="article-meta">
+                        <span>作者：Jonathan Corbet</span>
+                        <span>2026年9月7日</span>
+                        <span><a href="https://lwn.net/Articles/1092555/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <p><strong>可重启序列（restartable sequences，rseq）</strong>是内核用户空间接口中最古怪的角落之一；它为用户空间提供了一种执行简单无锁操作的方式，并在操作过程中被抢占时得到通知（因而必须重启）。6.19 版本合入的一项改进可重启序列性能的工作<strong>弄坏了 TCMalloc 分配器</strong>，因为它依赖了一种未被文档化（也非有意为之）的内核行为。现在，<strong>Olivier Dion</strong> 提出为可重启序列 API 增加新能力，把 TCMalloc 重新纳入正轨；不过它并没有让可重启序列 API 变得不那么古怪。</p>
+                    <p>快速回顾一下问题所在：可重启序列 API 围绕 <code>struct rseq</code> 构建，该结构由用户空间与内核共享。其中的 <code>cpu_id_start</code> 字段由内核维护，保存拥有该结构的线程正在执行的 CPU 编号。它被文档化为对用户空间<strong>只读</strong>。然而 TCMalloc 库照样写入了这个字段，把它设成一个哨兵值，并借助一些巧妙（说好听点是巧妙）的数据结构布局技巧，用来发现内核何时把它重置为有效 CPU 编号。这种重置表明该线程的执行在某个时刻被中断了。6.19 中的一项优化取消了该字段的无条件写入，于是这个技巧就失效了。</p>
+                    <p>到目前为止，该问题一直通过<strong>检测旧版可重启序列 API 的使用者并保留旧行为</strong>来绕过，代价是显著的代码复杂度与性能损失。在这种模式下使用可重启序列还与 GNU C 库的用法不兼容，导致其他性能问题。关于这段前情的更多细节，见相关文章。</p>
+                    <p>把 TCMalloc 带到当前形式的可重启序列、恢复与 C 库的兼容性以及性能，显然是可取的。Dion 的方案采用"<strong>RSEQ 操作（RSEQ operations）</strong>"的形式，其本质是：能够为内核编程一组操作，让内核在每次返回用户空间时执行。可以设置一个操作来恢复对 CPU 编号的无条件写入，从而为 TCMalloc 服务，同时不损害任何未使用这一新特性的线程的性能。</p>
+                    <p>该系列中定义的最简单操作是 <code>RSEQ_OP_RESET</code>，它把用户空间内存中的一个字重置为特定值。要设置这样一个操作，用户空间需要分配并初始化该结构的一个副本：</p>
+                    <pre><code>struct rseq_op_reset {
+	struct rseq_op_node	node;
+	__u64			src;
+	__u64			dst;
+	__u32			len;
+    };</code></pre>
+                    <p><code>src</code> 字段保存指向要存入的值的指针，若应存入零则直接为零；<code>dst</code> 是指向该值应被存入位置的指针；<code>len</code> 是目标长度，为四或八字节。<code>node</code> 字段本身是一个结构体：</p>
+                    <pre><code>struct rseq_op_node {
+	__u64 next;
+	__u64 prev;
+	struct {
+	    __u8  type;
+	    __u8  reserved[7];
+	};
+    };</code></pre>
+                    <p>这里 <code>type</code> 应设为操作类型（此例中为 <code>RSEQ_OP_RESET</code>）；其余所有内容必须清零，之后不得再改动。</p>
+                    <p>此外还定义了两个操作。<code>RSEQ_OP_RESET_WITH_STRIDE_CPUID</code> 把值写入一个由当前 CPU ID 索引的数组，而 <code>RSEQ_OP_RESET_WITH_STRIDE_MMCID</code> 改为按当前虚拟 CPU ID 索引。两者都使用这个结构体：</p>
+                    <pre><code>struct rseq_op_reset_with_stride {
+	struct rseq_op_node	node;
+	__u64			src;
+	__u64			dst;
+	__u64			dst_stride;
+	__u32			len;
+    };</code></pre>
+                    <p>新增的 <code>dst_stride</code> 值会与 CPU ID 相乘，以得到实际存入值的地址。</p>
+                    <p>一旦这些结构体之一设置完毕，就可以通过 <code>prctl()</code> 的新操作 <code>PR_RSEQ_OP</code> 来注册它。如果 <code>prctl()</code> 的第二个参数是 <code>PR_RSEQ_OP_REGISTER</code>，新操作会被注册；值为 <code>PR_RSEQ_OP_UNREGISTER</code> 则注销一个已存在的操作。操作一旦注册，就会在每次返回用户空间时被执行。总操作数上限是 <strong>2,048 个</strong>；想来应该够用。</p>
+                    <p>这个 API 有一个有趣的怪异之处。通常，对于这种类型的注册操作，人们会期望描述该操作的结构体被复制进内核并在那里使用。但在这里，数据<strong>留在原处</strong>，而 <code>rseq_op_node</code> 结构中的 <code>next</code> 和 <code>prev</code> 指针被用来把包含它的结构体链接进一个由内核维护的链表中。每次返回用户空间时，所请求的操作通过遍历该链表完成——而链表仍然位于用户空间内存中。与 <code>rseq</code> 结构不同，这些操作结构体<strong>不会被映射进内核地址空间</strong>；需要时使用访问用户空间内存的常规原语。</p>
+                    <p>这看起来是个奇怪的决策：所有这些用户空间访问肯定会让操作变慢，而且用户空间将有能力随时修改这些结构体的内容（包括指针）。代码中相当小心地在每一步验证该链表及其内容（进一步增加成本），但这仍让人感觉是危险的领域。看来用户空间能够做修改，在这个案例中实际上是一个<strong>期望的特性</strong>；能够改变要存入的值或该值应去的位置，显然被认为值得付出这些代价。</p>
+                    <p>考虑到这个系列最终是在<strong>往内核里再加一台虚拟机</strong>（虽然是一台极其简单的），人们可能会想，Dion 为什么不干脆实现"在返回用户空间时运行一个 BPF 程序"的能力，然后收工。补丁没有回应这个问题，但一个合理的答案是：<strong>加载 BPF 程序需要权限，而可重启序列不需要</strong>。强迫每个需要 RSEQ 操作的程序都以 <code>CAP_BPF</code> 运行，会制造它自己的问题。</p>
+                    <p>这个补丁系列太新了，连墨迹都还没干；它处于 <strong>RFC 阶段</strong>，尚未收到很多评论。Dmitry Vyukov 问，把操作结构体保留在内核中是否会更好。而 Florian Weimer 则担心这个特性"会随着时间变成另一个字节码解释器，基本上就是在重新实现 BPF"。截至本文写作时，Dion 尚未回应这些问题。对于"能让 TCMalloc 使用当前 API、并最终允许移除兼容代码"的改动，人们确有明确兴趣；但这个具体提案在合并前还需要演化多少，则有待观察。</p>
+                </div>
+            </div>
+
+            <!-- 专题文章 6 -->
+            <div class="article" id="article6">
+                <div class="article-header">
+                    <span class="article-category">开发工具 / 排版</span>
+                    <h2>Typst 的大步前进</h2>
+                    <div class="article-meta">
+                        <span>作者：Lee Phillips（特邀）</span>
+                        <span>2026年9月9日</span>
+                        <span><a href="https://lwn.net/Articles/1092993/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <p><strong>Typst</strong> 是一个把文档排版成各种格式的系统：PDF、SVG、PNG，以及仍在开发中的 HTML。它擅长处理技术材料，常被视为最终可能替代 LaTeX 的方案。我们上次关注 Typst 是一年前，当时它到了 0.13 版。新版本 <strong>0.15</strong> 于 6 月发布，带来大量新特性，包括支持可变字体、MathML、多重参考文献列表等。Typst 是自由软件，采用 Apache-2.0 许可，用 Rust 编写。</p>
+
+                    <h3>可变字体</h3>
+                    <p>Typst 现在支持<a href="https://en.wikipedia.org/wiki/Variable_font">可变字体（variable fonts）</a>。多数字体以一组文件分发，其中包含不同字重、不同变体（如斜体、粗体等）的字形。排版领域近年的一项发展是可变字体的出现——它可以把所有变体装进单个文件。这既节省空间，也能给作者或设计者带来更大灵活性。</p>
+                    <p>字体特性与变体通过为某个"<strong>轴（axis）</strong>"设值来选择；每个轴改变所渲染字形的某个方面。通常存在多个轴，它们可以有离散取值（用于开启或关闭各种特性），也可以有介于两个界限之间的连续取值。后者例如可用于在连续区间上选择字体字重。</p>
+                    <p>为了测试 Typst 的新特性，作者下载了两款开源可变字体：<strong>Roboto Flex</strong>（一款带 13 个轴的通用字体）和 <strong>Zycon</strong>（一款不含字母、但含 17 个小装饰图案的字体）。Zycon 的六个连续轴能平滑改变图案的各个方面，使该字体适用于动画。</p>
+                    <p>下面是一个使用这两款字体、并对各自某一个轴进行变化的 Typst 文档：</p>
+                    <pre><code>#set text(font:"Roboto Flex")
+   #for n in (-305, -200, -98) {
+       set text(variations:("YTDE": n)) 
+       [A penguin jumped quietly.
+   
+       ]
+   }
+   
+   #set text(font:"Zycon")
+   #for n in array.range(0, 10, inclusive:true) {
+     set text(variations:("M1  ": n/10))
+     str.from-unicode(127773)
+   }</code></pre>
+                    <p>在 Typst 中，<code>#</code> 字符让文档进入"<strong>代码模式</strong>"，此时该行或该块余下的内容被解释为 Typst 内建语言代码。在代码模式内，方括号中的内容被解释为"<strong>文本模式</strong>"，即要被排版的文字。</p>
+                    <p>上面的代码包含两条按名称设置字体的命令，使用 <code>text()</code> 函数的选项之一。接着是 <code>for</code> 循环，行为符合预期。循环内部我们调用 <code>text()</code> 函数来设置 <code>variations</code> 变量。Roboto Flex 要用的文字是直接输入的，而 Zycon 字体的输出是用 <code>str.from-unicode()</code> 指定的单个字符。它本可以直接输入，但读者可能因为浏览器字体的覆盖范围而看不到它。</p>
+                    <p>我们在 Roboto Flex 上操作的轴叫 <strong>YTDE</strong>。如下图所示，该轴决定字体下伸部（descender）的长度，同时保持其他特征不变。这在排版表格时可能很有用，例如用来避免下伸部与表格单元格边界相撞。Zycon 六个轴之一叫 <code>"M1 "</code>（末尾两个空格是名字的一部分；所有轴名都包含四个字符），它对不同字符有不同的作用。作用于月亮字形时，其效果是改变月相。</p>
+                    <p>用 <code>typst compile vfont.typ</code> 编译该文档会生成 <code>vfont.pdf</code>。</p>
+
+                    <h3>MathML</h3>
+                    <p>HTML 导出仍是 Typst 的实验性特性，但这个版本显示出明显进展。主要的新 HTML 特性是<strong>把数学公式转换为 MathML</strong>。此前关于 Typst 的文章展示过某个定积分的标记及其经 Typst 渲染成 PDF 的输出。同样的 Typst 代码在渲染成 HTML 时，会产生一长串 MathML 标记，几乎所有较新的浏览器都知道如何解释（本页在此处原本显示该公式的 MathML 渲染结果）。</p>
+                    <p>如果你看不到那个公式，说明你的浏览器不支持 MathML；如果你能看到，把它与此前文章中排版的公式对比，会发现 PDF 与 HTML 的结果本质上完全一致。能够用 Typst 在浏览器中产出 TeX 质量的数学排版，而不需要 MathJax 之类的 JavaScript 库、也不必退回使用图片，这对科学传播是一大福音。</p>
+                    <p>要启用实验性的 HTML 输出，Typst 需要一个特殊标志：</p>
+                    <pre><code>typst c --features html integral.typ integral.html</code></pre>
+                    <p>这就是用于把 <code>integral.typ</code> 中的公式标记排版成 HTML 的命令。</p>
+
+                    <h3>"Bundle" 输出</h3>
+                    <p>Typst 这类软件的典型使用场景是生成单个文件，通常是论文或书籍形式的 PDF。新的"<strong>bundle</strong>"特性允许作者在单个源文件中指定一组输出文件，格式可以是 Typst 支持的任何一种。这些文件可以共享数据，并且可以包含文档内与文档间的链接。</p>
+                    <p>该特性非常适合创建网站——由互相链接的 HTML 文件构成的网络。对学者也可能有用：他们或许希望从单个源文件同时生成会议演讲用的幻灯片组和配套预印本。</p>
+                    <p>下面是一个简单示例：一个 Typst 文件创建三个互相链接的文档（两个 HTML 页面和一个 PDF），并共享一段文字：</p>
+                    <pre><code>#let text = ['Twas brillig, and the slithy toves
+         Did gyre and gimble in the wabe:]
+   
+   #document("poems.html", title: [Famous Poems])[
+     #link(&lt;jabberwocky&gt;)[Here] is a famous nonsense poem.
+   ]&lt;home&gt;
+   
+   #document("jabberwocky.html", title: [Jabberwocky by Lewis Carroll])[
+   This famous poem begins like this:
+   
+   #text
+   
+   The #link(&lt;jabberwockyPDF&gt;)[rest] of the poem.
+   
+   Go #link(&lt;home&gt;)[home].
+   ]&lt;jabberwocky&gt;
+   
+   #document("jabberwocky.pdf", title: [Jabberwocky: the Complete Poem])[
+   #text ....
+   
+   Go #link(&lt;home&gt;)[home].
+   ]&lt;jabberwockyPDF&gt;</code></pre>
+                    <p>处理这段代码的命令（假设保存为 <code>bundle.typ</code>）是：</p>
+                    <pre><code>typst c --features html,bundle --format bundle bundle.typ</code></pre>
+                    <p>在作者的测试中，bundle 特性如宣传般工作；但由于它与 HTML 输出一样仍被视为进行中的工作，编译器要求使用 <code>--features</code> 标志。</p>
+                    <p>上面的命令会创建一个名为 "bundle" 的新目录，其中包含 <code>#document()</code> 函数定义的三个文件。它们都包含保存在 <code>text</code> 变量中的那两行诗。HTML 页面之间有超链接，从其中一个页面到 PDF，再从 PDF 回到那个两页的网站。链接通过标签定位，标签包含在尖括号中，跟在每个 document 函数之后。</p>
+
+                    <h3>多重参考文献列表</h3>
+                    <p>Typst 现在允许在单个文档中拥有<strong>多个参考文献列表</strong>，这是一个备受期待的特性。它最典型的应用是书籍——可能每章需要单独的参考部分。用一个小例子来介绍最合适：</p>
+                    <pre><code>#show bibliography: set text(size: 8pt)
+   
+   = Chapter I
+   
+   According to @smith, Smith is uncommonly smart.
+   
+   #bibliography("works.bib",
+   title: "References for Chapter I",
+   group: none)
+   
+   = Chapter II
+   
+   Jones@jones has a different view. The issue was
+   finally put to rest in the following year
+   in @mergutroid.
+   
+   #bibliography("works.bib",
+   title: "References for Chapter II",
+   group: none)</code></pre>
+                    <p>这里第一行指定参考文献列表应使用比正文默认更小的字号。在正文中，<code>@</code> 前缀会创建一条引用，使用默认的"方括号中数字"样式。每章末尾调用 <code>bibliography()</code> 函数。它的第一个参数指定使用哪个数据库提供文献信息；每个参考文献部分都可以使用不同数据库（或数据库集合），如有需要（关于这类文本文件数据库的说明，见我们近期关于 Pandoc 的文章）。<code>group</code> 参数控制引用的编号方式。取值 <code>none</code> 会让编号在每个部分从 1 开始；编号也可以是全篇连续的，或按任意方式分组。</p>
+
+                    <h3>多重 PDF 标准</h3>
+                    <p>通常，只要避免使用专有扩展，就足以确保用 Typst、LaTeX 或任何其他称职软件生成的 PDF 能满足该格式的承诺：文档现在和将来都能在各种阅读器中打开并显示一致。然而在更深层次上，PDF 并不只是"PDF"。存在各种 PDF 版本，而在这些之上，还有数十个与<strong>可归档性（archivability）和可访问性（accessibility）</strong>相关的正式标准。可归档性标准旨在确保文档在广泛的阅读器软件上确实可用，并且永远可用；可访问性标准则与 PDF 对各类残障人士的可用性有关。</p>
+                    <p>Typst 已经具备了针对各种 PDF 版本以及归档或可访问性标准的能力。新特性是在编译文档时可以<strong>同时针对多个标准</strong>。这很有用，因为人们可能想生成同时具备归档与可访问性属性的 PDF。该特性的实现通过在"标准组合不兼容"或"未遵循目标标准最佳实践"时发出警告或错误，帮助作者在这片 PDF 标准森林中导航。</p>
+                    <p>举例来说，下面这条命令尝试编译前一节的 "book" 文档，同时要求 PDF 1.7 版和 A-1b 归档标准：</p>
+                    <pre><code>typst c --pdf-standard 1.7,a-1b book.typ</code></pre>
+                    <p>Typst 编译器会回应这样一条错误消息：</p>
+                    <pre><code>error: PDF 1.7 is not compatible with PDF/A-1b
+   hint: PDF/A-1b requires version PDF 1.4</code></pre>
+                    <p>PDF 1.7 版与 A-2b 兼容，所以下面这样可以工作：</p>
+                    <pre><code>typst c --pdf-standard 1.7,a-2b book.typ</code></pre>
+                    <p>但如果我们再加上 UA-1 可访问性标准：</p>
+                    <pre><code>typst c --pdf-standard 1.7,a-2b,ua-1 book.typ</code></pre>
+                    <p>又会得到错误：</p>
+                    <pre><code>error: PDF/UA-1 error: missing document title
+    = hint: set the title with `set document(title: [...])`</code></pre>
+                    <p>通常 Typst 编译器除了语法正确之外不强求什么，但如果指定了某个可访问性标准，文档就必须符合该标准。UA-1 要求的事项之一就是文档标题。</p>
+                    <p>上述内容并非单纯的冷知识，尽管它看起来对典型的科学论文或教科书作者关系不大。这些细节对档案管理者和出版者很重要；除了帮助残障用户之外，生成可访问的 PDF 在美国以及许多其他国家对州和联邦政府而言是一项<strong>法律要求</strong>。Typst 对多重 PDF 标准的先进处理使其在这些场景中成为有用的工具。</p>
+
+                    <h3>结论</h3>
+                    <p>Typst 0.15 还有一些本文未详述的增强。其中一些包括对专色（spot colors）的支持、能解释编译过程中收敛失败原因的详细诊断信息，以及内建脚本语言中新的 map 与 filter 函数。文档已更新覆盖新版本，现在以一份 26MB 的 PDF 提供。</p>
+                    <p>Typst 在 GitHub 上开发，有 460 名贡献者。项目创建者写了一份面向新贡献者的指南，其中描述了一个 PR 应该是什么样，并警告<strong>任何由 LLM 生成的代码或描述都会被拒绝</strong>。他们也坦白说明：Typst 既是一个开源项目，也是一家公司，关于项目方向的决策以及单个贡献是否合适，都会把公司的需求纳入考量。这是潜在贡献者和用户应当记住的一个因素。</p>
+                    <p>系统开发的进展令人印象深刻。用户社区热情高涨，他们的参与让 Typst 生态扩展到超过 <strong>1500 个包</strong>。</p>
+                    <p>然而，出版界的<strong>网络效应</strong>正在阻碍 Typst 实现我们在此前文章中所看到的潜力。尽管用户已设计出匹配若干期刊风格规范的模板，但那些要求提交源码（而不只是 PDF）的期刊仍然坚持 LaTeX、Word 或其他格式。<strong>极少有期刊接受用 Typst 标记的稿件。</strong>只要 Typst 仍处于 1.0 之前的状态（这大概还有一段距离），并且存在需要做重大、可能破坏性文档变更的风险，这种情况就不太可能改变。</p>
+                    <p>尽管如此，Typst 今天已是极其有用的工具。例如作者最近需要做一个 SVG 标志，发现用 Typst 内建图形命令写一段文本描述，比去找绘图程序更快也更容易。无法断言 Typst 的优势是否会像许多拥趸描述的那样使它成为"LaTeX 替代品"。但如果开发以当前速度继续，这是一个确实存在的可能性——只不过可能需要一二十年才能实现。</p>
+                </div>
+            </div>
+
+            <!-- 社区简讯 -->
+            <div class="article" id="briefs">
+                <div class="article-header">
+                    <span class="article-category">社区简讯</span>
+                    <h2>📝 Brief items（社区简讯）</h2>
+                    <div class="article-meta">
+                        <span>LWN.net Weekly Edition for September 10, 2026</span>
+                        <span><a href="https://lwn.net/Articles/1092275/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <h3>安全</h3>
+                    <h4>Rustls 的十年</h4>
+                    <p>Joe Birr-Pixton 写了一篇<a href="https://www.rustls.dev/blog/posts/2026-08-26-a-decade-of-rustls/">博客文章</a>，回顾 Rustls TLS 库项目走过的十年，并展望即将到来的 0.24 版以及最终会有的 1.0 版。</p>
+                    <blockquote>
+                        <p>"Rustls 始于 2016 年 5 月 2 日的首次提交。进展很快：一个月后，也就是 6 月 5 日，它已经能与网上大多数站点互操作。首个发布 0.1.0 紧随其后，在 2016 年 8 月 27 日——距首次提交不到四个月。</p>
+                        <p>[…] 从 0.1.0 发布起，项目在接下来八年里走过了一长串版本，逐步构建功能、加固并精炼 API。这条发布线的高潮是 2024 年 2 月 29 日发布的 0.23。</p>
+                        <p>0.23 这条发布线一直很稳定：此后已有 43 个非破坏性发布。这种稳定并没有伴随停滞。0.23 系列交付了广泛的重要特性，包括 FIPS 认证的密码学选项、证书压缩、加密客户端问候（ECH）、后量子密码学，以及性能改进。"</p>
+                    </blockquote>
+
+                    <h4>本周安全引述</h4>
+                    <blockquote>
+                        <p>"互联网的运行速度几乎接近光速。你可以注册一个 .uk 域名，一分钟后地球另一端就能访问它。对想快速上线网站的用户来说这很棒。对想发起垃圾信息攻击的滥用者来说也很棒。</p>
+                        <p>等到足够多的人把骗子的域名举报为可疑时，已经太晚了。在注册商禁用该域名、或该名字进入安全浏览列表所需的时间内，已经发出了一百万条消息，也已经有足够多的人交出了自己的信息。</p>
+                        <p>有人告诉我们'一个系统的目的就是它所做的事'。目前，域名系统（DNS）的目的似乎就是一条让犯罪分子以惊人高速对人们行骗的渠道。"</p>
+                        <p>—— Terence Eden</p>
+                    </blockquote>
+
+                    <h3>内核开发</h3>
+                    <h4>内核发布状态</h4>
+                    <p><strong>当前开发内核是 7.3-rc2</strong>，于 9 月 7 日发布。Linus 说：</p>
+                    <blockquote>
+                        <p>"这次 rc2 <em>感觉</em>不像特别忙，但显然它很忙。rc2 通常是人们在合并窗口后喘口气、最安静的时候，而且要找 bug 也得等一阵子。但这次不是——这是一个'全脂'rc 版本。[…]</p>
+                        <p>看起来没有什么特别奇怪的地方，尽管 rc2 的时间点有点不寻常。这也许只是随机现象，但我们显然都会把它归咎于 AI，因为不管那是不是真正的原因，它都很容易背锅 ;)"</p>
+                    </blockquote>
+                    <p>该版本包含来自 <strong>2,546 名开发者</strong>的 <strong>15,882 个非合并变更集</strong>，其中 <strong>561 名是首次</strong>为内核做贡献。发布历史如下：</p>
+                    <table>
+                        <thead>
+                            <tr><th>RC</th><th>日期</th><th>提交数</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>v7.3-rc1</strong></td><td>2026-08-30</td><td>16,267</td></tr>
+                            <tr><td><strong>v7.3-rc2</strong></td><td>2026-09-06</td><td>681</td></tr>
+                        </tbody>
+                    </table>
+                    <p>更多细节可参见 LWN KSDB v7.3 页面。<strong>稳定更新</strong>：7.2.4、6.18.50、6.12.109 于 9 月 7 日发布；7.2.5 与 6.18.51 正在评审流程中，预计 9 月 11 日发布。</p>
+
+                    <h3>发行版</h3>
+                    <h4>Asahi Linux 现已支持 M3 系列 Mac</h4>
+                    <p>Asahi Linux 项目宣布，对 Apple M3 系列芯片的支持已加入 Asahi 安装器。</p>
+                    <blockquote>
+                        <p>"Linux 对 M3 系列 SoC 及搭载它们的机器的支持现已达到一个状态：M1 和 M2 系列机器上支持的<em>几乎</em>所有东西都能直接工作。这包括摄像头、内置麦克风、USB（直到 USB 3 10 Gb/s 的硬件上限）、硬件加速视频解码<strong>（包括 AV1 支持）</strong>、WiFi、蓝牙等等！唯一较大的例外仍然是完整的 DCP 支持和 GPU，我们会在未来几个月带来更多消息。<strong>目前不要指望有性能良好或省电的 3D 加速。</strong>"</p>
+                    </blockquote>
+                    <p>M3 支持的其他当前限制见该博客文章。</p>
+
+                    <h4>Buildroot 2026.08 发布</h4>
+                    <p>嵌入式 Linux 系统构建器 <a href="https://buildroot.org/">Buildroot</a> 的 <strong>2026.08</strong> 版已发布。Buildroot 2026.08 包含来自 100 名贡献者的近 1,000 项变更；一些值得注意的变更包括支持 Linux 7.1.x、Binutils 2.46.1、GCC 16.2.0、glibc 2.44，并新增了 M68K 与 IBM Power 10/11 架构。</p>
+
+                    <h4>Grml 2026.09 发布</h4>
+                    <p>面向系统管理员的 Debian 系 Grml 实时 Linux 发行版发布 <strong>2026.09</strong> 版，代号 "Hättiwaritätti"。它基于即将发布的 Debian 14（"forky"）中的软件包。值得注意的变更包括升级到 Linux 7.1.8 内核、支持从 exfat 格式的 USB 设备引导，以及升级到 GNU Screen 5.0.1。</p>
+
+                    <h3>开发</h3>
+                    <h4>Audacity 4.0 发布</h4>
+                    <p>音频编辑器 <strong>Audacity 4.0</strong> 版已发布。此版本的显著变化包括用 Qt 重写的界面、可以把用户界面布局保存为 "Workspaces"、音频片段处理方面的改进，以及新的 <code>.aup4</code> 项目格式。</p>
+                    <p>该版本与 Audacity 3.x 系列并非完全功能兼容；缺失功能列表见兼容性说明。</p>
+
+                    <h4>Jellyfin 12.0 发布</h4>
+                    <p>媒体管理系统 <strong>Jellyfin</strong> 的 12 版已发布。显著变化包括数据库性能改进、媒体转码升级到 FFmpeg 8.1，以及对书籍和漫画媒体更好的处理。完整变更列表见 Web 客户端与服务端的发布说明。</p>
+
+                    <h4>LibreOffice Base 调查结果</h4>
+                    <p>Heiko Tietze 发布了一篇博客文章，总结近期一项关于 LibreOffice 数据库应用 <strong>Base</strong> 使用情况的调查结果。共 455 人参与，其中 330 多人在 Linux 上使用 Base，使用场景从维护 CD、DVD 等个人媒体记录，到企业资源计划（ERP）与财务。当然，用户对如何改进这一应用有很多想法：</p>
+                    <blockquote>
+                        <p>"多数人要求改进用户界面——更少的杂乱、更有吸引力的设计。工作流和用户体验应当变得更简化或更强大，取决于专业水平和场景。例如，一个精细的搜索功能是很多人期望的。[…]</p>
+                        <p>几乎同样多的回答要求修 bug、改善稳定性、提高性能。关于查询、表单和报表的问题被提及的频率相同。在这方面，许多回复建议移除 Java 依赖。"</p>
+                    </blockquote>
+
+                    <h4>本周开发引述</h4>
+                    <blockquote>
+                        <p>"任何声称自己懂射频（RF）的人，要么在骗你，要么其实不懂 RF，要么在骗自己。</p>
+                        <p>我曾纠结要不要把这句作为开场白，因为我觉得我在这里说的话很容易被读成与我的本意相反。我不是在说'你永远理解不了这东西，因为它是魔法'，我想说的是'没人真正懂它，所以能学多少就学多少'。</p>
+                        <p>我感觉我现在懂得足够多，以至于知道 RF 基本上就是巫术。那些掌握冷门知识的人可以用很多晶体，加上特定长度、特定材质的杆子，通过地球接地来引导电磁场，向太空中发出特定的振动，从而与地球另一端的人交谈。你设备的谐振有点偏？没关系，你可以通过改变用某种电解质液体制成的电容器所捕获的电量来调校它。"</p>
+                        <p>—— Paul Tagliamonte</p>
+                    </blockquote>
+                </div>
+            </div>
+
+            <!-- 公告 -->
+            <div class="article" id="announcements">
+                <div class="article-header">
+                    <span class="article-category">公告</span>
+                    <h2>📢 Announcements（公告）</h2>
+                    <div class="article-meta">
+                        <span>LWN.net Weekly Edition for September 10, 2026</span>
+                        <span><a href="https://lwn.net/Articles/1092276/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <h3>新闻简报（Newsletters）</h3>
+                    <p><strong>发行版与系统管理</strong>：DistroWatch Weekly（9 月 7 日）、This week in F-Droid（9 月 1 日）、This week in Fedora（9 月 7 日）、openSUSE Tumbleweed Review of the Week（9 月 4 日）、Ubuntu Weekly News（8 月 31 日）。</p>
+                    <p><strong>开发</strong>：Emacs News（9 月 7 日）；These Weeks in Firefox（9 月 8 日）；GCC 13.4.1 状态报告（9 月 4 日）；What's cooking in git.git（9 月 2 日 / 4 日 / 8 日三期）；Git Rev News（8 月 31 日）；This Week in GNOME（9 月 4 日）；GNU Tools Weekly News（9 月 6 日）；Golang Weekly（9 月 4 日）；Last Week in Kubernetes Development（9 月 4 日）；LLVM Weekly（8 月 7 日）；This Week in Matrix（9 月 4 日）；OCaml Weekly News（9 月 8 日）；Perl Weekly（9 月 7 日）；This Week in Plasma（9 月 4 日）；PyCoder's Weekly（9 月 8 日）；Ruby Weekly News（9 月 3 日）；This Week in Rust（9 月 2 日）；Wikimedia Tech News（9 月 7 日）。</p>
+                    <p><strong>会议记录</strong>：Fedora FESCo meeting minutes（9 月 8 日）；openSUSE Release Engineering minutes（9 月 4 日）。</p>
+
+                    <h3>演讲征集（Calls for Presentations）</h3>
+                    <p>以下是摘自 LWN.net CFP 日历的截止日期列表（覆盖 2026 年 9 月 10 日至 11 月 9 日）：</p>
+                    <table>
+                        <thead>
+                            <tr><th>截止日期</th><th>活动日期</th><th>活动名称</th><th>地点</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>9 月 18 日</td><td>9 月 19 日</td><td>Software Freedom Day NJ</td><td>蒙特克莱尔，新泽西州，美国</td></tr>
+                            <tr><td>10 月 1 日</td><td>11 月 7–8 日</td><td>OpenFest 2026</td><td>索非亚，保加利亚</td></tr>
+                            <tr><td>10 月 1 日</td><td>11 月 12–13 日</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+                            <tr><td>11 月 1 日</td><td>次年 4 月 1–4 日</td><td>Southern California Linux Expo</td><td>帕萨迪纳，加州，美国</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>即将举行的活动（Upcoming Events）</h3>
+                    <table>
+                        <thead>
+                            <tr><th>日期</th><th>活动名称</th><th>地点</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>9 月 8–10 日</td><td>RustConf 2026</td><td>蒙特利尔，加拿大</td></tr>
+                            <tr><td>9 月 17–18 日</td><td>Git Merge</td><td>里斯本，葡萄牙</td></tr>
+                            <tr><td>9 月 19–20 日</td><td>Nextcloud Community Conference 2026</td><td>柏林，德国</td></tr>
+                            <tr><td>9 月 19 日</td><td>Software Freedom Day NJ</td><td>蒙特克莱尔，美国</td></tr>
+                            <tr><td>9 月 19–24 日</td><td>Akademy 2026</td><td>格拉茨，奥地利</td></tr>
+                            <tr><td>9 月 21–23 日</td><td>Kernel Recipes</td><td>巴黎，法国</td></tr>
+                            <tr><td>9 月 22–24 日</td><td>Reproducible Builds Summit</td><td>哥德堡，瑞典</td></tr>
+                            <tr><td>9 月 25–27 日</td><td>PostmarketOS and Alpine Linux Conference</td><td>亚琛，德国</td></tr>
+                            <tr><td>9 月 28–30 日</td><td>X.Org Developers Conference</td><td>多伦多，加拿大</td></tr>
+                            <tr><td>9 月 28 日–10 月 1 日</td><td>Alpine Linux Persistence and Storage Summit</td><td>Lizumerhütte，蒂罗尔，奥地利</td></tr>
+                            <tr><td>9 月 30 日–10 月 1 日</td><td>All Systems Go! 2026</td><td>柏林，德国</td></tr>
+                            <tr><td>10 月 1 日</td><td>Open Tech Day | Software-defined Storage</td><td>纽伦堡，德国</td></tr>
+                            <tr><td>10 月 1–2 日</td><td>embedded Linux for Safe and Secure Applications</td><td>哥廷根，德国</td></tr>
+                            <tr><td>10 月 2–4 日</td><td>GNU Tools Cauldron</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 3–4 日</td><td>Linux Days 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 3–4 日</td><td>openSUSE.Asia Summit 2026</td><td>日惹，印度尼西亚</td></tr>
+                            <tr><td>10 月 5–7 日</td><td>Linux Plumbers Conference 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 6 日</td><td>Real-time Linux User Forum</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 6 日</td><td>Yocto Project Developer Day 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 7–9 日</td><td>Embedded Linux Conference Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 7–9 日</td><td>Open Source Summit Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 8 日</td><td>Linux Security Summit Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 13–15 日</td><td>OpenSSL Conference</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 14–17 日</td><td>PyCon South Africa</td><td>开普敦，南非</td></tr>
+                            <tr><td>10 月 16–18 日</td><td>VideoLAN Developers' Days</td><td>罗马，意大利</td></tr>
+                            <tr><td>10 月 18–20 日</td><td>All Things Open</td><td>罗利，北卡罗来纳州，美国</td></tr>
+                            <tr><td>10 月 20–23 日</td><td>The Matrix Conference</td><td>马尔默，瑞典</td></tr>
+                            <tr><td>10 月 20–23 日</td><td>PostgreSQL Conference Europe</td><td>瓦伦西亚，西班牙</td></tr>
+                            <tr><td>11 月 6–7 日</td><td>Texas Linux Festival</td><td>奥斯汀，得克萨斯州，美国</td></tr>
+                            <tr><td>11 月 7–8 日</td><td>OpenFest 2026</td><td>索非亚，保加利亚</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>安全更新（Security updates）</h3>
+                    <p>本期覆盖 <strong>2026 年 9 月 3 日至 9 月 9 日</strong>的安全公告摘要，共 <strong>484 条</strong>公告，完整条目见 <a href="https://lwn.net/Articles/1092276/">LWN Announcements 页面</a>。按发行版统计：<strong>SUSE 223 条</strong>、Fedora 76 条、Oracle 64 条、AlmaLinux 36 条、Ubuntu 30 条、Mageia 22 条、Red Hat 22 条、Debian 11 条。</p>
+                    <p>受影响软件包范围很广，出现频率较高的包括：kernel、freerdp、grafana / grafana-pcp、chromium、wget、dracut、pcs、curl、libvirt、bzip2、buildah、microcode_ctl、thunderbird、emacs、apr-util、NetworkManager、xen、expat、php、pipewire、redis、firefox / firefox-esr、tar、gzip、nodejs、iperf3、osbuild-composer、apache2-mod_auth_openidc、c-ares、cpio、file-roller、lcms2、libarchive、mbedtls、strongswan、slurm-wlm、libde265、jbig2dec、gst-plugins-base1.0、imagemagick、glibc、gnupg2、libssh2、librabbitmq、gzip、dovecot、exiv2 等。</p>
+                    <p>其中部分发行版情况：<strong>Debian</strong> 发布了 chromium、firefox-esr、thunderbird、strongswan、slurm-wlm、libde265、jbig2dec、gst-plugins-base1.0、fort-validator、tryton-server 等公告；<strong>Fedora</strong> 覆盖 chromium、firefox、kernel、baresip、chirp、composer、memcached、nsd、nss、proftpd、mrtg、Mingw 系列子包等；<strong>Red Hat</strong> 集中发布 pcs、osbuild-composer、buildah、containernetworking-plugins、linux-sgx、opentelemetry-collector、cockpit-image-builder、container-tools、delve、ignition、runc 等；<strong>SUSE / openSUSE</strong> 覆盖 libvirt、bzip2、curl、dracut、NetworkManager、xen、cpio、emacs、libusb、multipath-tools、apache2-mod_auth_openidc 等；<strong>Ubuntu</strong> 则以多批次 linux 内核（含 AWS/GCP/GKE/Azure/IBM/NVIDIA/Raspberry Pi/realtime/lowlatency 等大量风味）以及 FFmpeg、curl、glibc、gnupg2、gzip、imagemagick、libssh2 等为主；<strong>AlmaLinux</strong> 发布 kernel、kernel-rt、grafana、expat、freerdp、thunderbird、microcode_ctl、nodejs:24、python3.14-cryptography 等；<strong>Oracle</strong> 与 <strong>Mageia</strong> 亦发布涵盖内核、浏览器、加密库与工具链的大量更新。</p>
+
+                    <h3>内核补丁精选（Kernel patches of interest）</h3>
+                    <p>本期（9 月 2 日至 9 月 9 日）内核相关补丁数量庞大，以下按类别择要摘录代表性条目，完整列表见 <a href="https://lwn.net/Articles/1092276/">LWN Announcements 页面</a>。</p>
+
+                    <h4>内核发布</h4>
+                    <ul>
+                        <li>Linux 7.3-rc2（Linus Torvalds，9 月 6 日）；7.2.4、6.18.50、6.12.109（Greg KH，9 月 7 日）；6.1.187-rt68（Clark Williams，9 月 8 日）。</li>
+                    </ul>
+
+                    <h4>架构相关</h4>
+                    <ul>
+                        <li>arm64：ftrace 支持 kCFI 内核上的 CALL_OPS、启用 128 位页表项、可抢占的 <code>this_cpu_*()</code> 操作、用 PSCI v0.2+ 并行上线 CPU、把 overflow sp 移入 SP_EL1、新增 PUD THP 支持、移除未用的大端支持；</li>
+                        <li>ARM：移除已废弃平台；LoongArch 加入 KHO 支持与 selftest；riscv 为 RV64 加入 bpf 栈参数支持；</li>
+                        <li>AMD SEV-SNP：新增 RMPOPT 支持与动态 PAMT；x86：bpf JIT 干跑模式、x86/fpu 恢复并强化信号帧可移植性、支持海光 family 18h models 4h-8h。</li>
+                    </ul>
+
+                    <h4>BPF 相关</h4>
+                    <ul>
+                        <li>支持按值传递的 struct 与 <code>__int128</code> 参数；统一 helper 与 kfunc 的参数检查。</li>
+                    </ul>
+
+                    <h4>构建系统</h4>
+                    <ul>
+                        <li>objtool 动态检测 noreturn；kbuild 显著加快内核构建速度。</li>
+                    </ul>
+
+                    <h4>核心内核</h4>
+                    <ul>
+                        <li>sched, steal_governor：引入首选 CPU 与基于 steal 的 vCPU 退避；sched/numa：每进程的自动 NUMA 均衡控制；sched：在 task tick 中处理分裂的调度与执行上下文；在 NVIDIA Olympus 上启用首选 SMT 兄弟；</li>
+                        <li>coredump/files：按请求退出文件；liveupdate 转向 feature flags 以兼容 LUO 与 memfd ABI；exec 从 UAPI 中移除 AT_VECTOR_SIZE_ARCH；</li>
+                        <li>trace：ftrace 环形缓冲区的栈迹去重；tracing wprobe 为 x86 加入 watchpoint 支持；srcu 补全原子 SRCU 支持。</li>
+                    </ul>
+
+                    <h4>开发工具</h4>
+                    <ul>
+                        <li>kcov 加入按任务的数据流跟踪（函数参数/返回值）、入口/出口记录、内存访问记录与延迟注入；bpf JITed 程序支持 KASAN 检查；</li>
+                        <li>stackdepot 用 trie 降低持久栈记录的内存占用；delaytop 加入最大延迟、时间戳与排序；selftests 覆盖面扩展（mm 的 GUP 微基准与 khugepaged、vDSO、BPF 共享 Makefile 与 memcg 测试）；power sequencing 加入 kunit 用例；KVM selftests 为 PPC 预启用；提供本地运行 Netdev CI 测试的容器。</li>
+                    </ul>
+
+                    <h4>设备驱动（择要）</h4>
+                    <ul>
+                        <li>Apple M1/M2/M3 SoC 的初始 USB4/Thunderbolt 支持；Broadcom BCM2712 IOMMU 驱动（Raspberry Pi 5）；NVIDIA vGPU manager 与 VFIO 变体驱动；nova-core 的 GPU 中断/GSP 事件投递与 GPU 页表、vmm、bar1 映射；drm/tyr 加入 VM 与 BO ioctl；</li>
+                        <li>网络：net: mana 用替换队列集重新配置、并发 HWC 请求与动态队列深度；nova 系列 NIC 驱动 nbl；RDMA/erdma 支持非连续内核队列缓冲；enetc 的 SR-IOV 改进与 v4 VF；lan966x 的 PCIe FDMA；wifi inffmac 新驱动（Infineon 新一代芯片组）、ath11k 的 airtime 队列限制与 TXQ 调度器、rtw88 为 RTL8723B/BS 做准备；</li>
+                        <li>USB：dwc3-qcom 为 SA8255P 加入固件托管资源支持、Qualcomm IPQ5018 启用 USB3、CIX Sky1 的 USB3/USBSSP；</li>
+                        <li>PCI：ACS 增强能力支持、接收端链路裕量（LMR）支持、Nord 平台 PCIe 支持、dw-rockchip 系统挂起；</li>
+                        <li>媒体与显示：Yoga Book 摄像头、Raspberry Pi 的 Wave6 视频编解码驱动、ipu6 支持 ipu7 硬件、Maxim GMSL2/3 序列化/解序列化驱动、drm/rcar-du 支持带 DSC 的 DSI 管线、面板 Samsung AMS662ZS01；</li>
+                        <li>其他：HID asus 加入 ROG Ally 掌机支持；HID generic 通过 hid-lamparray 支持 LampArray；支持 AS7343 多光谱传感器；Native SCSI 多路径支持；Qualcomm Nord DPRX 时钟控制器与相机时钟；i.MX8M PLL 的扩频时钟。</li>
+                    </ul>
+
+                    <h4>设备驱动基础设施</h4>
+                    <ul>
+                        <li>异步关闭设备；rust 加入 LED classdev 抽象与基础 GPIO consumer 抽象；rust / dma_buf 加入 dma_fence 抽象；</li>
+                        <li>DRM 加入 backlight 能力、状态读出支持与 <code>DRM_MODE_ATOMIC_RESET</code> 标志；把 drm_bridge 嵌入每个 drm_panel；</li>
+                        <li>driver core 加入 <code>TAINT_FORCED_BIND</code>、可撤销（revocable）机制与 <code>subsys_platform_driver()</code>；I2C 故障时的详细传输报告；phy 批量 helper 与 <code>phy_get_by_of_node</code>。</li>
+                    </ul>
+
+                    <h4>文档</h4>
+                    <ul>
+                        <li>FUSE 缓存文档与测试；重写 runtime PM 的 kerneldoc 与 runtime_pm.rst；在 mm 文档中描述 <code>set_memory()</code> 与 <code>set_direct_map()</code> API。</li>
+                    </ul>
+
+                    <h4>文件系统与块层</h4>
+                    <ul>
+                        <li>ceph 把写回路径转为 folio、为 kclient 加入 'lazyio' 挂载选项；ext4 对常规文件缓冲 I/O 改用 iomap；hfsplus 转为基于 iomap；</li>
+                        <li>btrfs 引入新实验特性 RAID56_VSL、支持 xattr 中的每 inode 压缩级别、移除 v1 空间缓存；f2fs 为运行时块大小准备元数据布局、引入元数据缓存、启用缓冲 RWF_DONTCACHE；</li>
+                        <li>exfat 加快大目录中的文件创建；jffs2 把写入校验扩展到所有写入路径；netfs 用分段 bio_vec 链跟踪 folio；VFS 为目录锁变更做准备；降低 NFS 客户端的锁争用；blk-iocost 的 BPF struct_ops 代价模型；改进离线与只读 zone 的处理。</li>
+                    </ul>
+
+                    <h4>内存管理</h4>
+                    <ul>
+                        <li>memcg 移除 v1 软限额；为 <code>memory.reclaim</code> 加入显式目标；页属主（page_owner）加入 PID/TGID/COMM 与 cgroup 过滤；</li>
+                        <li>bpf 驱动的主动 memcg 回收；为 mm_struct 加入用户内存访问 kfunc；RSS 的层次化 per-CPU 计数器；</li>
+                        <li>把 PTE 表存储与 PTE 值区分开；让 MAP_PRIVATE 的 <code>/dev/zero</code> 映射真正匿名；KVM guest_memfd 把后备内存绑定到 NUMA 节点；降低 FS-DAX pmem 的 struct page 开销；PTE 映射 mmap 写入的 sub-folio 脏跟踪；</li>
+                        <li>DAMON：支持 <code>{prep,apply}_probes</code>、新增 pgidle_set 探针过滤类型与 probe_hits_wsum DAMOS 核心过滤器、支持对 hugetlb 内存的访问监控；用户态页表释放改为 RCU 安全；新增面向 NUMA 感知回收的自适应多线程 kswapd；让硬件中毒页不进入下一次 kexec。</li>
+                    </ul>
+
+                    <h4>网络</h4>
+                    <ul>
+                        <li>把 arp_tbl 与 nd_tbl 命名空间化；为 vsock 把客户机 vsock 设备分配到网络命名空间；net/rds 把连接生命周期改为引用计数；</li>
+                        <li>netfilter 初步支持 IPv4 over IPv6 与 SIT flowtable offload；vxlan 把配置转为 RCU 并在 <code>vxlan_fill_info()</code> 中放弃 RTNL；virtio_net 为卡死检测引入 RX 队列看门狗；ip_tunnel 支持按 netns 注销设备；为 send/connect 支持线程专属 pidfd。</li>
+                    </ul>
+
+                    <h4>安全相关</h4>
+                    <ul>
+                        <li>把 skb secmark 改为 x-array 索引；把 <code>module_blacklist</code> 参数扩展到内建模块；在 inode hook 中暴露挂载 idmap；让 SELinux 能阻止对 <code>/proc/self/mem</code> 使用 FOLL_FORCE。</li>
+                    </ul>
+
+                    <h4>虚拟化与容器</h4>
+                    <ul>
+                        <li>KVM arm64：新增统计剖析扩展（SPE）支持、GICv5 IRS 支持、把受保护 VM 的 vCPU 状态限制在 EL2、把 FFA_NOTIFICATION* 调用转发给 TrustZone、为 Realms 加入 CCA 基础管道；</li>
+                        <li>KVM nVMX 在 eVMCS 活跃时调整 VMPTRLD/VMPTRST 行为；KVM VMX 加固以防把 TDX vCPU 当作 vcpu_vmx 解释；Hyper-V 为 Linux 客户机加入半虚拟化 IOMMU 支持；coco guest 对共享缓冲强制宿主页大小对齐；</li>
+                        <li>mshv 为根分区加入 SEV-SNP 支持；KVM SVM 支持为 SEV-SNP 客户机直接设置 VMSA。</li>
+                    </ul>
+
+                    <h4>杂项</h4>
+                    <ul>
+                        <li>容器工具脚本加入 TOML 配置；perf arm64 支持数据类型剖析。</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar bottom" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-09-10.html">📰 最新</a>
+            <a class="nav-btn" href="2026-09-03.html">← 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 →</span>
+            <span class="nav-current-label">2026年9月10日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <footer class="footer">
+            <p>内容翻译自 <a href="https://lwn.net" target="_blank">LWN.net</a>，遵循 Creative Commons 协议。</p>
+            <p>本期来源：<a href="https://lwn.net/Articles/1092273/" target="_blank">LWN.net Weekly Edition for September 10, 2026</a></p>
+            <p>更新时间：2026年9月18日</p>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
