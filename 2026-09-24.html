@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LWN 周刊 - 2026年9月24日</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128240;</text></svg>">
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+        <span class="theme-icon">&#127769;</span>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">LWN 周刊中文版</div>
+            <h1>LWN.net Weekly Edition</h1>
+            <p class="edition-date">2026年9月24日</p>
+            <p class="edition-desc">Linux 和自由软件周刊 - 中文翻译</p>
+            <a href="index.html" class="back-link">&larr; 返回期刊列表</a>
+        </header>
+
+                <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn" href="2026-10-01.html">📰 最新</a>
+            <a class="nav-btn" href="2026-09-17.html">&larr; 上一个</a>
+            <a class="nav-btn" href="2026-10-01.html">下一个 &rarr;</a>
+            <span class="nav-current-label">2026年9月24日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <main class="content">
+            <!-- 目录 -->
+            <div class="toc">
+                <h2>📑 目录</h2>
+                <ul>
+                    <li><a href="#article1">展望 Git 2.56 —— 以及 3.0</a></li>
+                    <li><a href="#article2">用 gccrs 编译内核</a></li>
+                    <li><a href="#article3">在 NetBSD 上用 Linux Test Project 测试 compat_linux</a></li>
+                    <li><a href="#article4">io_uring 的线程身份互换</a></li>
+                    <li><a href="#article5">关于现代化开源桌面的构想</a></li>
+                    <li><a href="#briefs">📝 Brief items（社区简讯）</a></li>
+                    <li><a href="#announcements">📢 Announcements（公告）</a></li>
+                </ul>
+            </div>
+
+<div class="article" id="article1">
+    <div class="article-header">
+        <span class="article-category">版本控制 / 软件开发</span>
+        <h2>展望 Git 2.56 —— 以及 3.0</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年9月18日</span>
+            <span><a href="https://lwn.net/Articles/1094575/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>Git 源代码管理系统是全球开发流程的核心，因此其中的变更——尤其是那些不兼容的变更——备受相关开发者的关注。Git 2.56 预计将在 9 月底前后发布，目前已经以候选发布版本（release candidate）的形式提供。它算不上最惊天动地的版本，但紧随其后的那一个——可能就是人们期待已久的 Git 3.0——则很可能不同凡响。</p>
+
+        <h3>Git 2.56 包含什么</h3>
+
+        <p>Git 2.56 包含 700 多个非合并提交，带来了不少不错的改进，但不会从根本上改变大多数用户的 Git 使用体验。在这方面颇具潜力的一个特性，是为（仍处于实验阶段的）<code>git history</code> 工具箱新增了 <code>drop</code> 子命令：</p>
+
+        <p><code>$ git history drop commit-id</code></p>
+
+        <p>这条命令会把指定的提交从当前分支的历史中移除，并重放其后新增的所有提交。它提供了一种更简便地移除某个问题提交的方式。遗憾的是，如果历史中包含合并提交，它目前仍会拒绝工作，这使得它无法用于许多（甚至大多数）仓库。</p>
+
+        <p><code>git status</code> 命令现在会建议执行 <code>git pull</code>，以更新一个落后于其所跟踪分支的分支。不过，即便某个分支落后于一个（尚未 fetch 的）远程跟踪分支，它仍然会显示该分支“up to date”。</p>
+
+        <p><code>git refs</code> 命令用于在底层操作引用（reference）；在 2.56 中，它新增了若干子命令。这些命令——<code>create</code>、<code>delete</code>、<code>update</code> 和 <code>rename</code>——对 Git 而言也许有些出人意料地，完全如其名称所示。</p>
+
+        <p>此外还有一些细微的易用性调整。新增的 <code>--delete-merged</code> 选项用于 <code>git branch</code>，可删除那些已被合并到其远程跟踪分支中的本地分支。如果用 <code>git branch -d</code> 尝试删除一个正被用于二分查找（bisection）的分支，操作会失败并给出一条有用的提示信息。对配置文件加锁的尝试在失败后会重试，从而避免多条命令同时修改该文件时的烦扰。<code>git add</code> 新增了 <code>--resolved</code> 选项，只添加冲突已被解决的、带合并冲突的文件。</p>
+
+        <p>除此之外，还有一大串惯常的缺陷修复、重构和性能改进。总的来说，2.56 看起来是一个扎实的版本，但它也显露出一个项目的迹象：它把许多更重要的成果留待未来。这就引出了下一个问题——接下来会发生什么。</p>
+
+        <h3>2.56 之后？</h3>
+
+        <p>9 月初，Git 维护者 Junio Hamano 向社区征询下一个版本该如何定。是把社区已经努力筹备了一段时间的 3.0 发布出来、以高潮结束这一年最好？还是说，在 3.0 能够发布之前，仍需要一个或多个 2.x 版本？</p>
+
+        <p>这是一个重要的问题，因为 3.0 将包含若干兼容性破坏（compatibility break），可能会让一些用户在升级前犹豫再三。其中或许最重要的，是默认改用 SHA-256 哈希函数，而不再使用 Git 从一开始就采用的 SHA-1。SHA-1 长期以来被认为强度不足，这对 Git 这类应用来说令人担忧。哈希被用来标识 Git 仓库中的每一个对象（文件、目录树、提交），并被用来验证通往任意给定点的提交链。如果 SHA-1 可以被攻破，就有可能在难以或无法被察觉的情况下篡改某个仓库的历史。</p>
+
+        <p>Git 长期以来一直对已知的 SHA-1 攻击设有防御，如今似乎很少有人认真担心仓库会被攻陷的问题。尽管如此，迁移到一个更安全的哈希函数仍非常有意义。</p>
+
+        <p>自 2023 年的 Git 2.42 版本起，Git 中就已经存在对 SHA-256 的非实验性支持，尽管与旧仓库互通的一些“胶水”工作耗时更久。长期以来，阻止 Git 开发者默认改用 SHA-256 的最大顾虑，是各大托管站点（forge）的支持（或者说不支持）。GitLab 自 2024 年起就已支持，Forgejo 也支持。然而，这个房间里仍然缺席的那头“大象”是 GitHub；发布一个会创建 GitHub 不兼容仓库的 Git 版本，前景令人担忧。目前仍不清楚 GitHub 何时会加入该支持，但值得注意的是，GitHub 员工、SHA-256 迁移背后的关键开发者 brian m. carlson 在回应 Hamano 的问题时表示，关于该话题的消息即将到来，并且把下一个版本定为 3.0 也许是最佳选择。</p>
+
+        <p>话虽如此，carlson 还发布了一项他们希望在 3.0 发布之前加入的改动。Git 一直把十六进制数（具体来说是对象 ID）一律作为小写字符串来处理，但它也一直接受大写 ID。这会导致两个看似不同的 ID（比如 <code>f00f00</code> 和 <code>F00F00</code>）实际上是同一个的情形。据称，缺陷和安全漏洞正是源自这种歧义。因此 carlson 想改变 Git 的行为，只接受小写的 ID。这项改动似乎不会给太多用户带来问题，但几乎可以肯定，总有某个地方的某个人依赖这一行为。</p>
+
+        <p>另一项等待 3.0 发布的重要改动，是转向“reftable”机制。Git 中的引用（更常被称作“ref”）是仓库中一个名字与一个对象之间的关联；例如，分支、标签和远程都是 ref。Git 目前（默认）把每个 ref 存为仓库 <code>.git/refs/</code> 下的一个文件。如果一个仓库包含一个名为 <code>foo</code> 的分支，那么就会有一个文件 <code>.git/refs/heads/foo</code>，其中存放该分支头部提交的 ID。还有一种机制可以把所有这些 ref 汇总到一个 <code>packed-refs</code> 文件中，从而在一定程度上提升性能。</p>
+
+        <p>这套机制能用，但随着 ref 数量增长，它会变得越来越低效。在某些项目里，ref 的数量确实会不断增长。根据该项目关于 reftable 的文档，Android 仓库包含超过 80 万个 ref。在这种规模下，查找 ref，或判断是否存在任何指向某个特定提交的 ref，都可能是一项昂贵的操作。拖慢开发进度是一种“黄牌警告”级别的恼人问题，这也促使人们想要对 ref 做点什么。</p>
+
+        <p>Git 2.45 版本把 reftable 作为一种更高效的 ref 存储方式引入。它是一个为空间效率和快速访问而优化的二进制文件。自那时起，已经有办法创建一个使用 reftable 而非旧的基于文件机制的仓库，但它从未成为默认选项。改用 reftable 对 Git 本身的使用者来说应当没有可见影响（除了更好的性能），但对访问 Git 仓库的其他软件包的用户来说可能会是个问题。carlson 在邮件中提到了 libgit2 是一个潜在的顾虑。</p>
+
+        <p>事实证明，libgit2 在这里不会成为阻碍；Patrick Steinhardt 表示，他已经为 libgit2 添加了 reftable 支持，并且 SHA-256 支持已在 8 月被默认启用。因此 libgit2 应当已经为 Git 3.0 的过渡做好了准备。</p>
+
+        <p>最后，正如 carlson 所提到的，还有 Rust 的问题。项目已经为用 Rust 编写的代码加入了一些试验性支持，但对让 Rust 成为构建 Git 的强制要求仍犹豫不决。这一点预计也将在 3.0 版本中改变；在那之后，任何没有可用的 Rust 编译器的平台都将无法升级。</p>
+
+        <p>在列出这些顾虑之后，carlson 表示它们或许不应拖住 3.0 的发布：</p>
+
+        <blockquote>
+            <p>我认为其他任何尚未在 SHA-256 上进展极快的人（以及对于处理本地仓库的软件而言，reftable 也是如此）很可能都不值得考虑。例如，JGit 和 Gitoxide 至少在一年前就被告知 Git 3.0 将带来 SHA-256。（我知道此事，因为正是我告知的。）</p>
+            <p>同样，我并不知道有谁在认真地为那些尚未支持 Rust 的平台进行 Rust 支持方面的工作，所以我认为这也不应成为阻碍。</p>
+        </blockquote>
+
+        <p>由此他们得出结论：最可能的情况是，把下一个版本定为 3.0 会是最佳选择。</p>
+
+        <p>实际情况如何，目前尚未公开发布；这正等待 Hamano 做出决定。正如他所说：“这不是一场人气竞赛，甚至也不是民主。”不过，在他发出询问后近两周的时间里，并没有出现强烈反对迈入 3.x 时代、把 Git 早期的一些设计决策抛在身后的声音（当然，使用 SHA-1 且不含 reftable 的仓库将继续得到完整支持）。如果 3.0 没有在 2026 年发布，它似乎也肯定会在不久之后出现。</p>
+
+        <div class="info-box note"><p><strong>更新：</strong>在 Kernel Recipes 上，Steinhardt 描述了关于各版本已达成一致的计划。2026 年 12 月的版本将被称为 2.98，以此作为 3.0 过渡即将到来的信号。2.99 版本将在 2027 年 4 月随之发布；那将是一个长期支持（long-term support）版本。Git 3.0 也将在同一时间发布，并将成为其后所有版本的基础。</p></div>
+    </div>
+</div>
+
+<div class="article" id="article2">
+    <div class="article-header">
+        <span class="article-category">编译器 / 内核开发</span>
+        <h2>用 gccrs 编译内核</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年9月22日</span>
+            <span><a href="https://lwn.net/Articles/1095553/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>Pierre-Emmanuel Patry 和 Arthur Cohen 在 RustConf 2026 上做了一场演讲，介绍 GCC 的 Rust 前端（gccrs）的现状，并特别着眼于编译 Linux 内核这一目标。下一周，Patry 又在 Kangrejos 为更偏内核方向的听众做了一场后续演讲，Cohen 未能出席。gccrs 项目总体进展良好，但距离编译器真正可用还需要一段时间。</p>
+
+        <p>Cohen 在 RustConf 的演讲一开始就表示，这个演讲的标题“用 gccrs 编译 Linux 内核”其实是个谎言。gccrs 目前无法编译 Linux 内核，原因有多方面。Cohen 说，其中一个原因是，他和 Patry 被裁员了，无法把全部时间投入到 gccrs 上——不过 Open Source Security 后来接手了他们的合同。另一个原因由 Patry 在 Kangrejos 上提出：他们目前的目标其实是“误编译（miscompile）Linux 内核”。项目需要先达到能产出一个可供测试和验证的二进制文件的阶段，才能说它在“编译”任何东西；几乎可以肯定，从 gccrs 能毫无怨言地接受内核的 Rust 代码，到它产出的结果是一个真正可用的内核之间，会存在一段延迟。尽管如此，两人已经取得了实质性的进展。</p>
+
+        <p>Cohen 解释说，GCC 是一个已有近 40 年历史的项目，它汇聚了 C、C++、Fortran、Go、Algol 等多种不同语言的编译器。gccrs 项目希望在这个名单中加入 Rust 编译器的完整实现，独立于 Rust 项目自己的 rustc 编译器。这很重要的原因有很多。例如，GCC 支持的后端架构比 rustc 更多。GCC 还支持许多现有项目所依赖的自定义编译器插件。如今 Rust 代码已经进入 Linux 内核，能够只用 GCC 来编译内核会是一件好事。</p>
+
+        <p>因此，gccrs 的主要目标一直是编译 Linux 内核中存在的 Rust 代码。Patry 向 RustConf 和 Kangrejos 两场听众解释说，这些代码被拆分为若干个相互依赖的 crate（包）。最基础的是 <code>core</code>，它提供“让 Rust 语言特性得以工作的最低限度”。例如，Rust 中的 <code>for</code> 循环使用 <code>Iterator</code> trait，而它定义在 <code>core</code> 中。没有 <code>core</code>，编译器就无法支持 <code>for</code> 循环。</p>
+
+        <p>内核中的其他 crate 包括：<code>stdarch</code>，提供与架构相关的操作；<code>alloc</code>，负责内存分配；<code>pin_init</code>，负责创建不可移动的结构体；等等。Patry 说，gccrs 刚起步时，他和 Cohen 先是尝试孤立地编译一些小的 Rust 代码片段。这种做法已经走到了尽头，所以现在的计划是先把 <code>core</code> 做好，然后沿着依赖图向上推进到 <code>alloc</code> 等等，直到整个内核都能编译。</p>
+
+        <p>Cohen 说，这种做法一直行之有效，但在尝试并行推进工作方面造成了一些问题。目前，编译 <code>core</code> 时出现的每个问题都隐藏在前一个问题之后，使得把工作拆分给多位贡献者变得困难。为解决这个问题，Patry 和 Cohen 制作了一个 <code>core</code> 库的模拟（mock）版本，只包含 <code>alloc</code> 所需的那些部分，这样为让该 crate 编译通过的工作就可以并行进行。</p>
+
+        <p>Cohen 补充说，<code>core</code> 库“真的很复杂”。在许多方面，它是最古怪的 Rust 库，因为它需要执行许多其他代码无需处理的大量底层操作。人们的希望是，一旦 gccrs 能编译 <code>core</code>，它就能处理大多数 Rust 代码，而其余库都会容易支持。“也许我只是在自我安慰，”Cohen 补充道，引来一片笑声。<code>alloc</code> crate 也用了一些复杂特性，比如 arbitrary self types，但内核中使用的版本比标准库中使用的版本更简单，所以 Cohen 不太担心。</p>
+
+        <p>不过，项目最终仍需要让标准库版本也能工作。Patry 说，有两个内核 crate 使用了过程宏（procedural macro），它们是在编译过程中被调用的 Rust 代码，并且可以链接标准库。因此，即便内核本身不链接标准库，gccrs 仍需要能够构建它，才能编译内核。</p>
+
+        <p>在 Kangrejos 上，Miguel Ojeda 问是否可能先使用由 rustc 编译的过程宏作为临时变通方案，直到标准库可用为止。Patry 不确定，但认为理论上可行。然而，他对在过程宏及其生成的代码之间引入奇怪的不兼容性、从而扰乱整个生态系统心存顾虑。Ojeda 认为，一个能让内核稍早用上 gccrs 的变通方案，对于测试 gccrs 和发现问题会很有用。他随后去核查了内核中过程宏对标准库的使用情况，几分钟后报告说，唯一的使用是通过 <code>syn</code> crate，以及一处大概可以被替换掉的 <code>BTreeSet</code> 使用。</p>
+
+        <p>然而，Gary Guo 认为 Ojeda 忽视了支持分配（allocation）所需的复杂性，而过程宏会隐式地用到分配。他说，一旦分配能正常工作，“你大概也就顺带得到 B-Tree 了”。Patry 说，他没有花太多时间研究让过程宏工作的问题，因为他和 Cohen 一直专注于 <code>core</code> crate。他建议，也许再多思考一下能想出办法让它工作。</p>
+
+        <h3>编译 core</h3>
+
+        <p>Cohen 更详细地讲了让 <code>core</code> 编译通过所涉及的方方面面。过去三年里，他和 Patry 主要在做名称解析（name resolution）的修复工作，即把名字的使用与其定义关联起来的过程。最初的实现很简单，“就像教科书式编译器做名称解析那样”。然而，这个实现被证明存在根本性缺陷，因为 Rust 的名称解析相当复杂。存在多个相互独立的命名空间（用于函数与常量、类型、标签、生命周期），名称解析有时必须跨这些命名空间进行。此外，名字可以在定义之前就被使用。</p>
+
+        <p>名字还可以由宏来定义，而宏本身又依赖于能够解析名字。因此，名称解析与宏展开必须彼此交错地进行，以一种反复执行直到发现所有名字的“不动点（fix-point）”方式运行。Cohen 最初告诉老板这项工作会花三周。结果，Patry 和 Cohen 在 RustConf 之前才完成，花了将近三年。尽管有所延误，名称解析现在已能正确工作，声明式宏展开也一样。它还不算特别快，但“那是未来的 Arthur 要操心的问题”。</p>
+
+        <p>在 Kangrejos 上，Patry 更详细地谈了性能问题。<code>core</code> crate 大约有 85,000 行代码，gccrs 过去要花约 42 分钟来编译它。这个 crate 确实大量依赖宏，但大部分时间花在名称解析上。由于名称解析会一直运行到达到不动点，编译器会做出许多相同的调用。为这些调用添加缓存后，编译 <code>core</code> 所需时间降到了三分钟（相比之下 rustc 是 30 秒），这“不如 rustc 快，但已快到足以支撑工作”。</p>
+
+        <p>其他棘手的部分，比如内联汇编（inline assembly）支持和 lang items 系统，大体上已经工作。眼下，gccrs 开发者所处理的每一个单独缺陷，都可能是横在 gccrs 与成功编译 <code>core</code> 之间的最后一个。</p>
+
+        <p>Patry 补充说，在编译单元之间传递 crate 元数据方面仍存在一个已知问题。目前，crate 元数据的序列化格式是该 crate 抽象语法树的转储（dump）。他解释说，这是一个临时权宜之计，眼下能用，但为了正确地进行跨 crate 链接，还需要把它清理干净。</p>
+
+        <h3>后续步骤</h3>
+
+        <p>Cohen 随后解释了项目的一些后续步骤。另一个已知问题是对 <code>Drop</code> trait 的处理，它用于在作用域结束时自动清理分配。参与 gccrs 项目的 Google Summer of Code（GSoC）学生 Janet Chien 一直专注于改进实现中的这一部分。她开始工作时，gccrs 根本没有实现 drop。现在，它已支持常见情形，但仍会被非线性控制流、部分移动（partial move）、泛型和临时值搞得手足无措。另一位 GSoC 参与者 Enes Çevik 一直在为编译和测试 <code>alloc</code> crate 添加基础设施。</p>
+
+        <p>一旦 gccrs 能编译内核所使用的全部 crate，下一步就是追赶稳定版 Rust。过去几年里，gccrs 一直以与 rustc 1.49 版本以及一个匹配的旧版内核看齐为目标。项目之所以这样做，是为了在试图让基本功能先跑起来时，不去追逐一个不断移动的目标；不过，最终总会有追逐那个目标的时候。Patry 对追赶的过程不太担心。语言的大多数变更表现为新的库函数和类型，以及现有不稳定特性的稳定化，Cohen 预计支持这些应当轻而易举。</p>
+
+        <p>尤其有三个特性确实代表了语言本身的真正变更，必须加以处理，Patry 向 RustConf 听众专门点出了它们：trait 向上转型（trait upcasting）、新的 <code>use&lt;...&gt;</code> 语法，以及 trait 中的返回位置 impl Trait（return-position impl Trait in traits）。还有一个额外的实验性特性 <code>cfi_encoding</code>，内核在生成 C 与 Rust 代码之间的绑定时会用到它。Patry 解释说，这会稍有棘手，因为它需要对 GCC 的控制流完整性（CFI）代码做改动。有一个现成的补丁系列正是处理这个问题的，但自 2025 年被引入以来一直未被合并。gccrs 开发者可能需要与 GCC 的其他维护者合作，弄清该补丁系列是否可接受以及如何让它被合并。</p>
+
+        <p>在那之后，项目还必须测试用 gccrs 编译的内核，确保其行为与用 rustc 编译的二进制文件完全一致。由于内核目前甚至还不能编译，Patry 和 Cohen 尚未朝这个方向开展大的工作，但他们已经采取了一些初步步骤。</p>
+
+        <p>RustConf 上一位听众问，gccrs 是否实现了 rustc 使用的任何中间表示（IR）。Patry 说没有——不过，由于项目希望复用下一代 trait solver 的实现，代码最终可能不得不产出适合它的中间表示。</p>
+
+        <p>另一个人问 Rust 语言规范（specification）的文档化程度如何，以及这对 gccrs 的验证有何影响。Cohen 说，规范不足以完整实现一个编译器，但这不是负责规范的人的错。上游 rustc 开发者很高产，每版编译器都会带来新特性。Patry 和 Cohen 曾尝试在规范不足之处加以改进，这也是对这门语言进行独立重新实现的又一个好处。</p>
+
+        <div class="info-box note"><p>［感谢 Linux 基金会——LWN 的差旅赞助方——为参加 RustConf 和 Kangrejos 提供协助。］</p></div>
+    </div>
+</div>
+
+<div class="article" id="article3">
+    <div class="article-header">
+        <span class="article-category">NetBSD / 兼容层</span>
+        <h2>在 NetBSD 上用 Linux Test Project 测试 compat_linux</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年9月21日</span>
+            <span><a href="https://lwn.net/Articles/1094310/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>NetBSD 长期以来一直通过其内核级的 <code>compat_linux</code> 特性支持运行 Linux 二进制程序，但针对它的测试覆盖并不像一些人期望的那样完整。为了给 <code>compat_linux</code> 提供更好的测试，Google Summer of Code（GSoC）参与者 Henrique Brito 选择让 Linux Test Project（LTP）测试套件能够在 NetBSD 上编译并运行。在 EuroBSDCon 2026 上，Brito 的导师 Stephen Borrill 就该项目的进展以及 LTP 在 NetBSD 上的现状做了报告。这项工作已经带来了一些小修小补，也列出了一份相当可观的待解决问题清单。</p>
+
+        <p>我本人没有亲临 EuroBSDCon 2026，但有机会在直播后不久观看了 Borrill 的演讲。视频与其他 EuroBSDCon 2026 演讲一并发布在一个 PeerTube 实例上，幻灯片则可以从他的网站链接获取。</p>
+
+        <p>Borrill 自 2007 年起就是 NetBSD 开发者，他说自己经营着一家基于 NetBSD 开发瘦客户端和服务器的公司。许多瘦客户端需要通过 Citrix 的专有 Independent Computing Architecture（ICA）应用访问虚拟桌面。这个客户端没有 NetBSD 原生版本，但有一个 Linux 版本可以在 <code>compat_linux</code> 下运行，而 Borrill 为 NetBSD Packages Collection（pkgsrc，一个第三方软件仓库）维护着它的软件包。</p>
+
+        <p>他遇到了一个新版本的 ICA 客户端，它在 <code>compat_linux</code> 下无法运行，反而会以一个 <code>ENOSYS</code> 错误失败，表示某个系统调用尚未实现。这让他对 <code>compat_linux</code> 产生了兴趣，并在 NetBSD 的 GSoC 建议项目列表里添加了一个条目，用来模拟缺失的 Linux 系统调用。</p>
+
+        <h3>compat_linux</h3>
+
+        <p>第一个 GSoC 项目并没有解决 Borrill 的问题；那个项目带来的是 <code>splice()</code> 系统调用的原生实现，可供 <code>compat_linux</code> 调用。他一直遇到的 <code>ENOSYS</code> 错误后来随着 <code>timer_create()</code> 调用的加入而单独得到了修复；在那之后，Borrill 说，他就不再那么在意模拟缺失的系统调用了。不过，他对测试 <code>linux_compat</code> 产生了兴趣。</p>
+
+        <p>Borrill 演讲最初标题里用了“Linux 仿真（Linux emulation）”来描述 <code>compat_linux</code>，他说这并不准确；当 <code>compat_linux</code> 启用时，NetBSD 是以“几乎没有性能影响”的方式原生运行 Linux 代码的。“我们所做的只是加了一个很小的垫片（shim），让它在系统调用以及文件访问方式等方面看起来像 Linux。”Linux 系统调用到 NetBSD 调用的映射是按架构定义的，位于 <code>/sys/compat/linux/arch/&lt;ARCH&gt;/syscalls.master</code>，其中 <code>ARCH</code> 可以是 <code>amd64</code>、<code>i386</code> 等。NetBSD Internals 文档虽然略显陈旧，但解释了操作系统如何检查一个可执行二进制文件并决定使用哪个内核 ABI。</p>
+
+        <p><code>compat_linux</code> 特性在 NetBSD 的 GENERIC 内核中默认不启用，但可以作为一个模块提供。Borrill 说，出于安全原因，“一切都被移到了模块里”。<code>compat_linux</code> 会把 Linux 系统调用翻译成 NetBSD 系统调用，并在 <code>/emul/linux</code>（32 位应用则为 <code>/emul/linux32</code>）下的“影子根（shadow root）”目录中查找应用所依赖的任何共享库。例如，如果一个 Linux 二进制程序试图打开 <code>/usr/bin/ldd</code>，NetBSD 会先查找 <code>/emul/linux/usr/bin/ldd</code>，之后才回退到 <code>/usr/bin/ldd</code>。</p>
+
+        <p>正如人们对 NetBSD 的预期，<code>compat_linux</code> 支持相当多的架构，包括 x86 和 Arm 上的 32 位与 64 位应用。Borrill 指出，NetBSD 还支持运行 FreeBSD、SunOS 和 Ultrix 的二进制程序，“过去支持的还要多得多，你知道，多到疯狂”。然而，运行其他操作系统二进制程序的需求已经慢慢消退——在许多情况下，运行这些二进制程序所需的硬件也一样消失了。</p>
+
+        <h3>测试 compat_linux</h3>
+
+        <p>NetBSD 有一个名为 Kyua 的原生测试框架，但它在 <code>compat_linux</code> 上的覆盖并不广泛。与其把这种支持加进 NetBSD 常规测试套件，Borrill 觉得这个项目或许可以为 NetBSD 构建 LTP 并使用它。他指出，LTP 有“各种各样”的测试；“但眼下我们只看它系统调用这一侧”。他说，这包含大约 376 组测试，总共约 1,300 个测试。</p>
+
+        <p>第一个决定是如何构建 LTP；Brito 和 Borrill 没有尝试交叉编译，而是选择在 <code>compat_linux</code> 下用 Linux 版 GCC 来构建它。他们选用 pkgsrc 中的 SUSE 15.5 兼容包，为 GCC 12 创建了一个 Linux 兼容包并上传到 pkgsrc。他说，一旦测试套件跑起来，他们注意到所运行的大部分测试都通过了，但很多被跳过了。</p>
+
+        <p>Brito 原以为如果一切都通过，这个项目会显得无聊；Borrill 去查了一下，发现 Brito 是从 NetBSD 10.1 起步的。那个版本自带的 <code>compat_linux</code> 会把自己呈现为 Linux 3.11，而后者发布于 2013 年。显然，自那个内核发布以来已经有了很大变化；例如，NetBSD 上的 SUSE 15.5 软件包期望的是 Linux 5.14.21。测试那些自 3.11.6 之后新增的系统调用，肯定会提高发现问题的几率，也有助于确保更多 Linux 应用能够运行。</p>
+
+        <p>Borrill 说，他们本可以直接修改配置，为 <code>compat_linux</code> 声明一个不同的内核版本，但最终决定更好的做法是改用 NetBSD 11，它的 <code>compat_linux</code> 声明 Linux 内核版本为 6.3.10，即便 NetBSD 11 当时尚未发布。不过，NetBSD 11 的第四个候选发布版本当时已经可用，而正式版本在 7 月 30 日发布，大约在当年 GSoC 开始编码两个月之后。</p>
+
+        <p>毫不意外，他们也因为 NetBSD 上不可用的特性而不得不跳过一些测试。例如，Borrill 说 LTP 会尝试测试 NetBSD 不支持的文件系统，如 Btrfs 和 XFS，因此他们把测试限制在 ext2、ext3、ext4 和 tmpfs 上。最终，Brito 写了一个管理器脚本（<code>compat_linux_test_project</code>）来处理针对 <code>compat_linux</code> 运行 LTP 的事宜。它负责处理 NetBSD 与 Linux 之间的差异，以正确编译 LTP、运行测试，并跳过已知会（例如）挂起或导致内核崩溃的测试。他们还决定把这项工作打包以便他人使用，并期望通过 pkgsrc 发布。它尚未合并进官方 pkgsrc 树，但目前可以在 Brito 的 GitHub 上 pkgsrc fork 的 <code>emulators/compat_linux_test_project</code> 目录中找到。</p>
+
+        <p>Borrill 建议他们尝试把所有东西都静态编译，而不是动态编译，这样就“不会再有像所有那些 Linux 库之类的东西”这样的额外依赖。这个包在动态编译时大约 80MB，但静态构建后竟然大约有 5.1GB。“我是在酒吧里构建这个的，当时我有时间点了一整杯啤酒并且喝完，那时候它还在设法把包打包成 tarball。”他说，这大概行不通，但静态编译全部内容的选项仍然留给任何想要的人。</p>
+
+        <p>运行所有测试大约需要 25 分钟，但脚本允许用户指定希望测试避开哪些系统调用，从而不必重跑整批测试。例如，下面这条命令会测试 <code>readv()</code>、<code>writev()</code>、<code>open()</code> 和 <code>close()</code> 系统调用。</p>
+
+        <p><code>$ compat_linux_test_project -s readv, writev, open, close</code></p>
+
+        <p>这个脚本还有供用户重跑测试并与之前结果对比的选项。“我们还内置了一份基线，代表我们认为目前的状态，这样你就可以把在自己机器上的运行结果与我们已有的既定基线进行比较。”</p>
+
+        <h3>失败类型</h3>
+
+        <p>Borrill 说，<code>linux_compat</code> 已经实现了大多数 Linux 系统调用，“以至于你通常可以先拿一个 Linux 二进制程序来试一下，并期望它能工作”。不过，它不奏效的方式既有趣又多样；可能会出现许多种失败类型。</p>
+
+        <p>最容易处理的是那些已知“不支持、我们也不在意”的特性。同样，有些系统调用会完全缺失；例如 NetBSD 不支持任何与 Linux 命名空间（namespace）相关的系统调用。在演讲后段，他想着说，这些缺失的命名空间系统调用对 NetBSD 来说会是不错的东西，但“肯定超出了 GSoC 项目的范围”。</p>
+
+        <p>在某些情况下，测试可能会用到 <code>compat_linux</code> 支持的某个系统调用，它“表面上看起来可能没问题”，却因为某个 NetBSD 不支持的 Linux 专有标志而失败。在另一些情况下，失败可能揭示出 NetBSD 尚未实现的某个东西，或者它可能是“只在 Linux 世界里才有意义的某种东西”。</p>
+
+        <p>在 NetBSD 上运行 LTP 时还要考虑环境变量和配置；Borrill 指出，LTP 会查找 Linux 内核的 <code>.config</code> 文件来判断该运行什么，但由于 <code>compat_linux</code> 不提供内核，也就没有配置文件。Brito 的脚本负责提供合适的 <code>.config</code>，好让 LTP 跳过不支持的子系统和操作。他提到的最后一类失败是那些“一切都崩溃、机器死掉、所有这一类事情”的激动人心的失败。</p>
+
+        <h3>示例</h3>
+
+        <p>随后他举了一些具体例子，比如 <code>lseek()</code>，它有两个未实现的标志：<code>SEEK_DATA</code> 和 <code>SEEK_HOLE</code>。这会导致测试提前停止，从而没有把后续测试标记为失败。</p>
+
+        <p>许多打开文件的测试失败，是因为 <code>compat_linux</code> 不支持 <code>open()</code> 系统调用的 <code>O_TMPFILE</code> 和 <code>O_PATH</code> 标志。他说，一个修复办法可能是在 NetBSD 内核里真正实现它们，好让 <code>compat_linux</code> 原生地继承。另一个选项是针对那些对 NetBSD 没什么用的东西，只在 <code>compat_linux</code> 层里实现。一个例子是用于向进程发送信号和数据的 <code>rt_sigqueueinfo()</code> 系统调用；它只能通过 <code>compat_linux</code> 使用。</p>
+
+        <p>他说，其中一个有趣的失败是，当给 <code>writev()</code> 传入 <code>iovcnt = 0</code> 时，Linux 的行为与 BSD 系不同。他说，BSD 系会按照 POSIX 规定返回 <code>EINVAL</code>——而 Linux 却返回“0”，表示按照请求没有传输任何数据。“测试失败了，但按照所有规范，我们做的都是对的。那是因为零是一个无效值，所以我们返回了 <code>EINVAL</code>。”这一行为不会被原生实现，但可以在 <code>compat_linux</code> 里用两三行代码实现，以“某种程度上与 Linux 保持 bug 兼容”。</p>
+
+        <p>但 <code>compat_linux</code> 是否总是需要做到 bug 兼容？他指出，LTP 对 <code>setsockopt()</code> 和 <code>shmat()</code> 的测试会去查找一些 Linux 上已知、而 NetBSD 上并不存在的 bug。“那这些我们该怎么办？是直接忽略它们？还是需要像我们对 <code>writev()</code> 那样做到 bug 兼容？”</p>
+
+        <p>他说，有一个被发现的测试失败“带着某种讽刺意味”，因为它与上一个 GSoC 中加入的一个系统调用有关。当 <code>off_in</code> 或 <code>off_out</code>（分别表示从文件复制到文件的源范围和目标范围）不为 <code>NULL</code> 时，<code>copy_file_range()</code> 调用会导致 NetBSD 内核崩溃；这个调用本应支持非 NULL 的文件偏移。修复很简单，且已经提交进 NetBSD。</p>
+
+        <h3>下一步？</h3>
+
+        <p>这个 GSoC 项目聚焦于测试 x86 和 x86-64。Borrill 说，显而易见的下一步之一，是朝着多架构测试努力，尤其是 Arm。“一些更冷门的架构我们大概不会去操心”。然而，支持 Arm 需要更新 pkgsrc 上可用的 SUSE 兼容包以支持更多架构。他说自己还没时间去做，但他认为这会非常有用，并计划等从会议回家后“把一台 Raspberry Pi 架起来，真正试一试”。</p>
+
+        <p>作为项目的一部分，Brito 整理了一份关于那些被视为基础、也就是 Linux 应用更常使用的系统调用的测试结果电子表格。Borrill 说，由于 Brito 已经做了不少功课，不仅弄清了哪些系统调用失败，还弄清了失败原因，现在有了一份“我们可以认领的任务清单”，它可能不仅对 <code>compat_linux</code> 有用，对 NetBSD 本身也有用。</p>
+
+        <p>Borrill 在演讲结尾感谢了 Google 通过 GSoC 支持 NetBSD、感谢 Brito 在这个项目上的工作，以及感谢 Leonardo Taccari——他以 GSoC 参与者身份接触 NetBSD，后来成为导师，如今帮助组织该项目在计划中的参与。“他真的一路升到了管理层的树上。他的薪水没涨，但他在组织大家方面非常出色。”</p>
+
+        <h3>提问</h3>
+
+        <p>第一个被点名的人问道：“过去我记得 <code>futex()</code> 支持是个大问题，Linux 仿真里对它的支持并不好。现在好一些了吗？”Borrill 回答说并没有；这只是他在演讲中没有专门谈到的事情之一。他指出，Brito 的电子表格里有相关记录。</p>
+
+        <p>另一位听众想知道，当存在“同一个东西的不同版本，比如较早的版本和较晚的版本”时，<code>compat_linux</code> 是否支持版本区分。例如，如果某个系统调用的行为在 Linux 3.11 和 5.15 之间不同呢？这个兼容层是同时支持两个版本，还是只仿真最新的版本？Borrill 说，简短的回答是他不知道；NetBSD 确实有系统调用版本机制，但“我们在 Linux 兼容层里完全没做那些”。他补充说，它确实支持两个版本的 SUSE 二进制程序，最新的一个是 15.5。他让提问者去查电子表格获取更多信息。</p>
+    </div>
+</div>
+
+<div class="article" id="article4">
+    <div class="article-header">
+        <span class="article-category">内核 / io_uring</span>
+        <h2>io_uring 的线程身份互换</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年9月17日</span>
+            <span><a href="https://lwn.net/Articles/1094303/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p><code>io_uring</code> 子系统的一切都围绕异步执行；应用依赖它不阻塞——除非明确要求阻塞。在 <code>io_uring</code> 内部，维持“永不阻塞”的保证有时颇为棘手，因为内核中的许多代码路径从来不是为异步执行设计的。这个问题已经被绕过，但代价是显著的性能损失。如今，<code>io_uring</code> 维护者 Jens Axboe 发布了一个 RFC 补丁集，提出了一个有些激进（也潜藏着危险）的解决方案。</p>
+
+        <p>用户空间中的进程可以通过在提交环（submission ring）的提交队列条目（SQE）中描述一个或多个操作，然后调用 <code>io_uring_enter()</code>，将它们提交给 <code>io_uring</code>。内核会开始处理所有被放进环中的条目。如果可能，内核会在 <code>io_uring_enter()</code> 调用内立即执行它们。例如，如果一个读请求可以用页缓存（page cache）中已有的数据满足，且用户空间缓冲区完全驻留在 RAM 中，那么所请求的数据可以立即复制，而不会阻塞。</p>
+
+        <p>然而，在需要阻塞的情况下，事情会变得更复杂。内核中的许多 I/O 路径都内置了异步支持；它们会把一个新请求带到尽可能远的地方，并在阻塞操作完成后在内核中的别处收尾。但也有些操作缺少这种支持；其中包括 <code>io_uring</code> 对应 <code>fdatasync()</code>、<code>statx()</code>、某些 <code>openat()</code> 路径（尽管有 <code>O_NONBLOCK</code> 标志）等系统调用的等价物。<code>io_uring</code> 代码在实现这些操作时必须格外小心，以免 <code>io_uring_enter()</code> 在处理一批已提交操作的过程中阻塞在半途。</p>
+
+        <p>在当前内核中，任何可能导致 <code>io_uring_enter()</code> 阻塞的操作都会被移交给一个独立的工作线程（worker thread）执行。这让提交线程得以继续；独立的 worker 在需要时可以阻塞，而不会拖住其他任何东西。不过，这种移交并非没有代价；内核必须唤醒一个等待中的 worker 线程并进行一次上下文切换，以及其他开销。如果该操作确实会阻塞，这些开销最终可能并不显著。但在许多情况下，操作本可以在不阻塞的情况下完成。在这些情况下，额外开销就成了执行该请求总成本中相当大的一部分。既然转向 <code>io_uring</code> 的开发者通常是为了追求更好的应用性能，那么为避免可能根本不会发生的阻塞而付出的代价，就让人很难受了。</p>
+
+        <p>解决这个问题的一种做法，是把内核中所有系统调用路径都改造成非阻塞的。多年来，在一些情况下确实这么做了，但这并非易事、也非一日之功。另一种替代方案——也就是 Axboe 所选择的那种——是先直接进行一个可能阻塞的操作，然后在不阻塞提交线程的前提下处理那些确实阻塞的情况。</p>
+
+        <p>检测那些确实会阻塞的操作需要对调度器做一处改动。一个名为 <code>PF_IO_HANDOFF</code> 的新标志被加入表示线程的 <code>task_struct</code> 结构的 <code>flags</code> 字段。如果一个线程即将因任何原因阻塞，而它又置有这个标志，调度器就会去调用一个名为 <code>io_uring_task_sleeping()</code> 的新函数。以这种方式挂接到调度器，使得 <code>io_uring</code> 能够获知内核中任意位置发生的阻塞，而无需修改所涉及的实际代码路径。</p>
+
+        <p>一旦 <code>io_uring</code> 知道某个操作将要阻塞，它就必须对此有所作为。理论上，一个选项是回退到阻塞点之前已完成的工作，然后在 worker 线程里重启该操作。但由于这种阻塞几乎可能发生在内核中的任何地方，这实际上并不可行。作为一般规则，一旦 <code>io_uring</code> 开始了某个涉及那些并非为规避阻塞而设计的内核代码路径的请求操作，它就必须把该操作一路做到底。</p>
+
+        <p>Axboe 的解决方案是“线程身份移交（thread identity handoff）”。当调度器通知 <code>io_uring</code> 某个线程即将阻塞时，<code>io_uring</code> 会从其线程池中选出一个 worker 线程作为回应。代码并非把正在进行的活儿交给那个线程（此刻这做不到），而是交换两个线程的身份。worker 线程被弄得在一切方面都看起来像原来那个提交线程，包括它的线程 ID、信号处理设置等等；然后那个线程继续处理提交环，直到最终返回用户空间。从 <code>io_uring_enter()</code> 返回的线程，其 <code>task_struct</code> 与发起调用的那个不同，但其他一切（但愿如此）看起来都一样。</p>
+
+        <p>与此同时，原本即将在阻塞中执行某个操作的那个线程，则接过了 worker 线程的身份，然后照常继续阻塞。当它醒来时，它会继续该操作直至完成，然后进入 worker 线程池中占据自己的位置。最终结果是，可能阻塞的操作可以由提交线程执行，而且如果它们能在并不真正阻塞的情况下运行，就能完全在那里处理掉。只有操作确实阻塞时，才需要付出引入一个 worker 线程的代价。</p>
+
+        <p>听起来够简单，但这类身份交换布满了潜在的地雷。在两个相关线程能够交换它们的 <code>task_struct</code> 结构之前，内核必须绝对确保内核中没有其他东西持有对这些结构的引用。否则，最终就会有人拿着指向错误 <code>task_struct</code> 的引用去干点什么，而这个结果对于那些正努力跟上内核 CVE 洪流的人来说，丝毫不会减轻负担。这是被认定为值得避免的结果。</p>
+
+        <p>要防止这种情况，就意味着在开始一个可能阻塞的操作之前，必须确保提交线程在需要时能够移交它的身份。有一长串条件会阻止移交、并要求以旧方式执行该操作（见这个补丁中 <code>thread_handoff_allowed()</code> 与 <code>thread_handoff_compatible()</code> 的定义）。例如，如果线程正被 <code>ptrace()</code> 跟踪，那么跟踪者就持有对其 <code>task_struct</code> 的引用。同理，如果所涉及的线程正在跟踪任何其他任务，那些任务也持有引用，因此该线程无法执行移交。其他会阻止移交的条件包括：使用 perf 事件、在内核中跟踪 futex 所有权、在实时调度器下运行、持有核心调度 cookie、执行 <code>vfork()</code>，以及若干其他情况。这个判断看起来是这个补丁系列中最吓人、最脆弱的部分。<code>task_struct</code> 到处都是，因此很难确知内核中所有可能的引用情形都已被覆盖——更别说还要去担心未来那些根本没想到 <code>io_uring</code> 的开发者又新增引用。</p>
+
+        <p>不过，潜在回报很大。补丁的附函（cover letter）里给出了不少基准测试结果。对于一些快速的、非阻塞的操作，改进可以非常大；在 tmpfs 文件系统上运行的 <code>fsync()</code> 基准测试显示出接近 700% 的提升。其他改进则更温和，而一些总是阻塞的测试则出现了性能回退。最严重的回退往往出现在更高的队列深度下——也就是当有一长串操作同时提交时。立即把每个操作推入 worker 线程可以让它们并行处理，而把它们在提交线程里一直处理到阻塞点，则会使这些工作串行化、从而变慢。Axboe 说他对解决这个问题有一些想法，但他不确定是否值得去做，因为他说，执行这些操作的应用一开始就往往没有很高的队列深度。</p>
+
+        <p>Axboe 显然并不指望这个补丁系列能在近期合入；他更关心的是判断整体方法到底有没有可行之处。到目前为止评论还很有限。Peter Zijlstra 指出，阻止身份移交的另一个条件——如果相关线程运行在影子栈（shadow stack）上——会使这个特性在大多数已部署的系统上无法使用；Axboe 则认为影子栈可以随线程身份的其余部分一起移动。除此之外，看起来开发者们大多还在消化这个系列，正如 Gabriel Krisman Bertazi 所说，它“真的很酷，而且看起来是件非常危险的事”。如果这个系列能说服开发者，“危险”的部分已经处理妥当，它或许最终能为许多工作负载带来显著更好的 <code>io_uring</code> 性能。</p>
+    </div>
+</div>
+
+<div class="article" id="article5">
+    <div class="article-header">
+        <span class="article-category">桌面 / 用户体验</span>
+        <h2>关于现代化开源桌面的构想</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年9月23日</span>
+            <span><a href="https://lwn.net/Articles/1095425/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>Scott Jenson 多年来一直在 Apple、Google 等公司从事用户界面（UI）和用户体验（UX）方面的工作。如今，他正试图说服开源项目做更多实验，推动桌面超越由来已久的“窗口、图标、菜单、指针”（WIMP）模型。在 KDE 的年度开发者大会 Akademy 2026 上，他在一场旨在说服与会者引领桌面设计的演讲中，分享了他的抱怨与构想。</p>
+
+        <p>他自我介绍说，自己长期从事 UX 工作，其中大部分时间在 Google。他说，那段时间他注意到一种文化上的转变，“因为 2005 年我加入时，我们并不邪恶；我们真的想做正确的事”。他曾在 Chrome 团队工作了一段时间，他说那个团队“充满着一心只想要开源、开放网络的人”。情况后来发生了翻天覆地的变化，这促使他离开了 Google，“但我正试图为在这些公司工作赎罪”。</p>
+
+        <p>他现在为 Mastodon 和 Home Assistant 工作，“只是想着给开源里再挤出一点更好的 UX 设计”。Jenson 说，他并不想对抗，但他认为开源在 UX 设计领域需要很多帮助。这很具挑战性，因为开源项目人手不足。</p>
+
+        <h3>创新</h3>
+
+        <p>他到 Akademy 来讲他的想法，是因为去年他在 Ubuntu 的会议上做过一个类似的演讲，反响很好。“它在 YouTube 上获得了超过五十万次观看——以 YouTube 的标准微不足道，但以 Scott 的标准则是巨大。”这让他明白，桌面 UX 这个主题是人们想谈论的话题。这一次，他还想展示一些他手头的原型，来演示他的想法。</p>
+
+        <p>他认为桌面 UX 与其他类型的 UX 非常不同。Jenson 讲了一个在 Macintosh 的 Finder 应用（一个文件管理器）上工作的故事。团队“想在文件名里加省略号”，用于在 Finder 中显示名称太长、无法完整显示的文件。开发者想把省略号放在文件名末尾，但他认为那样会丢失太多信息，于是建议省略号应放在文件名中间。“如今它被认为是 Macintosh 所做的那些令人兴奋的、注重细节的事情之一。”</p>
+
+        <p>他经手的另一个 UX 细节，是 Mac 上把一个窗口中的文件点击拖拽到另一个窗口的方式。鼠标点击动作有两个部分：用户按下按钮时（mouse down）和用户松开按钮时（mouse up）。在 Mac 上，条目的选中发生在 mouse down 时，但窗口只在 mouse up 动作时才提升（raise）。换句话说，如果用户把一个图标从 Finder 窗口拖到另一个窗口，第一个窗口不会被提升。</p>
+
+        <p>然而在大多数 Linux 系统上，如果用户试图从后台窗口点击拖拽一个文件，那么只要用户做出 mouse down 动作，窗口就会立即被提升。这让从一个窗口点击拖拽文件到另一个窗口变得复杂。这是一个基础性的动作，意味着在 Linux 上把数据移入应用，无法像在 Mac 上那样方便。</p>
+
+        <p>他说，他两年前在 Mastodon 上谈过这个问题，当时一位 KDE 开发者回应，认为在窗口之间拖拽数据时把 mouse down 与 mouse up 动作分开是个好主意。然后他们几个小时后就实现了它。</p>
+
+        <p>“我忘了那是谁了。所以如果在座有谁做了这事”，他说，但他还没能把话说完，房间里某个地方就有人回了一句“不客气”。Jenson 喊道：“谢谢你！我想见你已经想了两年了！”他说，这是一个开源可以很棒的例子：有人可以直接说“这主意不错，我来做”，然后飞快地实现并把这个特性推送到项目里。</p>
+
+        <h3>已然稳定</h3>
+
+        <p>不过他真正想说的是，桌面 UX 已经二十年没有真正改变过了。上世纪 80 年代和 90 年代有过大量新想法和改进，“然后它就稳定下来了，没多少真正改变”。但如今人们用电脑做的事情多得多，他认为桌面 UX 有成长的空间。</p>
+
+        <p>Linux 系统的许多 UX 最初是从 Windows 和 Mac 抄来的，“KDE 甚至说它是为 Windows 用户准备的，它想为 Windows 用户做得跟 Windows 类似”。这没什么错，但他觉得 Linux 社区“总体上”一直依赖微软和苹果去做所有的 UX 研究和测试，“而且坦白说，[去]犯错误”。</p>
+
+        <p>有人可能会指出，GNOME 为其部分设计变更做过用户研究，KDE 的人机界面指南（HIG）也是基于其贡献者的研究制定的。然而，不得不说这些是例外而非常态；可以肯定的是，没有任何人在为整个 Linux 桌面资助或开展定期的 UX 设计研究与开发。</p>
+
+        <p>他说，让苹果和微软先做这些事“以便我们能在它们后面跟车（draft behind them）”是聪明的，但问题在于“它们某种程度上已经放弃了”。苹果多年来一直任其桌面 UX 和桌面硬件“荒废下去”，因为它已把重心转向 iPhone 和 iPad 设备。“我的意思是，苹果想让 Mac 死掉。它们想让世界转向 iPad。结果呢？并没有。”</p>
+
+        <p>苹果此后把注意力转回了 Mac，但它们自那以后所做的东西——比如 Liquid Glass 设计语言——并不怎么受用户欢迎。他说，苹果倾向于添加的那些特性，“基本上都是为了把它更紧地绑到 iPhone 上，把你更紧地绑进它们的生态里”。那不是为了改进桌面，而是为了加固它们的护城河。</p>
+
+        <p>微软“只是在一个接一个地犯错”。他举了该公司试图强迫用户用其 OneDrive 云存储服务保存文件、引发广泛批评的侵犯隐私的 Windows Recall 特性，以及 Windows 桌面上“无处不在的广告”。不过他的用意并不是痛骂苹果或微软——尽管听众似乎并不反对——而是指出 Linux 桌面不能再跟着它们的榜样走下去了。“整个 Linux 社区一直在等着苹果和微软或多或少地去冒所有的风险，而它们已经不再冒任何风险了。”</p>
+
+        <h3>三种反驳</h3>
+
+        <p>Jenson 强调，他并不想改变一切，但他希望看到以改善桌面体验为目标的实验和更多开发。然而他说，当他告诉人们桌面创新已经停滞、Linux 桌面“不能只靠打补丁和修 bug 走向未来，我们必须自己开始引领”时，他会遭遇反驳。</p>
+
+        <p>他把这些反驳归为三类。他收到的第一个反对意见是“移动赢了；桌面老了，照移动的做法做就行”。他驳斥说，移动确实赢得了消费市场、社交媒体和其他领域，但“它没有赢得生产力”。人们仍然在电脑上干活，因为“桌面是默默强大的；它们有键盘和大屏幕，它们能做惊人的事情”。然而人们已经忽略了这一点，没有真正体会到桌面有多好。“我认为我们应该理解它们为什么好，然后想我们能做什么让它们更好。”</p>
+
+        <p>他听到的第二个反对意见是，WIMP 模型能玩的花样就那么多。“别再试图修它了；它已经到头了。”他也不同意，认为还有更多可做。来自技术社区的最后一个、尤其强烈的反对意见是“别碰我的东西”。当人们费尽力气把桌面环境调成自己喜欢的样子，却有什么改动来打破它时，他们会很生气。“我理解。就像我之前说的，我不想改变一切。”但世界在变，“我们需要温和地朝着一些新事物生长”。</p>
+
+        <h3>什么是 UX？</h3>
+
+        <p>思考桌面设计下一步该往哪走，就引出了“什么是 UX？”这个问题。他说这个词被误解了，人们尤其是管理者那一类人“觉得它只是像素，可 UX 远不止像素”。他说，把 UX 想成分层的有助于理解。有样式（style），它由留白、图标、配色方案，以及没错，像素构成。但还有结构（structure），他说，那是用户如何在应用中游走，也就是导航模型。</p>
+
+        <p>策略（strategy）是 UX 的另一部分；理解目标用户是谁，并确定他们想要什么。决定什么重要、什么不重要；开发团队会优先做什么、忽略什么？“UX 设计师为你的团队省时间的最快方式，就是帮你说‘不’。”</p>
+
+        <p>还有他称之为“stuff（东西）”的一层：平台底层技术那些影响 UX 的较低层限制。例如，他说，如果一个应用是为 DOS 创建的，“你就不会去写一个漂亮的 Macintosh 应用。技术决定了你能做什么”。桌面已经演化了 40 年，拥有承载着既定标准的“历史包袱（historical cruft）”。</p>
+
+        <blockquote>
+            <p>我们只是沿袭了一大堆我们就这样接受了的东西。我认为，如果我们打算修好桌面，就必须理解这种较低层的限制，以及我们想如何解决它？我们只是接受移动和桌面今天就是有这些“东西”，我们根本不考虑去修它。</p>
+        </blockquote>
+
+        <p>他说，人们忘了，最初的 Macintosh 屏幕“高达 342 像素”。自然，窗口大量重叠。从那以后，“我们就想当然地认为窗口必须重叠”。但很多人拥有“巨大巨大的屏幕”，而现有的窗口管理器模型对这些设备并不那么管用。“我能理解为什么人们用平铺窗口系统之类的东西，因为这套现有模型确实不太管用。”</p>
+
+        <h3>理解未来</h3>
+
+        <p>在演讲早些时候，他引用过 Alan Kay 的一句话——Kay 曾在 Xerox PARC 主导设计了第一个 WIMP 界面：“视角值 80 点智商（Perspective is worth 80 IQ points）。”Jenson 现在又回到 Kay：“你们看得出来，我非常喜欢他。[…] 他谈到理解事物的三个步骤。”他说，第一步是思考当下，“现在正在发生什么？”第二步是“别忘了过去，知道之前发生过哪些工作”，最后一步是确保“你的问题真正清晰”。他说，太多人急于奔向答案，但他们应该急于奔向问题。如果问题清晰，答案就会更好。</p>
+
+        <p>他说，他不想把演讲变成关于 AI 的，但他不得不谈它。“我不得不谈 AI，而这事让我恼火，因为有那么多酷东西可以谈，而 AI 把所有的氧气都吸走了，你能谈的只剩它了。”不过他承认，桌面上与 AI 相关的事情很多，只是方式有点古怪。</p>
+
+        <p>他把当前一些把 AI 与桌面集成的努力解释为“试图偷偷把 AI 塞进来”，同时让 UI 保持原封不动。另一些努力则试图用 AI 理解屏幕上有什么，并用聊天机器人来与界面交互，“我觉得这有点没抓住重点”。直到去年夏天 Anthropic 推出 Claude Code。“它彻底改变了局面，因为它会向下看进你的文件系统”，并从用户文件的内容里获取上下文。这使它能够做更有趣的事，并与系统交互。</p>
+
+        <p>提到 Claude 之后，他顿了顿，说自己只是在讲前沿模型，因为其他人都在讨论它们。“我对前沿模型有很多个人层面的意见。它们是伦理和环境上的灾难。我对它们不太感冒。”他说，他对 Apertus 感到兴奋，后者被宣传为由 Swiss AI Initiative 创建的一个完全开放、负责任的、用于主权 AI 的模型。“我确实认为，讨论在本地运行的、以合乎伦理方式训练的小语言模型是可能的，而且你不必把灵魂出卖给魔鬼。”</p>
+
+        <h3>直接操作的诅咒</h3>
+
+        <p>他想表达的关键点不在于生成式 AI 的用途，而在于让它访问文件系统如何改善了它的可用性。它现在有了上下文，能与用户的数据一起工作，但它在文件系统层面工作，而没有用桌面的 UX。</p>
+
+        <p>他把桌面基本构件——基本上就是熟悉的 WIMP 模型加上桌面剪贴板——谈作用户四处搬运数据的方式。他说，专家用户可以很快地搬运数据，但问题在于：桌面是无状态的。他称之为直接操作的诅咒；桌面没有工作记忆（working memory）。“如果你往剪贴板里复制太多东西，哦抱歉，它没了。”</p>
+
+        <p>Jenson 推测，Linux 之所以有那么多桌面环境、窗口管理器和 Wayland 合成器——以及替代性的剪贴板管理器——是因为桌面对用户来说并没有完全正常工作。他认为这其实关乎工作记忆：“我怎样才能以某种方式管理我的数据，让我能在所有这些东西之间记住它，并真正用上它。”他的视角转向去问：“我们会为工作记忆做些什么来改善桌面 UX？”</p>
+
+        <p>AI 也许给了他这个灵感，但他补充说，他想先为人解决桌面 UX。“如果 AI 能用它，很好。我不在乎。那是后面的事。”</p>
+
+        <h3>记住你的过去</h3>
+
+        <p>在尝试创建帮助用户获得更多与其数据相关的上下文和工作记忆的系统方面，已有先例。他提到了一篇名为“Lifestreams: a storage model for personal data”的论文。那篇论文论证说，桌面系统“无力管理典型计算机用户的电子信息和事件”，并引入了 Lifestreams 概念作为动态组织用户计算机工作空间的隐喻。</p>
+
+        <p>那篇论文影响了微软命运多舛的 WinFS 项目，后者是一次基于关系数据库系统来合并数据存储与管理的尝试。它在 2003 年做了演示，原计划此后某个时候发布，但最终在 2006 年被搁置。在自由软件这边，则有语义桌面项目 NEPOMUK，那是一个由欧盟资助的研究项目。</p>
+
+        <p>NEPOMUK 的一个版本被包含在 KDE 4 里，其构想是让应用“能够使用来自整个桌面、网络、其他设备的信息，并把它组合进一个连贯的界面”。它后来被移除，并被 Plasma 桌面的 Baloo 文件索引与搜索框架取代，后者与 NEPOMUK 的功能有一些重叠，但特性范围有所缩减。</p>
+
+        <p>Jenson 说，他担心人们把那些项目的失败当作这些想法本身有错的证据。他论证说并非如此，“我会说，是当时的硬件和系统辜负了这一愿景。我认为，考虑到更新的硬件和更好的系统，是时候重新思考这些项目了”。</p>
+
+        <h3>原型</h3>
+
+        <p>按 Kay 的建议，走过了当下与过去之后，他想出了几个他认为值得围绕桌面 UX 探索的问题。第一个是“如果我们只为大显示器设计，会怎样？”如果有忽略笔记本、只聚焦宽屏显示器的桌面设计，它会解锁什么？他还有一个问题是，桌面如何才能随时间捕捉用户的意图？</p>
+
+        <p>这些问题导向了他所说的那些原型——他说自己有点紧张，不太敢给听众看，因为“技术人喜欢挑错”。这些演示大约在 Jenson 演讲视频的第 29 分钟处。他的幻灯片尚未发布，但他在活动上告诉我，将来某个时候会发布。</p>
+
+        <p>第一个演示是展示桌面如何更好地利用宽屏显示。他指出，宽屏显示器的中心适合与某个应用一起工作，但在显示器两侧工作就变得更困难。“它适合周边视觉，但不适合工作。”</p>
+
+        <p>他演示了一种桌面布局（下方是其截图），它会把焦点放在显示器中央的那个或那些窗口上。他在背景中加入了一个网格，从屏幕中央向外逐渐淡去，以模拟宽屏显示器。其想法是，宽屏优先的桌面会把信息强调在屏幕中央，然后用一个类似 Exposé 的平铺模型来安排桌面其余的窗口。他认为，这会让不在使用中的窗口更容易交互，也会比虚拟桌面更适合管理大量窗口。“我不反对虚拟桌面。虚拟桌面被非常有条理、很聪明的人使用。我了解我的听众。”然而他说，大多数人搞不定虚拟桌面。</p>
+
+        <p>他还演示了把一个音乐播放器窗口一直拖到屏幕的一侧，他称之为“暂存区（stash area）”。当它移到边缘时，它会变成一个只带一个播放按钮的小部件，而不再显示整个窗口。他认为，他所演示的这些东西，用今天的 Wayland 就可以做到。</p>
+
+        <p>Jenson 又展示了改进后的剪贴板模型，它借鉴了 Obsidian 编辑器 Canvas 功能的思路。Canvas 允许用户拖放图片、文本和文件，从而创建一个信息的可视化布局。用户可以先创建一个文档，再把信息从网页浏览器拖进文档，从另一个来源丢进一个文件，“这里的想法是，这现在实际上成了我为这个文档收集起来的一堆东西。如果我关掉它，明天再回来，它还在那里”。他补充说，本地 AI 将能够进来，整理用户收集到的信息，“哦看，你有一堆酒店，让我帮你整理一下”。</p>
+
+        <p>他讨论的最后一个想法，是一种收集“保护隐私的数据”的方式，用以帮助用户更好地可视化诸如网页浏览历史之类的东西。他说，网页浏览器只会给用户一个“不太有用”的浏览历史视图，所以他尝试“不使用 AI，只用简单的数学”来收集数据，利用注意力信号——比如用户在一个网页上停留了多久——来讲述他们在桌面上把时间花在了哪里。“我基本上想出了这个空间联想情节记忆提示（spatial associative episodic memory prompt）”，以一种有用、有趣的方式组织数据。他认为工作记忆是探索桌面 UX 新想法的好办法。</p>
+
+        <blockquote>
+            <p>所以这次演讲的目标就是要说，让我们开始把它拆解开来。我真的希望我的原型能让你们来找我说，“我们忘了这一点”，然后我们来谈谈那个。[…] 所以我只希望我们去尝试，因为没有其他人会去尝试，而我认为总得有人开始。</p>
+        </blockquote>
+
+        <p>时间只够问一个问题。一位听众问，Jenson 的模型将如何防范微软在 Windows Recall 上遭遇的所有隐私担忧。“我们怎么确保这段历史只对用户可访问，而不能像 Windows Recall 那样被黑进去？”</p>
+
+        <p>Jenson 回答说，他的想法是收集遥测数据，“不是有趣的信息”，这会大大降低数据对潜在攻击者的吸引力。不过他说，他并不想淡化这个问题，而是想先构建原型看看这个想法好不好，然后再探索加密或保护数据的方法。他也同意，即便是这些数据也可能是有价值的信息。他补充说，Windows Recall 最大的问题在于“他们保护它的方式有多愚蠢”，他相信其他人能把这件事做得好得多。</p>
+
+        <div class="info-box note"><p>［感谢 Linux Foundation——LWN 的差旅赞助方——对我前往奥地利 Graz 参加 Akademy 2026 的协助。］</p></div>
+    </div>
+</div>
+
+            <!-- 社区简讯 -->
+            <div class="article" id="briefs">
+                <div class="article-header">
+                    <span class="article-category">社区简讯</span>
+                    <h2>📝 Brief items（社区简讯）</h2>
+                    <div class="article-meta">
+                        <span>LWN.net Weekly Edition for September 24, 2026</span>
+                        <span><a href="https://lwn.net/Articles/1094842/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <h3>安全</h3>
+                    <h4>WordPress 严重 RCE 漏洞公布</h4>
+                    <p>在 WordPress 用于页面模板解析的 <code>get_page_template()</code> 函数中发现了一个严重漏洞，在某些有限条件下可让未认证的攻击者实现<strong>远程代码执行（RCE）</strong>。项目已为 WordPress 的最新分支提供更新，并将修复回补到 4.7 分支。RCE 攻击成功所需的条件见漏洞报告。</p>
+                    <p>该漏洞也影响 WordPress 的分支项目 <strong>ClassicPress</strong>，不过该项目尚未提供安全更新。LWN 曾在 2024 年<a href="https://lwn.net/Articles/1004003/">报道过 ClassicPress</a>。这两个内容管理系统的用户都应尽快更新。</p>
+
+                    <h4>Radicle 网络协议中的严重安全漏洞</h4>
+                    <p>点对点代码协作项目 <a href="https://radicle.xyz/">Radicle</a> 披露了其节点所用网络协议中的<strong>两个严重漏洞</strong>。第一个是协议"并未提供它本应提供的机密性"，这使得任何能观察到两个节点之间网络流量的人都能读取交换的数据。第二个是<strong>对等端认证被破坏</strong>，允许冒充——攻击者可以伪造自己的 Node ID，并读取本不该读取的私有仓库。</p>
+                    <p>在实践中，这两个漏洞组合使用时危害最大：位于路径上的攻击者能看到连接两端的 Node ID，而两者通常都在允许列表中；该攻击者可以在旁听时读取交换的一切内容，随后用看到的某个 Node ID 按需拉取整个仓库。现实的威胁是位于你的节点与它同步的节点之间路径上的任何人，没有任何设置或允许列表能对此提供保护。</p>
+                    <p>项目在安全更新可用之前就公布了此事：你今天就能采取行动，而我们稍后发布的任何修复都无法撤销已经发生的泄露。原文提供了当前可用的变通方法；一个不向后兼容的重大更新正在进行中。</p>
+
+                    <h3>内核开发</h3>
+                    <h4>内核发布状态</h4>
+                    <p>当前开发内核是 <strong>7.3-rc4</strong>，于 9 月 20 日发布。它一如既往地很大；Linus 说："到现在我们都知道套路了：'它很大，等等等等'。"</p>
+                    <p>本次发布出现了来自 <strong>2,720 名开发者</strong>的 <strong>17,056 个非合并变更集</strong>，其中 <strong>649 名是首次</strong>为内核做贡献。发布历史如下：</p>
+                    <table>
+                        <thead>
+                            <tr><th>RC</th><th>日期</th><th>提交数</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><strong>v7.3-rc1</strong></td><td>2026-08-30</td><td>16,267</td></tr>
+                            <tr><td><strong>v7.3-rc2</strong></td><td>2026-09-06</td><td>681</td></tr>
+                            <tr><td><strong>v7.3-rc3</strong></td><td>2026-09-13</td><td>733</td></tr>
+                            <tr><td><strong>v7.3-rc4</strong></td><td>2026-09-20</td><td>598</td></tr>
+                        </tbody>
+                    </table>
+                    <p>更多细节见 LWN KSDB v7.3 页面。<strong>稳定更新</strong>：大规模的 7.2.7、6.18.53 与 6.12.111 更新于 9 月 21 日发布。</p>
+
+                    <h4>Systemtap 5.6 发布</h4>
+                    <p>跟踪工具 <strong>Systemtap 5.6</strong> 版已发布。新特性包括：面向 <code>--bpf</code> 运行时的 BPF LSM 钩子与 XDP 数据包处理探针、基于 BTF 的 <code>kernel.tracepoint</code> 探针、语句执行跟踪、新的 <code>@enumname()</code> 运算符、更丰富的运行时错误上下文、dyninst 硬件观察点、现代化的 systemd 服务模板，以及对 Linux 7.2 运行时 / tapset 的广泛兼容性工作。整体还带来了多线程加速。</p>
+
+                    <h3>开发</h3>
+                    <h4>GNOME 51 发布</h4>
+                    <p>桌面环境 <strong>GNOME 51</strong> 版已发布。变更列表包括多项性能改进、Maps 应用中的离线数据和更好的公交信息、文件预览器的新界面等。</p>
+
+                    <h4>Igalia 庆祝"上游二十五年"</h4>
+                    <p>开源咨询公司 <strong>Igalia</strong> 发布公告，庆祝为客户从事上游 FOSS 项目工作 25 年。该公司做过的项目清单令人大开眼界：WebKit、移动浏览器渲染（Maemo、Moblin、MeeGo 与 Tizen）、Linux 内核（CPU 与 GPU 调度）、3D 图形驱动、Orca 屏幕阅读器、GStreamer 等等。此外，作为一家员工持股的合作社，该公司的工作方式既惠及社区也惠及客户：</p>
+                    <blockquote>
+                        <p>"这一切都不是慈善。Igalia 是一家咨询公司，上面提到的大部分工作都是有人为了要给某个产品出货而付费的：一个需要让 Web 在其硬件上良好运行的设备制造商、一个需要用户不断索要的某个特性的平台、一家其路线图依赖于技术栈深处某个东西比现在运行得更好的公司。他们从我们这里得到的不只是一份要永远自己背着的补丁。我们在上游、在项目本身里完成工作，因此它会进入下一个版本，并在合同结束很久之后继续发挥作用。我们的客户出货的产品建立在无人需要独自维护的代码之上，而其他所有人也得到同样的代码。从一开始就是这个安排。"</p>
+                    </blockquote>
+
+                    <h4>Systemd v262 发布</h4>
+                    <p><strong>Systemd v262</strong> 已发布。值得注意的新特性包括：可为小型容器把 systemd 构建为单个静态链接的二进制、支持 Linux 6.17 引入的内核 coredump socket 协议、加入对 OpenSSL 4 的支持，以及许多其他变更。完整变更列表见发布说明。</p>
+
+                    <h4>本周开发引述</h4>
+                    <blockquote>
+                        <p>"在软件的语境下，我认为我们应当努力实现（也是我们达成了这一点的标志）的《星际迷航》式乌托邦的一部分，就是给'消费者（consumer）'这个词的心脏钉上一根木桩。"</p>
+                        <p>—— Matilda Horger</p>
+                    </blockquote>
+                    <blockquote>
+                        <p>"假设你正在做一个补丁，想尽快把它发到列表上。但还差一处改动，用来解决一个设计问题。这大概会花你 10 分钟，而且基本是机械性的工作，谁都能做。于是你先把补丁发出去，好早点拿到反馈。</p>
+                        <p>遗憾的是，这很可能带来两个后果。一些评审者会指出那一处改动——而它本就在你的计划之中，所以这个反馈没什么用。另一些评审者则会自己动手去做那处改动，这样你就浪费了每位评审者 10 分钟。</p>
+                        <p>如果你能为别人省下时间，那就去做。它可能只是你的 10 分钟，但乘以多个人就很快累积起来，可能变成 1 小时的'社区时间'。"</p>
+                        <p>—— Tomas Vondra</p>
+                    </blockquote>
+                </div>
+            </div>
+
+            <!-- 公告 -->
+            <div class="article" id="announcements">
+                <div class="article-header">
+                    <span class="article-category">公告</span>
+                    <h2>📢 Announcements（公告）</h2>
+                    <div class="article-meta">
+                        <span>LWN.net Weekly Edition for September 24, 2026</span>
+                        <span><a href="https://lwn.net/Articles/1094843/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <h3>新闻简报（Newsletters）</h3>
+                    <p><strong>发行版与系统管理</strong>：DistroWatch Weekly（9 月 21 日）、This week in F-Droid（9 月 18 日）、This week in Fedora（9 月 21 日）、openSUSE Tumbleweed Review of the Week（9 月 19 日）、Ubuntu Weekly News（9 月 14 日）。</p>
+                    <p><strong>开发</strong>：Emacs News（9 月 21 日）；These Weeks in Firefox（9 月 17 日）；What's cooking in git.git（9 月 21 日）；This Week in GNOME（9 月 18 日）；Golang Weekly（9 月 18 日）；Last Week in Kubernetes Development（9 月 18 日）；LLVM Weekly（9 月 21 日）；This Week in Matrix（9 月 18 日）；OCaml Weekly News（9 月 22 日）；Perl Weekly（9 月 21 日）；This Week in Plasma（9 月 19 日）；PyCoder's Weekly（9 月 22 日）；This month in Radicle CI（9 月 17 日）；Weekly Rakudo News（9 月 21 日）；Ruby Weekly News（9 月 17 日）；This Week in Rust（9 月 16 日）；Wikimedia Tech News（9 月 21 日）。</p>
+                    <p><strong>会议记录</strong>：This week in the Perl Steering Committee（9 月 22 日）。</p>
+
+                    <h3>演讲征集（Calls for Presentations）</h3>
+                    <p>以下是摘自 LWN.net CFP 日历的截止日期列表（覆盖 2026 年 9 月 24 日至 11 月 23 日）：</p>
+                    <table>
+                        <thead>
+                            <tr><th>截止日期</th><th>活动日期</th><th>活动名称</th><th>地点</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>9 月 28 日</td><td>11 月 3–4 日</td><td>Open vSwitch and OVN 2026 Fall Conference</td><td>海尔布隆，德国</td></tr>
+                            <tr><td>10 月 1 日</td><td>11 月 7–8 日</td><td>OpenFest 2026</td><td>索非亚，保加利亚</td></tr>
+                            <tr><td>10 月 1 日</td><td>11 月 12–13 日</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+                            <tr><td>10 月 4 日</td><td>11 月 7–8 日</td><td>OpenALT</td><td>布尔诺，捷克</td></tr>
+                            <tr><td>10 月 9 日</td><td>11 月 20–21 日</td><td>OLF Conference</td><td>哥伦布，俄亥俄州，美国</td></tr>
+                            <tr><td>11 月 1 日</td><td>次年 4 月 1–4 日</td><td>Southern California Linux Expo</td><td>帕萨迪纳，加州，美国</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>即将举行的活动（Upcoming Events）</h3>
+                    <table>
+                        <thead>
+                            <tr><th>日期</th><th>活动名称</th><th>地点</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>9 月 19–24 日</td><td>Akademy 2026</td><td>格拉茨，奥地利</td></tr>
+                            <tr><td>9 月 22–24 日</td><td>Reproducible Builds Summit</td><td>哥德堡，瑞典</td></tr>
+                            <tr><td>9 月 25–27 日</td><td>PostmarketOS and Alpine Linux Conference</td><td>亚琛，德国</td></tr>
+                            <tr><td>9 月 28–30 日</td><td>X.Org Developers Conference</td><td>多伦多，加拿大</td></tr>
+                            <tr><td>9 月 28 日–10 月 1 日</td><td>Alpine Linux Persistence and Storage Summit</td><td>利祖默小屋，蒂罗尔州，奥地利</td></tr>
+                            <tr><td>9 月 30 日–10 月 1 日</td><td>All Systems Go! 2026</td><td>柏林，德国</td></tr>
+                            <tr><td>10 月 1–2 日</td><td>embedded Linux for Safe and Secure Applications</td><td>哥廷根，德国</td></tr>
+                            <tr><td>10 月 1 日</td><td>Open Tech Day | Software-defined Storage</td><td>纽伦堡，德国</td></tr>
+                            <tr><td>10 月 2–4 日</td><td>GNU Tools Cauldron</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 3–4 日</td><td>openSUSE.Asia Summit 2026</td><td>日惹，印度尼西亚</td></tr>
+                            <tr><td>10 月 3–4 日</td><td>Linux Days 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 5–7 日</td><td>Linux Plumbers Conference 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 6 日</td><td>Yocto Project Developer Day 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 6 日</td><td>Real-time Linux User Forum</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 7–9 日</td><td>Embedded Linux Conference Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 7–9 日</td><td>Open Source Summit Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 8 日</td><td>Linux Security Summit Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 10–11 日</td><td>GStreamer Conference 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 13–15 日</td><td>OpenSSL Conference</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 14–17 日</td><td>PyCon South Africa</td><td>开普敦，南非</td></tr>
+                            <tr><td>10 月 16–18 日</td><td>VideoLAN Developers' Days</td><td>罗马，意大利</td></tr>
+                            <tr><td>10 月 18–20 日</td><td>All Things Open</td><td>罗利，北卡罗来纳州，美国</td></tr>
+                            <tr><td>10 月 20–23 日</td><td>The Matrix Conference</td><td>马尔默，瑞典</td></tr>
+                            <tr><td>10 月 20–23 日</td><td>PostgreSQL Conference Europe</td><td>瓦伦西亚，西班牙</td></tr>
+                            <tr><td>10 月 30 日–11 月 1 日</td><td>Qubes OS Summit</td><td>柏林，德国</td></tr>
+                            <tr><td>11 月 3–4 日</td><td>Open vSwitch and OVN 2026 Fall Conference</td><td>海尔布隆，德国</td></tr>
+                            <tr><td>11 月 6–7 日</td><td>Texas Linux Festival</td><td>奥斯汀，得克萨斯州，美国</td></tr>
+                            <tr><td>11 月 7–8 日</td><td>OpenFest 2026</td><td>索非亚，保加利亚</td></tr>
+                            <tr><td>11 月 7–8 日</td><td>OpenALT</td><td>布尔诺，捷克</td></tr>
+                            <tr><td>11 月 12–13 日</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+                            <tr><td>11 月 14–15 日</td><td>Capitole du Libre 2026</td><td>图卢兹，法国</td></tr>
+                            <tr><td>11 月 17–19 日</td><td>Open Source Monitoring Conference</td><td>纽伦堡，德国</td></tr>
+                            <tr><td>11 月 20–21 日</td><td>OLF Conference</td><td>哥伦布，俄亥俄州，美国</td></tr>
+                        </tbody>
+                    </table>
+
+                    <h3>安全更新（Security updates）</h3>
+                    <p>本期覆盖 <strong>2026 年 9 月 17 日至 9 月 23 日</strong>的安全公告摘要，共约 <strong>628 条</strong>公告，完整条目见 <a href="https://lwn.net/Articles/1094843/">LWN Announcements 页面</a>。按发行版统计：<strong>Fedora 195 条</strong>、<strong>SUSE 166 条</strong>、Oracle 69 条、AlmaLinux 68 条、Ubuntu 55 条、Mageia 30 条、Debian 21 条、Red Hat 20 条、Slackware 4 条。</p>
+                    <p>公告覆盖范围很广，涉及各发行版的常规安全维护批次以及内核、工具链与基础设施组件的更新。Fedora 与 SUSE 依旧占据数量的绝对主导，Oracle 与 AlmaLinux 的公告数量较上一期明显上升，反映秋季维护窗口的集中发布。</p>
+
+                    <h3>内核补丁精选（Kernel patches of interest）</h3>
+                    <p>本期（9 月 16 日至 9 月 23 日）内核相关补丁数量庞大，共 <strong>324 条</strong>，以下按类别择要摘录代表性条目，完整列表见 <a href="https://lwn.net/Articles/1094843/">LWN Announcements 页面</a>。</p>
+
+                    <h4>内核发布</h4>
+                    <ul>
+                        <li>Linux <strong>7.3-rc4</strong>（Linus Torvalds，9 月 20 日）</li>
+                        <li>稳定更新 <strong>7.2.7</strong>、<strong>6.18.53</strong>、<strong>6.12.111</strong>（Greg Kroah-Hartman，9 月 21 日）</li>
+                    </ul>
+
+                    <h4>各分类补丁数量</h4>
+                    <ul>
+                        <li><strong>设备驱动</strong> 160 条、<strong>内存管理</strong> 23 条、<strong>架构相关</strong> 19 条、<strong>网络</strong> 19 条、<strong>文件系统与块层</strong> 16 条；</li>
+                        <li><strong>核心内核</strong> 15 条、<strong>设备驱动基础设施</strong> 14 条、<strong>虚拟化与容器</strong> 12 条、<strong>BPF 相关</strong> 10 条、<strong>开发工具</strong> 10 条、<strong>杂项</strong> 10 条；</li>
+                        <li><strong>构建系统</strong> 4 条、<strong>文档</strong> 4 条、<strong>安全相关</strong> 4 条。</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+
+                <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar bottom" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn" href="2026-10-01.html">📰 最新</a>
+            <a class="nav-btn" href="2026-09-17.html">&larr; 上一个</a>
+            <a class="nav-btn" href="2026-10-01.html">下一个 &rarr;</a>
+            <span class="nav-current-label">2026年9月24日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <footer class="footer">
+            <p>内容翻译自 <a href="https://lwn.net" target="_blank">LWN.net</a>，遵循 Creative Commons 协议。</p>
+            <p>本期来源：<a href="https://lwn.net/Articles/1094840/" target="_blank">LWN.net Weekly Edition for September 24, 2026</a></p>
+            <p>更新时间：2026年10月9日</p>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
