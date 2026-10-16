@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LWN 周刊 - 2026年10月8日</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128240;</text></svg>">
+</head>
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+        <span class="theme-icon">&#127769;</span>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">LWN 周刊中文版</div>
+            <h1>LWN.net Weekly Edition</h1>
+            <p class="edition-date">2026年10月8日</p>
+            <p class="edition-desc">Linux 和自由软件周刊 - 中文翻译</p>
+            <a href="index.html" class="back-link">&larr; 返回期刊列表</a>
+        </header>
+
+                                <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-10-08.html">📰 最新</a>
+            <a class="nav-btn" href="2026-10-01.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年10月8日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <main class="content">
+            <!-- 目录 -->
+            <div class="toc">
+                <h2>📑 目录</h2>
+                <ul>
+                    <li><a href="#article1">应对内核安全漏洞的汹涌来袭</a></li>
+                    <li><a href="#article2">Gentoo 为 Chromium 软件包举行「临终仪式」</a></li>
+                    <li><a href="#article3">超越 &amp;：深入 Rust 的智能指针</a></li>
+                    <li><a href="#article4">Sashiko 补丁评审系统的最新进展</a></li>
+                    <li><a href="#article5">用 Charon 分析 Rust 程序</a></li>
+                    <li><a href="#article6">LAVD 调度器：从游戏到服务器的演进</a></li>
+                    <li><a href="#article7">Python 的两个随机数模块</a></li>
+                    <li><a href="#briefs">📝 Brief items（社区简讯）</a></li>
+                    <li><a href="#announcements">📢 Announcements（公告）</a></li>
+                </ul>
+            </div>
+
+<div class="article" id="article1">
+    <div class="article-header">
+        <span class="article-category">内核 / 安全</span>
+        <h2>应对内核安全漏洞的汹涌来袭</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月1日</span>
+            <span><a href="https://lwn.net/Articles/1096908/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>如今已不是什么秘密：大语言模型（LLM）让人们可以轻松发现安全漏洞，其结果是几乎所有自由软件项目——内核也不例外——都迎来了铺天盖地的漏洞报告。在 2026 年的 <a href="https://kernel-recipes.org/en/2026/">Kernel Recipes</a> 大会上，Greg Kroah-Hartman 登台讲述了内核安全团队是如何应对这场洪流的。他传递的核心信息是：「不要恐慌」。</p>
+        <p>Kroah-Hartman 首先展示了一张图表，内容是每个内核版本中修复的 CVE 编号数量；图表的一个版本如右侧所示。趋势一目了然：在此前以每个版本约 500 个修复的稳定速率运行之后，这个数字突然翻了两番。他说，不久之前，大约每周 50 个修复的旧速率还显得令人难以置信。而现在，内核项目正在以<i>每天</i> 33 个 CVE 的速度进行修复。有什么东西变了；这个变化当然就是 LLM 的出现。好消息是，内核社区此前所做的准备工作已经收到回报，工具链能够扩展到这样的活动规模。其他项目正陷入恐慌，但「我们做得很好，而且还可以更快」。</p>
+        <p>他强调，任何人都无需恐慌，这股洪流并不是什么大问题。媒体上有很多报道，也有很多「末日营销」，但我们应该直接无视。作为这种营销方式的一个例子，他讲述了一段经历：他接到一个电话，告知 Mythos LLM 发现了 79 个 Linux 内核漏洞。起初他有些担心，但随后获取了原始数据——现在他已经可以谈论这些数据了。这批所谓的漏洞是这样发现的：查看旧的漏洞修复，然后寻找其他存在类似问题的地方，这与 Julia Lawall 和 Sasha Levin 等人过去所做的工作如出一辙。</p>
+        <p>在这 79 个漏洞中，有 24 个除了「某些东西崩溃了」之外没有任何细节。另有 14 个根本不是漏洞，还有 3 个是根据编造的数据得出的，从一开始就是假的。有 15 个是真实漏洞——但它们在当前内核版本中早已被修复。他说，最后这一类在这些工具中很典型：它们善于迎合，只要被要求，就会努力去找漏洞。它们甚至会去阅读邮件列表，找出并报告那些已被他人修复的漏洞。这种「发现」他人早已报告的漏洞的模式相当常见。</p>
+        <p>剩下 26 个是确实需要关注的漏洞——差一点。其中 6 个是重复的。而且他指出，总数加起来也对不上 79；LLM 并不总是擅长基本的算术。所以有 20 个漏洞需要修复；其中 7 个只能通过恶意文件系统镜像才能利用，而内核社区早已在文档中说明这实际上不算安全问题。另有两个漏洞需要有能力向网络栈中间注入恶意数据包，而只有 root 才能做到这一点，因此它们也不是真正的漏洞。还有两个只影响 NOMMU 系统（没有内存管理单元的系统）；其中一个位于 <code>io_uring</code> 中。他怀疑没有人会在 NOMMU 系统上使用 <code>io_uring</code>。这两个漏洞他都修复了，但修复补丁尚未进入上游——毕竟没有谁真正关心 NOMMU 系统上的安全问题。另有两个轻微的 IPv6 问题，以及一个允许恶意本地用户通过 GPU 危及系统的问题——但这样的用户本来就能干出更糟糕的事情。</p>
+        <p>最终结果是，这场行动在一个每小时合并十多个补丁的项目中，产出了十个真实的漏洞修复。也就是说，处理这些报告只相当于内核社区一个小时的工作量。</p>
+        <h3>真正的问题</h3>
+        <p>他说，我们<i>真正</i>应该担心的问题是从发现漏洞到出现利用代码的平均时间（mean time to exploit）。2018 年，这个时间是 63 天；2026 年则是 7 天。所以这个问题是真实存在的，但最大的问题在于人们根本不去更新自己的系统。运行旧软件，已经是许多人再也享受不起的奢侈了。</p>
+        <p>多年投入不足的账单终于要到期了；我们的软件从来就不是为完美的安全性而设计的。现在我们不得不艰难地熬过这个漏洞发现阶段。但这种局面我们以前也见过：多年前模糊测试器（fuzzer）的出现，同样曾带来一波需要修复的漏洞洪流。我们完成了那些工作，处理掉了那些漏洞，模糊测试器发现的漏洞流量最终也大幅回落。他说，当你把所有漏洞都修完，报告自然就会停止。</p>
+        <p>举个例子，看看 <a href="https://rsync.samba.org/">rsync</a>。Andrew Tridgell 逐一处理了所有被报告的漏洞（<a href="/Articles/1076040/">期间也承受了一些非议</a>），如今所有代码扫描器都宣称 rsync 是干净的。</p>
+        <p>他停顿了片刻，谈起最近有关微软内部通信的<a href="https://www.motherjones.com/politics/2026/09/openai-chatgpt-microsoft-copyright-legal-case-documents-revelations/">报道</a>——这些通信表明，至少微软的部分高管担心他们的模型窃取了其所吸收数据中的很大一部分。他说，LG Research 的一份报告指出，LG 用于模型训练的数据中只有 20% 是合法获取的。我们也许并不喜欢这些工具被创造出来的方式，但我们可以利用它们来帮助改进我们的软件。</p>
+        <p>话虽如此，并非所有人都在朝这个方向努力。有人正向内核邮件列表倾泻补丁，常常一天数百个；这些补丁往好了说也是未经测试的。我们应该直接无视它们。他说，最好的模型仍有 50% 的时候是错的，所以我们不妨假定 50% 的 LLM 生成补丁是错误的。我们完全没有义务照单全收。LLM 生成的代码中常常能看出一些模式。例如，这些模型经常错误地想用 <code>mutex_destroy()</code> 替换对 <code>mutex_unlock()</code> 的调用。它们会生成冗长而毫无用处的变更日志，还会往代码里塞进多得离谱的注释。</p>
+        <p>当人们尝试打造更擅长生成内核代码的机器人时，往往首先用内核的开发历史来训练它们。但那段历史展示了大量社区早已抛弃的模式，里面满是糟糕的范例。他说，这些机器人产出的东西是「会骂人的烂代码」。维护者在看到这类代码时不应害怕推回去。通常最好的问题是「你是怎么测试它的？」。还应当记住，这些系统会泄露信息：它们告诉你的任何东西，也会告诉其他人；你上传给它们的任何东西，都会被分发给其他人。这就是为什么研究人员会不断「发现」那些前一天刚刚被公开报告的漏洞。</p>
+        <p>他说，这些工具的前景并不光明。多年来，Coverity 开发了一款代码扫描工具，产出了大量高质量的报告，而且它还是确定性的。但这家公司始终没能盈利；人们不愿意为这类工具付费。他预测，当前的这些工具将落得同样的下场。当代码质量工具表现良好时都没人愿意付费，对于错误率高达 50% 的工具，就更不会有人付费了。</p>
+        <h3>适应</h3>
+        <p>那么内核社区是如何适应这种局面的？一项有益的工作是完善<a href="https://docs.kernel.org/process/threat-model.html">内核威胁模型的文档</a>；有时候，机器人确实会去阅读这些材料，其余情况下也可以让补丁提交者去查阅。<a href="https://docs.kernel.org/process/security-bugs.html">安全相关文档</a>现在要求将维护者抄送在安全报告之中；任何试图对此类信息捂盖子的做法都注定失败。报告者还被要求随报告提交一个初始修复；他们随时可以让自己的 LLM 生成补丁，这也有助于内核开发者拿出恰当的修复方案。他说，现在还有资金支持一名全职开发者来处理发送到 <code>security@kernel.org</code> 的报告。</p>
+        <p>开发者和维护者可以对漏洞报告者和补丁提交者推回去；如果对方不回答问题，开发者也没有义务回应他们。至于自己的测试工作，他说，开发者应当运行本地模型；它们足以胜任这项工作，而非公开的信息绝不应该上传到非本地系统。当然，还有一句话：「把漏洞修掉」。对于想在自己的代码上运行模型的开发者，Chris Mason 的 <a href="https://github.com/masoncl/kres#kres">kres</a> 是一个实用的工具；他还建议阅读 Willy Tarreau 撰写的<a href="https://wtarreau.blogspot.com/2026/05/find-bugs-in-your-code-using-opencode.html">这篇文章</a>，了解如何用本地模型查找代码漏洞。</p>
+        <p>对于管理者而言，他说，OpenSSF 的<a href="https://openssf.org/resources/securing-open-source-in-the-age-of-ai-a-practical-guide/">《AI 时代的开源安全》文档</a>应当是必读材料。</p>
+        <p>他在结尾时说，漏洞报告的洪流在可预见的将来看不到减缓的迹象；接下来的将是「艰难的 18 个月」。但当尘埃落定，我们的代码会比以前更好，这是一件好事。</p>
+        <p>本次演讲的<a href="https://www.youtube.com/watch?v=NnV_cWeoo5Q&list=PLEVVgAZOU9P8&index=9">视频</a>已在 YouTube 上发布。</p>
+        <p>[感谢 LWN 的差旅赞助方 Linux Foundation 支持我参加本次活动。]</p>
+    </div>
+</div>
+
+<div class="article" id="article2">
+    <div class="article-header">
+        <span class="article-category">发行版 / 浏览器</span>
+        <h2>Gentoo 为 Chromium 软件包举行「临终仪式」</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年10月6日</span>
+            <span><a href="https://lwn.net/Articles/1097760/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>作为 Google Chrome 网页浏览器的开源上游项目，<a href="https://www.chromium.org/Home/">Chromium</a> 是许多 Linux 用户的首选浏览器。但它也以<a href="https://lwn.net/Articles/619158/">令 Linux 发行版难以打包和构建</a>而闻名：Chromium 拥有复杂的构建系统，项目捆绑了大量依赖，而且发布频繁。这一切，再加上用户的抱怨，最终促使 <a href="https://packages.gentoo.org/packages/www-client/chromium">Gentoo Chromium 软件包</a>的维护者放弃了对该包的维护。</p>
+
+        <p>Gentoo 的核心理念是让用户借助 <a href="https://wiki.gentoo.org/wiki/Handbook:X86/Working/Portage">Portage</a> 软件管理工具从源码构建自己的软件。Gentoo 的打包者编写 <a href="https://wiki.gentoo.org/wiki/Ebuild">ebuild</a> 文件——一种以类 Bash 语法写成的文本文件，其中包含 Portage 构建软件所需的信息。用户随后使用 <a href="https://wiki.gentoo.org/wiki/Emerge"><code>emerge</code></a>（Portage 的命令行界面）自行构建软件包。<a href="https://github.com/gentoo-mirror/gentoo/blob/stable/www-client/chromium/chromium-151.0.7922.169-r1.ebuild">最近的一份 Chromium ebuild</a> 就足以体现这个软件包的复杂程度。</p>
+
+        <p>Gentoo 确实通过其 <a href="https://wiki.gentoo.org/wiki/Project:Binhost">Binhost</a> 项目为部分软件提供预构建的二进制包。不过，从源码构建让用户可以灵活地声明 <a href="https://wiki.gentoo.org/wiki/USE_flag"><code>USE</code> 标志</a>来设置编译期选项或更改软件包的配置。例如，用户可能希望指定软件包链接哪些可选库，或者是否安装随附的文档。具体到 Chromium，用户可能会使用 <code>-bundled-toolchain</code> <code>USE</code> 标志（它告诉 Portage <em>不要</em>使用捆绑的工具链），以便用系统自带的 Clang 来编译 Chromium，而不是使用<a href="https://chromium.googlesource.com/chromium/src/+/90.0.4430.72/docs/clang_sheriffing.md">上游项目捆绑的版本</a>。对于 x86-64 系统上的 Gentoo 用户来说这是可选项，但其他架构的用户则必须使用 <code>-bundled-toolchain</code>，因为 Chromium 捆绑的工具链只提供 x86-64 版本。</p>
+
+        <p>值得注意的是，由于在使用专有编解码器构建软件包方面存在的问题，Chromium 目前无法以二进制包的形式从 Gentoo 获取。</p>
+
+        <h3>临终仪式（last rites）</h3>
+
+        <p>包括 Arch Linux、Debian 和 Fedora 在内的许多发行版都使用「孤儿（orphan）」一词来指代被维护者放弃的软件包：开发者宣布某个软件包已成为孤儿，其他贡献者如果愿意，便可以接手维护它。Gentoo 的说法则更具戏剧性：软件包维护者在 gentoo-dev-announce 邮件列表上为某个软件包宣布「临终仪式（last rites）」，通知项目该软件包将不再有人维护，同时也给其他开发者一个接手维护的机会。</p>
+
+        <p>开发者宣布临终仪式之后，该软件包的 ebuild 会在 <a href="https://wiki.gentoo.org/wiki/Ebuild_repository#The_Gentoo_ebuild_repository">Gentoo 的 ebuild 仓库</a>中被<a href="https://wiki.gentoo.org/wiki/Knowledge_Base:Masking_a_package">屏蔽（mask）</a>，以确保用户不会误装一个不再维护的软件包。已安装该包的用户在尝试升级时会收到该包已被屏蔽的警告。Chromium 软件包维护者 Sam James 在 Roman Žilka 提交的一份 <a href="https://bugs.gentoo.org/982204">bug 报告</a>中经历了漫长的讨论之后，于 9 月 24 日<a href="https://lwn.net/ml/all/87ld8rb0p1.fsf%40gentoo.org/">为 Chromium 软件包宣布了临终仪式</a>。</p>
+
+        <p>9 月 9 日，Žilka 曾<a href="https://bugs.gentoo.org/982204#c0">抱怨</a> Chromium ebuild 的最新稳定版本已经过时：</p>
+
+        <blockquote><p>最新稳定的 <code>www-client/chromium</code>（以及 <code>google-chrome</code>，可能还有其他包）版本为 151.0.7922.169，其中包含多达 602 个已知漏洞，涵盖各个严重级别，可谓灾难性。必须由有资质的人采取措施，让这类重要软件包不再重复出现这种情况。</p></blockquote>
+
+        <p>他在 bug 报告中附上了<a href="https://982204.bugs.gentoo.org/attachment.cgi?id=970220">一份针对较新版本 Chromium 的 ebuild</a>，但同时指出，如果用户尝试使用 <code>-bundled-toolchain</code> <code>USE</code> 标志编译 Chromium，该 ebuild 将无法工作。</p>
+
+        <p>James <a href="https://bugs.gentoo.org/982204#c5">回复</a>道：「<strong>作为源码包来维护，Chromium 简直糟透了。它无疑是 Gentoo 中最消耗维护者的软件包。</strong>」他表示，一味抱怨对维护工作没有帮助，并补充说，由于难以保持及时更新，多年来维护者已有好几次差点给 Chromium 举行临终仪式。他还提到自己之前已经向 Žilka 说过这一点，并表示如果 Žilka 愿意协助维护该软件包，将受到欢迎。</p>
+
+        <p>事实上，Žilka 在 8 月就<a href="https://bugs.gentoo.org/980389">提交过一份类似的 bug</a>，抱怨 Chromium ebuild 中存在的漏洞数量；James 当时<a href="https://bugs.gentoo.org/980389#c1">回复</a>说，这个软件包一直很难维护，「而现在他们又把 Go」加入为依赖。在此之前，Žilka 还曾现身于 Matt Jolly 提交的一份<a href="https://bugs.gentoo.org/show_bug.cgi?id=CVE-2025-14372">关于 Chromium 漏洞的 bug 报告</a>中，<a href="https://bugs.gentoo.org/show_bug.cgi?id=CVE-2025-14372#c4">抱怨</a>说「更新流程需要修一修，别让这种事情再发生在如此关键的软件包上！」</p>
+
+        <p>Jolly 曾<a href="https://bugs.gentoo.org/show_bug.cgi?id=CVE-2025-14372#c7">回复</a>说，维护者是一群尽力而为的志愿者，但「构建失败、人为因素（『我把 bug 分配搞砸了，而自动化没有接住』），以及我自己有限的空闲时间是造成延迟的最大原因」。他说，改变这种局面的最好方式就是 Žilka 主动伸出援手。</p>
+
+        <h3>反复尝试</h3>
+
+        <p>Gentoo 有各种称为 <a href="https://wiki.gentoo.org/wiki/Project:Overlays">overlay</a> 的第三方仓库，提供额外的或替代性的 ebuild。9 月 11 日，Nick Reale <a href="https://bugs.gentoo.org/982204#c11">表示</a>，他尝试了来自 <a href="https://obentoo.org/v/v3e/">Bentoo</a> 和 <a href="https://github.com/FireBurn/Overlay">Fireburn</a> overlay 的较新版 Chromium ebuild，但两个都无法成功使用。几天后，他<a href="https://bugs.gentoo.org/982204#c16">报告</a>使用 Bentoo 的 ebuild 加上一组特定的 <code>USE</code> 标志取得了成功。随后 Reale 和 François Valenduc 展开了一些后续讨论，分享了他们借助其他 ebuild 在 Gentoo 上编译更新版 Chromium 的各种「咒语」。9 月 18 日，Valenduc <a href="https://bugs.gentoo.org/982204#c20">评论</a>说 Chromium 153.0.8010.47 已经发布，而且 Arch Linux、openSUSE、SUSE 和 Ubuntu 上都已有该版本。「尽管这里提出了那么多方案，我们还在等 Gentoo。」</p>
+
+        <p>James <a href="https://bugs.gentoo.org/982204#c21">回复</a>说，目前还没有任何维护者有空去研究 Chromium 软件包的问题。他表示，随 bug 报告提交的补丁和 ebuild「很有用，也值得感谢，但并不是拿来直接提交那么简单」。他说，如果维护者没有测试过这些 ebuild 就提交，结果在用户的系统上出了问题，用户同样会抱怨。</p>
+
+        <blockquote><p>该做的事总会做成，但如果没有人愿意按照这件事应有的方式来处理（这远不止是附上 ebuild 那么简单），那它更有可能被举行临终仪式。</p></blockquote>
+
+        <p>Valenduc <a href="https://bugs.gentoo.org/982204#c22">表示</a>，他无力维护这个软件包，「但从 bentoo overlay 拿 ebuild 并不是那么难……看着 Gentoo 迟迟不更新实在令人沮丧。」James <a href="https://bugs.gentoo.org/982204#c23">回复</a>说，ebuild 在 Valenduc 的机器上能跑，并不代表它的所有 <code>USE</code> 标志都能正常工作。他还补充说，没有人向 Gentoo 的 ebuild 提交过补丁，这意味着维护者需要通过对比 ebuild 差异来逆向推导出改动的内容。「这些工作量都不小；虽然有一个现成的 ebuild 作为起点对这项工作有帮助，但这并不意味着可以简单地 <code>git add</code>、<code>git commit</code>、<code>git push</code> 完事。」Valenduc <a href="https://bugs.gentoo.org/982204#c24">承认</a>他无法测试所有可能的 <code>USE</code> 标志，因为在他的笔记本上编译一次 Chromium 需要 15 到 16 个小时。</p>
+
+        <p>9 月 24 日，Žilka <a href="https://bugs.gentoo.org/982204#c30">评论</a>道：「这太荒谬了」。几分钟后，James <a href="https://bugs.gentoo.org/982204#c31">回复</a>「好吧」，随后<a href="https://bugs.gentoo.org/982204#c32">为该软件包发布了临终仪式</a>。</p>
+
+        <h3>我们能留下它吗？</h3>
+
+        <p>Maciej S. Szmigiero <a href="https://bugs.gentoo.org/982204#c35">询问</a>是否有可能把 ebuild 留在 Gentoo 的仓库中，只是声明它以「尽力而为（best effort）」级别维护。「移除一个可构建、可打补丁的 Chromium，对 Gentoo 桌面用户来说是巨大的损失。」James <a href="https://bugs.gentoo.org/982204#c36">表示</a>，他认为这行不通。他已经解释过 Chromium 是由志愿者维护的，但这一解释并未被接受。</p>
+
+        <p>他说，人们尽可以在其他仓库中维护这个 ebuild，但那意味着他们必须自己动手完成工作，或者接受别人以较低标准完成的工作。他指出，讨论中有人引用了来自 Bentoo overlay 的 ebuild，但这些 ebuild 的生成似乎「高度自动化」，漏掉了 Gentoo 版本中的部分修复。「复制 ebuild 一切正常——直到出问题的那一天。」</p>
+
+        <p>James 补充说，在 10 月 24 日临终仪式期结束之前，仍有人可以接手 Chromium 软件包，或者该软件包将来也有可能被恢复。不过，除非有可持续维护的计划，否则他并不希望看到这种情况。「由于上游变动频繁，Chromium 在 Gentoo 历来都在耗尽维护者的热情，而这个 bug 里的部分内容对提振积极性也毫无帮助。」</p>
+
+        <p>Matt Whitlock <a href="https://bugs.gentoo.org/982204#c42">想知道</a>，是否可以通过删减 Chromium 的绝大部分 <code>USE</code> 标志，或者让维护者停止对第三方库进行解捆绑（unbundling），来减轻开发者精力耗尽的问题。</p>
+
+        <blockquote><p>基本上，我想问的是：我们能否放弃 <code>www-client/chromium</code> 中我们已经习以为常的<em>全部</em>灵活性，来换取一个真正可维护、但仍然从源码构建、且不依赖以不透明二进制形式分发的工具链的软件包？</p></blockquote>
+
+        <p>他<a href="https://bugs.gentoo.org/982204#c46">后来补充</a>说，问题的一部分在于上游项目的开发者「从未在禁用任何所谓『可选』功能的情况下测试他们的构建」。这就把责任留给了下游的软件包维护者。「就 Chromium 而言，让所有开关都保持可用（尽管上游长期忽视）是一项艰巨得近乎无法完成的任务。」</p>
+
+        <h3>复杂性</h3>
+
+        <p>James <a href="https://bugs.gentoo.org/982204#c47">表示</a>，这是个好问题，但近来 Chromium 复杂度增加的部分原因是加入了 Rust 和 Go 依赖。打包者不得不费一番周折来确保 Go 构建不需要网络访问——Gentoo ebuild 禁止这样做，但这还不是唯一的问题。他说，Google 的开发者似乎一直在使用实验性的 Rust 特性，导致新版本发布时经常出问题。除此之外，「另一个问题在于上游用于生成发布 tarball 的 CI 并不可靠」。Gentoo 的一位 Chromium 维护者曾提交补丁试图修复，但收效甚微。「让（这些补丁）通过审查花了很长时间，而之后它又坏过好几次。他们似乎根本没有注意到、也不在乎它要么不产出 tarball，要么产出的 tarball 不完整。」</p>
+
+        <p>Jolly <a href="https://bugs.gentoo.org/982204#c53">补充</a>了自己在为 Gentoo 维护 Chromium 过程中观察到的一些问题。他说，维护 Chromium 每周可能要花费六个多小时，而这还只算在一台配有「海量内存」的高速 PC 上的编译时间。在 64 位 Arm 机器上，编译时间还要更长。</p>
+
+        <blockquote><p>算上变基补丁、拣选修复、反复执行 <code>ebuild ... clean compile</code>，再加上设法发现并修复新出现的 bug、权衡因不对浏览器做更多解捆绑而违反了多少 Gentoo 政策、投入时间搞自动化以便日后省时少错等等，这相当于承诺每周至少贡献一个工作日的空闲时间。让构建保持最新面临着巨大压力，尤其是在每周出现数百个浏览器 CVE 的时代。</p></blockquote>
+
+        <p>他在关于 Chromium 临终仪式及恢复该软件包所需条件的回复中附上了一份「预防性 FAQ」。他说，维护 Chromium 并不存在无法逾越的技术障碍，但需要多名具备广泛技能的维护者——包括熟悉 C、C++、Go、JavaScript 和 Rust。「还有大量 NIH（非此处发明）的 Google 工具，你得为它们专门练就技能，而这些技能在其他任何地方都派不上用场——提前打好预防针。」</p>
+
+        <p>他说，使用 Google 的工具链会更简单，但也会把 ebuild 限制在 x86-64 上。「我们将失去 arm64、ppc64 和 RISC-V overlay——不如现在就干脆撕掉创可贴，因为它并不能实质性改善局面。」他补充说，他愿意为任何想维护源码 ebuild 的人审查提交并提供指导，但他认为至少需要三个人。「历史证明单个维护者是行不通的，而且自我 2023 年开始维护这个软件包以来，发布周期已经缩短了两次；当时已经很糟，现在更是雪上加霜。」</p>
+
+        <p>毫不夸张地说，Chromium 的<a href="https://chromiumdash.appspot.com/releases?platform=Linux">发布节奏</a>相当激进。Chromium 拥有多个渠道，包括稳定版、测试版和开发版。通过稳定渠道，大约每两周就会有一个新的浏览器主要分支，而且每周都会发布一个新版本。</p>
+
+        <h3>获取 Chromium</h3>
+
+        <p>目前来看，Gentoo 用户恐怕需要到别处寻找合适的 Chromium ebuild、改用其他浏览器，或者另寻其他分发方式来获取 Chromium。例如，Gentoo 用户可以安装<a href="https://flathub.org/en/apps/org.chromium.Chromium">来自 Flathub 的 Flatpak</a>，但这是一个由第三方构建的未经验证的软件包——并非出自 Chromium 上游项目。而且对于不使用 x86-64 或 64 位 Arm 系统的用户来说，Flatpak 也帮不上忙。</p>
+
+        <p>从技术上讲，Chromium 用户可以按照上游的说明自行构建和编译浏览器，但 Chromium 项目似乎并不太在意让这件事变得容易。项目确实有一个<a href="https://www.chromium.org/developers/how-tos/get-the-code/">获取代码的页面</a>，但其中指向 Linux（以及 macOS 和 Windows）构建说明的链接返回 503 错误。搜索说明文档可以找到<a href="https://chromium.googlesource.com/chromium/src/+/main/docs/linux/build_instructions.md">这一个页面</a>，但页面上没有标注日期，因此无法确定它是否是最新的。即使假设这些说明是最新且正确的，按照它们构建 Chromium 也是一场不小的折磨。用户可以<a href="https://www.chromium.org/getting-involved/download-chromium/">从项目方下载预构建的二进制文件</a>，但仅限 x86-64 系统。</p>
+
+        <p>当然，其他发行版仍在继续提供 Chromium 软件包，尽管它们的做法无法提供与 Gentoo 同等的灵活性。Fedora 的<a href="https://packages.fedoraproject.org/pkgs/chromium/chromium/">软件包</a>（其描述为「一款由 WebKit（Blink）驱动、Google 不希望你使用的网页浏览器」）版本为 154.0.8037.92，比上游 10 月 1 日发布的版本（154.0.8037.97）落后一个版本。同样，Debian 安全仓库中的软件包目前版本与 Fedora 的相同，其<a href="https://security-tracker.debian.org/tracker/source-package/chromium">信息页面</a>显示 154.0.8037.97 至少修复了 11 个已知 CVE。紧跟 Chromium 的步伐绝非易事。</p>
+
+        <p>也许 Gentoo 会找到一支愿意且有能力承担维护 Chromium ebuild 之责、并达到 Gentoo 用户所期望标准的团队。但无论结果如何，在此期间 Chromium 恐怕都不会变得更容易维护。</p>
+    </div>
+</div>
+
+<div class="article" id="article3">
+    <div class="article-header">
+        <span class="article-category">Rust / 语言设计</span>
+        <h2>超越 &amp;：深入 Rust 的智能指针</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月2日</span>
+            <span><a href="https://lwn.net/Articles/1096028/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>Rust 拥有多种类型的智能指针，既有标准库提供的，也有用户自定义的。然而，内置引用可以完成的某些操作，用户自定义的智能指针却无法实现。Rust 项目语言团队的负责人 Tyler Mandry 在 <a href="https://rustconf.com/">RustConf 2026</a> 上发表演讲，介绍了为改变这一现状所做的长期努力——让智能指针拥有与内置引用同等的灵活性。</p>
+        <p>Mandry 说，整个 2026 年他都在与语言团队其他几位感兴趣的成员一起，以 <a href="https://goals.rust-lang.org/2026/roadmap-beyond-the-ampersand.html">"Beyond the &amp;"</a> 项目之名研究这个问题。这项工作颇费心思，但他们最终得出的设计应当能让人们对指针和引用的运作方式建立一个简单得多的心智模型。为了说明这一设计所要解决的问题，他展示了一个简化的 Rust 程序示例：该程序计算一些动态内容，并将其缓存在哈希表中。示例使用了 Rust 的 map-entry API，其中的 <code>or_insert_with()</code> 函数接受一个回调，用于在哈希表条目为空时进行填充。</p>
+        <pre><code>    struct RenderState {
+        cache: HashMap&lt;String, Arc&lt;String&gt;&gt;,
+        template: String,
+    }
+
+    fn render_page(state: &amp;mut RenderState, name: &amp;str) -&gt; Arc&lt;String&gt; {
+        // Mutably borrow `state.cache` using the Entry API.
+        let entry = state.cache.entry(name.to_string());
+        entry.or_insert_with(|| {
+            // Create the entry if it doesn't exist.
+            Arc::new(state.template.replace("$name", name))
+        }).clone()
+    }</code></pre>
+        <p>这段代码在哈希表中查找缓存键（<code>name</code>），要么返回缓存值的副本，要么在条目不存在时把 <code>name</code> 代入模板进行计算。共享状态通过内置的可变引用 <code>&amp;mut RenderState</code> 来访问。这个示例可以正常工作，但无法安全地在线程间共享。如果加上互斥锁以便共享缓存，借用检查器就会拒绝这段程序：</p>
+        <pre><code>    fn render_page(state: &amp;Mutex&lt;RenderState&gt;, name: &amp;str) -&gt; Arc&lt;String&gt; {
+        let state: MutexGuard &lt;' _ , RenderState&gt; = state.lock().unwrap();
+
+        // The borrow checker complains that "state" is mutably borrowed here:
+        let entry = state.cache.entry(name.to_string());
+        entry.or_insert_with(|| {
+            // ... but then used here while it is still borrowed:
+            Arc::new(state.template.replace("$name", name))
+        }).clone()
+    }</code></pre>
+        <p>Mandry 解释说，最初的代码之所以能通过，是因为借用检查器能够识别出 <code>state.cache</code> 和 <code>state.template</code> 是两个不同的字段，同时访问它们是安全的。而加入互斥锁之后，借用检查器看到的只是对 <code>MutexGuard</code> 结构的不透明访问，无法再判断这些访问是互不相交的——它不得不考虑这样一种情况：可变借用正在修改状态，与此同时回调却在读取它，从而可能导致无效的数据竞争。在这个例子中，一个简单的修复办法是先对 <code>MutexGuard</code> 解引用一次，再对其背后的结构重新借用：</p>
+        <pre><code>        let state: &amp;mut RenderState = &amp;mut *state.lock().unwrap();</code></pre>
+        <p>这样就构造出一个新的内置引用，和最初代码所用的一样，借用检查器于是又能看出这些访问彼此不冲突。问题解决了，但做法并不直观。Mandry 表示，这类复杂性正是 Rust 学习曲线陡峭的原因之一。如果 <code>MutexGuard</code> 这样由用户定义的指针类型能表现得更像内置引用，情况会好得多。</p>
+        <p>他接着说，指针类型无处不在，而它们的语义又各有细微差别。有些指针不能安全地解引用（裸指针），有些可写但不可读（<a href="https://doc.rust-lang.org/std/mem/union.MaybeUninit.html"><code>MaybeUninit</code></a>），诸如此类。这体现了 Rust 的多样性，但也让设计出一个对所有可能的指针类型都适用的方案变得困难。</p>
+        <p>语言团队最终确定的方案，以 Nadrieril 和 Benno Lossin 的工作为基础，是把编译器内部"位置（place）"的概念暴露给用户代码。位置相当于 C 语言中的左值（lvalue）：一个可以从中读取或向其中写入值的位置。位置与指针的区别在于，位置是编译期存在的抽象表达式，比如 <code>state.cache</code>，而指针是在运行时表示位置的一种方式。</p>
+        <p>思路是为每个智能指针创建一个新的句柄（handle）类型。句柄通常只是对指向同一位置的不安全指针的一层封装。随后，编译器会自动创建句柄来表示程序中引用到的位置。这样，用户代码就可以在句柄类型上实现若干 trait，从而影响借用检查器与对应自定义智能指针的句柄交互的方式，其灵活程度远超现有的 <a href="https://doc.rust-lang.org/std/ops/trait.Deref.html"><code>Deref</code></a> 和 <a href="https://doc.rust-lang.org/std/ops/trait.DerefMut.html"><code>DerefMut</code></a> trait。为了展示这大概是什么样子，Mandry 演示了库作者可以如何教会借用检查器处理通过 <a href="https://doc.rust-lang.org/std/ptr/struct.NonNull.html"><code>NonNull</code></a> 指针访问的位置上的写入操作：</p>
+        <pre><code>    unsafe impl&lt;T&gt; WritePlace for NonNullHandle&lt;T&gt; {
+        const SAFE: bool = false;
+        unsafe fn write_place(self, value: T) {
+            unsafe { self.0.write(value) }
+        }
+    }</code></pre>
+        <p><code>WritePlace</code> trait 的作用是告诉借用检查器，某一类句柄（这里指引用 <code>NonNull</code> 指针的句柄）可以被写入，以及如何写入。当 <code>SAFE</code> 设为 false 时，借用检查器会把对关联位置的写入视为不安全操作。实际的写入会被转发给 <code>NonNull</code> 所包装的裸指针。整个 trait 实现是不安全的，因为如果 trait 实现有误，借用检查器就可能出错，进而导致不健全（unsound）的行为。</p>
+        <p>与之对应的 <code>ReadPlace</code> trait 则描述如何从一个句柄读取数据。更有意思的是 <code>ProjectPlace</code> 和 <code>BorrowPlace</code>。前者告诉借用检查器如何把一个包含结构体的位置转换成包含其某个字段的位置。例如，当程序员写下 <code>state.template</code> 时，如何把（<code>MutexGuard&lt;RenderState&gt;</code> 的句柄）转换成 <code>MutexGuard&lt;String&gt;</code>。后者告诉借用检查器如何创建一个新的智能指针来借用给定的位置，其作用相当于内置引用中的 <code>&amp;</code>。</p>
+        <p>语言团队还在讨论使用 <code>BorrowPlace</code> 创建新智能指针时应该采用什么语法。虽然可以复用 <code>&amp;</code> 符号，但这可能造成困惑，也会让类型推断更难发挥作用。有人提议改用 <code>@</code> 符号，但大家对此也不完全满意。不过，无论最终选择什么语法，<code>BorrowPlace</code> trait 都完整地编码了借用检查器为安全处理该指针类型所需的一切信息。这意味着，目前内置的行为也可以通过同一机制来定义。例如，内置引用类型 <code>&amp;T</code> 的实现大致如下：</p>
+        <pre><code>    unsafe impl&lt;'a, T&gt; BorrowPlace&lt;&amp;'a T&gt; for RefHandle&lt;'a, T&gt; {
+        // Tell the borrow checker that multiple references can be made to the
+        // same place at the same time:
+        const ACCESS: AccessKind = AccessKind::Shared;
+        // And that the borrow lasts for the lifetime 'a:
+        type Timing = Lifetime&lt;'a&gt;;
+        // And that creating references is a safe operation:
+        const SAFE: bool = true;
+
+        unsafe fn borrow(self) -&gt; &amp;'a T {
+            unsafe { &amp;*self.ptr.as_ptr() }
+        }
+    }</code></pre>
+        <p>这为用户提供了编写"表现如同引用"的自定义智能指针的范例，也为标准库的维护者提供了一个记录现有那些反直觉的内置行为的场所。只要为 <code>MutexGuard</code> 写一个类似的句柄类型实现，前面的 <code>render_page()</code> 示例就能无错通过。Mandry 称之为"对这个例子来说只是一点小小的代码改动，却是一次重大的语义转变"。</p>
+        <p>把智能指针与编译器现有的内部机制更紧密地绑定还有其他好处。目前，可以对引用背后的值进行模式匹配，却不能对智能指针背后的值这样做——至少必须先解引用指针再重新借用其后的值才行。<code>BorrowPlace</code> 所暴露的细节，足以让编译器安全地实现这类模式匹配。</p>
+        <p>Mandry 说，语言团队评估新特性的一项标准是可组合性：即候选特性与语言现有结构的融合程度，以及该特性的多个用法之间相互组合的效果。句柄和位置"组合得天衣无缝"，因为它们不过是把编译器理解和处理这门语言时已经在用的部分细节暴露出来而已。</p>
+        <p>尽管如此，向库代码暴露位置和句柄目前仍处于原型阶段。Mandry 请求大家帮助确保这一设计能适用于所有人的用例；他请听众查阅<a href="https://rust-lang.github.io/beyond-refs/">设计文档</a>，并补充他们自己遇到的语义怪异的智能指针示例。"如果你有一个抽象希望与语言做更深度的整合，请帮我们试试这个方案，并把遇到的障碍告诉我们。"</p>
+        <p>他打算接下来完善的设计部分是错误和诊断信息。理想情况下，用户永远不应该看到提到新增 trait 的错误信息；这些 trait 将保持内部性质，错误信息则会像内置引用那样直接说明问题。虽然距离它成为语言的稳定部分还有很多工作要做，Mandry 对这一设计仍持乐观态度。"我希望它能让各种库把 Rust 变得更加强大和友好。"</p>
+        <p>有一位听众想知道这一设计是否也支持破坏性模式匹配（即在对值进行模式匹配的同时取得其所有权、将其拆解为各个组成部分的复合操作）。Mandry 回答说可以，前提是开发者为相应的句柄实现了 <code>VariantPlace</code> trait。他说，要让句柄类型支持所有操作，总共需要实现六到八个操作，这只是其中之一。</p>
+        <p>另一位听众询问该设计是否也适用于一般意义上的枚举。Mandry 停顿了一下，望向远处放空了片刻，然后迟疑地拖长语调说了声"可以"。他进一步解释说，从枚举中任意投影出某个字段恐怕是行不通的，但在这个方向上已经有一些探索性的工作。例如，是否应该可以从 <a href="https://doc.rust-lang.org/std/option/enum.Option.html"><code>Option</code></a> 内部投影出一个字段，得到一个包裹该字段值的 <code>Option</code>？"我不知道答案，但这是个有趣的问题。"Mandry 在会议时间即将结束之际如是说。</p>
+        <p>［感谢 LWN 的差旅赞助方 Linux Foundation 协助我们前往蒙特利尔参加 RustConf。］</p>
+    </div>
+</div>
+
+<div class="article" id="article4">
+    <div class="article-header">
+        <span class="article-category">内核 / AI 开发工具</span>
+        <h2>Sashiko 补丁评审系统的最新进展</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月5日</span>
+            <span><a href="https://lwn.net/Articles/1096963/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>补丁评审长期以来都是内核项目（以及其他大多数项目）的一个瓶颈性约束：根本没有足够的人手来认真评审所有提交上来等待合入的代码。Sashiko 系统利用大语言模型（LLM）自动生成评审意见，为缓解这一问题带来了希望，并且已经成为内核开发流程中的重要一环。在 2026 年的 <a href="https://kernel-recipes.org/en/2026/">Kernel Recipes</a> 大会上，Sashiko 的维护者 Roman Gushchin 介绍了这套系统的工作原理以及正在进行的改进工作。</p>
+        <p>他说，推动 Sashiko 开发的首要目标，是防止新漏洞进入内核。除了 LLM 之外（这自然是例外），全部代码都是开源的，并已捐赠给 Linux Foundation。Sashiko 的主实例运行在 Google 的 Gemini LLM 上，但代码也能配合多种流行的模型工作。它监视内核邮件列表，并对其上出现的所有补丁进行评审。这些评审意见会出现在由 Google 赞助的 <a href="https://sashiko.dev/">sashiko.dev 中心站点</a>上。</p>
+        <p>他说，为内核打造一个专门的评审工具框架有多方面的原因。这个项目最初使用的是通用 LLM，但评审质量不够高。LLM 高度依赖于所提供的上下文：信息要足够，但不能过多；提供太多信息会导致「奇怪的效果」。安全同样是一个重要顾虑：维护者依靠 Sashiko 来评判代码，必须确信它没有被暗中破坏。这意味着，其中就包括要投入大量精力来保护系统免受<a href="https://en.wikipedia.org/wiki/Prompt_injection">提示注入</a>攻击。对于一个每天必须评审 1500 个甚至更多补丁的系统来说，效率也是需要考虑的因素。</p>
+        <p>Sashiko 背后的设计原则包括「完全透明」：一切内容都对外公开，其中包括<a href="https://github.com/sashiko-dev/sashiko#sashiko">代码</a>、<a href="https://github.com/masoncl/review-prompts#review-prompts-for-ai-assisted-code-review">提示词</a>、思维链以及生成的评审意见。开发工作由基准测试来引导，这些测试同时衡量发现问题能力和误报率。Sashiko 的所有方面都是可选加入的，他说，开发者可以控制邮件的发送。该项目追求的是一种「类内核的开发文化」。</p>
+        <p>Sashiko 的结构是一个多阶段流水线：目前有 11 个阶段，很快还要增加一个。前七个阶段各自从不同角度评审补丁：一个专攻锁，一个专攻资源控制，一个专攻安全，等等。每个阶段都会产生一些「疑虑」（concerns），传递给后续阶段；第八个阶段负责去重，第九个阶段处理冲突消解，第十个阶段进行验证和严重性校准，最后一个阶段生成报告。他说，将「发现」与「验证」分开非常重要。如果要求系统只报告它能够完全证明存在的漏洞，它会漏掉大量问题；先列举出疑虑、然后再设法证伪，效果要好得多。</p>
+        <p>在最初的六个月里，Sashiko 在 91 个邮件列表上生成了超过 17 万条评审意见。这项工作需要超过 1800 万次 Git 调用来查询信息。早期版本速度很慢；事实证明，瓶颈在 I/O 上，因为要频繁检查 Git 仓库。评审一个补丁过去需要 15 个小时；现在一次评审只需 15 到 30 分钟。</p>
+        <p>基准测试的做法是：取 1000 个已知回归问题及其已知修复；将引入回归的那个补丁在不带修复的情况下重新评审，再由一个 LLM 给结果打分。目前 Sashiko 能找出其中刚过一半的漏洞，而这些漏洞当初全都逃过了人工评审。</p>
+        <p>他说，评估 Sashiko 对内核社区的影响并不容易；这个系统还太新，也难以衡量——它发现的许多漏洞都在后续的补丁提交中被悄悄修复了。他说，内核仓库中目前有 1215 个提交引用了 Sashiko，它的评审意见收到了来自 1015 位内核开发者的 6600 封邮件回复。由此他得出结论：这套系统确实在起作用。但它是否让内核代码变得更好，就更难衡量了。他花了一些时间研究那些修复「60 天内刚合入的补丁」的内核提交；7.1 版本中这类情况<i>看起来</i>有所减少，但现在下结论为时过早。不过，被 Sashiko 评为「干净」的补丁很少需要后续修复，而那些被报告存在问题的补丁则需要更多修复。</p>
+        <p>Sashiko 一个较新的功能是本地的、基于终端的评审模式。安装方式如下：</p>
+<pre>
+    $ cargo install sashiko
+</pre>
+        <p>之后只需配置好自己的 LLM 密钥，然后在终端里运行即可。</p>
+        <p>Sashiko 在评审一个补丁时，往往还会发现周边代码中已有的漏洞。开发者并不总是乐于听到这些漏洞；修复它们并不是他们本来要做的事。因此 Sashiko 现在<a href="/ml/all/7ia4se37qwvk.fsf@castle.c.googlers.com/">会抑制这类报告</a>，并将它们放入一个单独的数据库。这个数据库目前大约有 5000 个漏洞；凡是 <code>MAINTAINERS</code> 文件中被列名的人都可以查询它，查看自己子系统内被报告的漏洞。一个问题是，没有人有空维护这个数据库，比如清理那些已经修复的条目；他希望能搭建一些代理（agent）来做这项工作。</p>
+        <p>同样新的还有「Sashiko for Sashiko」，用于评审 Sashiko 自身的改动。与此同时，显然有人正在外面运行一个 Sashiko 实例来评审 OpenBSD 的补丁；他不知道那是谁，但很希望借鉴他们的经验。未来，可能会为 Git、LLVM 或 QEMU 这类项目搭建 Sashiko 实例。虽然 Sashiko 使用的许多提示词都是内核专用的，但其中的很多内容更具通用性。他还见过一些开发者在自己的工作流中使用 Sashiko；Sashiko 本是为维护者设计的，但开发者的使用也在不断扩展。</p>
+        <p>当然，这个工具总有可以改进的地方。例如，对大型改动的评审明显不如对小型改动的评审。它有个毛病会让开发者很沮丧：即使代码本身没有变化，它也会不断在之前评审过的代码里找出新的漏洞。它仍然无法找出所有漏洞，而且仍然会编造出不存在的漏洞。</p>
+        <p>Gushchin 在结尾说，Sashiko 项目需要更多帮助，欢迎新的贡献者。对其评审结果提供反馈或许是最重要、最有价值的贡献方式。面向特定子系统的提示词开发也始终受欢迎。最后，将 Sashiko 适配到其他可能受益于自动补丁评审的项目上，同样是有价值的工作。</p>
+        <p>一位现场听众（令人意外的是，不是我）评论说，许多提示词似乎与内核文档中的内容重复，而文档中的另一些信息对人类开发者同样有用。他建议，或许可以把这些提示词纳入内核文档。Gushchin 在原则上表示同意，但指出情况比较复杂。他说，Sashiko 既要支持较旧的内核，也要支持当前的主线版本，而提示词的变更速度往往快于内核的发布周期。这两点都主张把提示词——或至少其中一部分——保留在内核之外。</p>
+        <p>Mark Brown 评论说，当 Sashiko 需要内核代码树之外的信息时，结果往往是「一坨垃圾」；他想知道这种情况能否改善。架构特定代码往往是出现这种现象的一个领域。Gushchin 表示，让模型访问数据手册（data sheet）或许会有帮助，尽管这未必在法律上总是可行。</p>
+        <p>本次演讲的<a href="https://www.youtube.com/watch?v=gE7dBZBLvBc&list=PLEVVgAZOU9P8&index=15">视频</a>已在 YouTube 上发布。</p>
+        <p>[感谢 LWN 的差旅赞助方 Linux Foundation 支持我参加本次活动。]</p>
+    </div>
+</div>
+
+<div class="article" id="article5">
+    <div class="article-header">
+        <span class="article-category">Rust / 工具链</span>
+        <h2>用 Charon 分析 Rust 程序</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月7日</span>
+            <span><a href="https://lwn.net/Articles/1097198/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>Nadrieril 是 Rust 的资深贡献者，也是 rustc 模式匹配基础设施的维护者。在参与 Rust 开发的过程中，他注意到了这门语言在可用性上的一个问题：很难从 Rust crate 中自动提取信息，供其他工具使用。<a href="https://github.com/AeneasVerif/charon#charon">Charon 项目</a>的目标就是解决这个问题——为访问 Rust 编译器的内部信息提供一个稳定的 API。</p>
+        <p>他解释说，Rust 的很多特性都是隐式或自动的，因此如果不想重新实现 Rust 编译器（rustc）的大部分功能，就很难写出一个能解读 Rust 代码行为的工具。工具规避这一问题的常规做法是使用 rustc 的内部接口，但这些接口有时会在毫无预警的情况下失效。编译器二进制文件只是一个薄薄的包装，理论上可以链接并使用其背后的库，但这些入口点被明确标注为不稳定。</p>
+        <p>Charon 的目标是以一种稳定的方式"向你展示 rustc 所看到的东西"，把跟进 rustc 内部接口变化所需的全部开发工作集中到一处。Nadrieril 认为，从事内核开发的 Rust 开发者在编写作为内核构建一部分的自定义工具时，可能对此有特别的需求。为了具体展示 Charon 能做什么，Nadrieril 准备了<a href="https://github.com/AeneasVerif/kangrejos-2026-charon-demo#charon-demo">一系列演示</a>，从一个"基本什么都不做"的微型 crate 开始。运行 "<code>charon cargo</code>" 会像 cargo 平常那样编译 Rust 项目，但会多出一份输出：一个 .llbc 文件，其中包含以可读形式完整记录 crate 内容的 JSON——涵盖定义的类型、trait 和函数。</p>
+        <p>Charon 还能为人类读者把这个 JSON 输出美化为易读的格式。输出采用一种类似 Rust 的语言，通过额外的注释和语句来标注程序来源，并将隐式特性显式地呈现出来。例如，输出中用闪电（⚡）符号标出栈展开（unwinding）期间控制流的去向。即便是这个最简示例的输出也颇为冗长，但它标明了值在何处被 drop、所涉变量的类型，甚至保留了源代码中的注释。这个 Rust 函数：</p>
+        <pre><code>    fn consume(_: String) {}</code></pre>
+        <p>会变成：</p>
+        <pre><code>    // Full name: use_threads::consume
+    fn consume(_1: String)
+    {
+        let _0: (); // return
+        let _1: String; // arg #1
+
+        storage_live(_0)
+        _0 = ()
+        _0 = ()
+        conditional_drop[impl_Destruct_for_String::drop_glue&lt;'0&gt;] _1
+        ↳⚡ unwind_continue
+        return
+    }</code></pre>
+        <p>Nadrieril 接着展示了这类分析对内核的具体用处。首先，Charon 可以用来查看 rustc 是如何解读 bindgen 的输出的——bindgen 是一个为内核的 C 结构体生成 Rust 版本的程序。Charon 的输出既显示 rustc 选择了哪种具体布局，也标明布局中哪些部分能保证在不同编译器版本之间保持稳定。作为示例，他展示了 Charon 针对内核 <a href="https://elixir.bootlin.com/linux/v7.2.8/source/include/linux/types.h#L204"><code>list_head</code> 结构</a>的一段输出：</p>
+        <pre><code>    // Full name: bindings::bindings_raw::list_head
+    pub struct list_head {
+      next: *mut list_head,
+      prev: *mut list_head,
+    }
+    // layout:
+    //     size: 16usize (guaranteed:
+    //         at_least(align_to(max(size_of::&lt;*mut list_head&gt;(),
+    //                               size_of::&lt;*mut list_head&gt;()),
+    //                           max(align_of::&lt;*mut list_head&gt;(),
+    //                               align_of::&lt;*mut list_head&gt;())))),
+    //     align: 8usize (guaranteed:
+    //         at_least(max(align_of::&lt;*mut list_head&gt;(),
+    //                      align_of::&lt;*mut list_head&gt;()))),
+    //     discriminator: _,
+    //     inhabited: true,
+    //     variants: [
+    //         _: {
+    //             offset of next: 0,
+    //             offset of prev: 8,
+    //             inhabited: true,
+    //             tagger: [],
+    //         },
+    //     ],
+    //     repr(C),</code></pre>
+        <p>这些信息中有若干冗余的部分，比如一个并非枚举的结构体（因此只有一个变体）也带着变体信息。好处在于，Charon 输出的 JSON 结构极为规整，编写使用它的简单工具因此变得容易。结构和枚举总是提供同一套信息，函数也一样，无论它们是定义为闭包、方法还是顶层函数。这使得遍历所生成 JSON 的代码更好写。例如，一个检查程序不得调用 <a href="https://doc.rust-lang.org/std/thread/fn.spawn.html"><code>std::thread::spawn()</code></a> 的<a href="https://github.com/AeneasVerif/kangrejos-2026-charon-demo/blob/main/demo2-detect-threads/main.rs">自定义 linter</a>，大约只需 60 行代码。</p>
+        <p>"如果你曾试着研究过 rustc 的 ABI，现在可能已经在哭了。这可不是件容易的事。"Nadrieril 说。Gary Guo 询问 Charon 与目标相似的 <a href="https://github.com/rust-lang/rustc_public#rustc-public-project-group-formerly-stable-mir">rustc_public 项目</a>相比如何。Nadrieril 回答说，这两个项目处于一个光谱的两端。rustc_public 项目只做暴露 rustc 接口所必需的最少工作，同时也只提供最低程度的抽象。Charon 则会做一定量的工作，把 rustc 接口提供的信息包装成一种优雅、简化、易于解析的格式，并提供更好的配套工具。Guo 认为 Charon 的做法更好。</p>
+        <p>Miguel Ojeda 建议，<a href="/Articles/991399/">Coccinelle for Rust</a> 项目或许可以用 Charon 取代 <a href="https://rust-analyzer.github.io/">rust-analyzer</a>。Nadrieril 认为 Charon 确实适合这一用例。Kent Overstreet 询问 Charon 能否展示不同的优化 pass 对 Rust 代码做了什么，他认为这将有助于在不花数年时间彻底弄懂优化如何影响代码生成的前提下，从这门语言中榨取最优性能。Nadrieril 表示这确实有用，只是他之前没想到，所以 Charon 目前还不支持。不过他认为加起来并不难。</p>
+        <p>他还演示了更多 Charon 的可能用途。其中一个演示是把一个执行 128 位乘法的简单 Rust 函数翻译成 Python。这个特定的例子没什么实用价值，因为 Python 本身就支持大整数，但把算法从 Rust 翻译到另一种语言有时是有用的。例如，Charon 暴露的 OCaml 绑定，就是把 Charon 跑在它自己的源代码上生成的。它还被用来把 Rust 翻译成 C 或 Lean。</p>
+        <p>Hindborg 询问 Rust 到 C 的翻译质量如何。Nadrieril 说，该工具只针对安全 Rust，但在这个范围内表现相当不错，生成的 C 代码清晰可读。微软已经用它把一些用 Rust 实现的密码学原语翻译成了 C。Xong Fei Ding 提到，<a href="https://github.com/google/boringssl#boringssl">BoringSSL</a> 曾收到一个补丁，试图把 <a href="https://github.com/celabshq/libcrux#libcrux---a-high-assurance-cryptographic-library-in-rust">libcrux</a> 从 Rust 转换为 C，用来替换 BoringSSL 的密码学代码，但因 C 版本性能不佳而被拒绝。Nadrieril 表示，Rust 与 C 中跑得快的代码模式并不一致，从 Rust 生成高性能的 C 代码远比生成可读的 C 代码困难。</p>
+        <p>Guo 询问 Charon 的输出是基于 rustc 解析完 Rust 代码后立即构建的中间表示（中级中间表示，简称 MIR），还是基于完成类型检查和部分优化之后的表示（elaborated MIR）。Nadrieril 说两者皆可——默认使用前者，用户通过 <code>--precise-drops</code> 标志可以要求使用后者，因为某些优化会改变 drop 发生的位置。Guo 解释说，他的兴趣源于为了让 <a href="/Articles/951550/">klint</a> 工具正常工作而不得不"绕开"rustc 的一些内部实现。经过一番讨论，Guo 得出结论：Charon 无法完全取代 klint，但原因仅仅是 klint 还会检查生成二进制文件的一些性质。</p>
+        <p>Nadrieril 在演讲结尾说，Charon 的开发刚过四年，除异步代码外已支持所有 Rust 特性。仍存在一些 bug，但除 bug 之外，Charon 产生的输出是正确的。该项目很快就能准备好发布 1.0 版本。他请求大家在自己的用例中试用 Charon。这个项目的意义就在于把与编译器对接所需的逻辑集中到一处；如果各类工具都能采用它，他会非常高兴。</p>
+    </div>
+</div>
+
+<div class="article" id="article6">
+    <div class="article-header">
+        <span class="article-category">调度器</span>
+        <h2>LAVD 调度器：从游戏到服务器的演进</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月7日</span>
+            <span><a href="https://lwn.net/Articles/1097209/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>可扩展调度器类（extensible scheduler class）让开发者能够用 BPF 创建自定义 CPU 调度器，也为这一领域带来了一波创新浪潮；<a href="https://github.com/sched-ext/scx/tree/main/scheds/rust/scx_lavd#scx_lavd">LAVD 调度器</a>或许是其中最引人注目的调度器之一。尽管它最初是为<a href="https://lwn.net/Articles/1051430/">游戏应用而设计</a>的，但 LAVD 调度器此后已扩展到服务于其他类型的工作负载。在 2026 年的 <a href="https://kernel-recipes.org/en/2026/">Kernel Recipes</a> 大会上，Changwoo Min 和 Gavin Guo 介绍了这个调度器的概况及其演进历程。</p>
+        <h3>游戏与关键性</h3>
+        <p>Min 首先介绍说，这个调度器最初是为了解决游戏中的卡顿问题而开发的。它的核心概念是"紧迫性"（urgency）——下一个最需要运行的是哪个任务？调度器会尝试自动推断任务的紧迫性，然后用这一计算结果来调整虚拟截止时间（virtual deadline）。最近，LAVD 又加入了更复杂的启发式机制，用来决定任务应该运行在哪个 CPU 上，并尽量减少系统中活跃 CPU 的数量。</p>
+        <p>该项目始于 2023 年，最初面向 <a href="https://store.steampowered.com/steamos">SteamOS</a> 系统。那些系统此前一直使用默认的完全公平调度器，但用户不断抱怨延迟尖峰（latency spike）问题，这会严重破坏游戏体验。开发者投入了大量精力对调度器进行调优，但没有任何调优旋钮能在普遍意义上解决这个问题——调优效果高度依赖于具体的工作负载。不过，底层问题的根源往往是相同的。在观察游戏应用的行为时，他们注意到最常见的系统调用是 <a href="https://man7.org/linux/man-pages/man2/futex.2.html"><code>futex()</code></a>——一个典型游戏中的众多线程之间存在着大量的通信。这种通信正是设计更好调度器的关键所在。</p>
+        <p>Linux 调度器试图优化平均性能，但 Min 表示，对于游戏（以及许多其他工作负载）来说这是一个错误的目标；尾延迟（tail latency）更重要。最初的目标是改善 <a href="https://store.steampowered.com/steamdeck">Steam Deck</a> 设备上的尾延迟，这是一种只有单一 CPU 类型的相对简单的系统。为此，开发者们专注于确定任务的紧迫性。后来，LAVD 被逐步改造以应对其他 CPU 类型（特别是 CPU 能力各异的非同构系统），并最终适用于数据中心工作负载。据最近统计，已有 42 名开发者向该调度器提交了 900 多次 commit，代码规模目前约为 12,000 行。</p>
+        <p>游戏通常被组织成处理链条：任务 A 完成一部分工作后通知 B，B 再做进一步的工作并传递给 C。因此，延误 B 也会延误 C。捕捉这种"谁唤醒谁"的模式是 LAVD 设计的核心；具体做法是为每个任务维护三个信号：等待频率（它多久睡眠一次以等待其他任务）、唤醒频率（它多久唤醒其他任务一次）以及平均运行时间。他说，平均运行时间较短的任务更容易受到调度器延误的影响。</p>
+        <p>基于这些参数，可以计算出任务的"关键性"（criticality）；它与等待频率和唤醒频率的乘积成正比，与平均运行时间成反比。后续版本的 LAVD 还加入了关键性继承（criticality inheritance）：一个任务的紧迫性可以传播到它所阻塞等待的任务，以及阻塞在它身上的任务。</p>
+        <h3>截止时间与 CPU 选择</h3>
+        <p>接下来 Guo 接手介绍了一些细节，首先从任务截止时间的计算讲起。与其他调度器一样，LAVD 会优先运行截止时间最早的任务。关键在于，对每个任务而言，计算距下一个截止时间的时间时有一个最后的步骤：将该时间除以任务的关键性。因此，如果两个任务最初被分配了相同的截止时间，但其中一个任务的关键性是另一个的十倍，那么该任务的截止时间就会提前十倍。这就确保了最关键的任务先于其他任务运行。</p>
+        <p>在确定时间片时，调度器力求让每个任务都能在一个 10ms 的时间窗口内运行一次，因此默认时间片就是 10ms 乘以活跃 CPU 的数量，再除以正在运行的任务数。当需要抢占某个任务时，LAVD 会查看与新任务的缓存域（cache domain）相关的那些 CPU，并尝试选择正在运行最低关键性任务的 CPU。不过也有一些限定条件：如果目标任务本来就即将用完自己的时间片，就不会被抢占；锁持有者也永远不会被抢占——调度器会监视 <code>futex()</code> 调用，以掌握哪些任务正在等待锁。LAVD 不会使用处理器间中断（IPI）来强制立即抢占，而是缩短目标任务的时间片，让它在下一个调度点自然地让出 CPU。</p>
+        <p>LAVD 为每个 L3 缓存域维护一个分发队列（dispatch queue），因此每个队列中存放的都是共享同一个缓存的任务，从而让任务尽可能运行在可能存有其缓存数据的 CPU 上。但是 Guo 指出，当其他域中还有任务等待运行时，CPU 不应闲置，因此一个无事可做的 CPU 可以尝试从其他域拉取任务。总体而言，LAVD 的负载均衡试图在各 CPU 之间均衡工作负载，但它并不是按运行队列中的任务数量来均衡，而是力求让每个 CPU 上的权重（即正在做的工作量）保持一致。</p>
+        <p>为一个任务挑选运行 CPU 时还要考虑更多因素。某些 CPU 被认为是"动荡的"（turbulent），意味着在这些 CPU 上更难保证截止时间。正在处理大量中断的 CPU 或运行实时任务的 CPU 都可能属于这一类。LAVD 在放置高关键性任务时，会尽量选择"平稳的"（steady）CPU，尽可能避开动荡的 CPU。</p>
+        <p>一个相关的问题是：什么时候应该唤醒空闲 CPU 来运行任务？把任务放到空闲 CPU 上有利于工作保全（work conservation，即最大化系统所能产生的吞吐量），但也可能造成糟糕的缓存行为，损害性能。LAVD 会跟踪一个任务在某个 CPU 上运行的时间长短，并据此计算缓存"温热"（warmness）值；当任务离开 CPU 后，该值会随时间衰减。温热值用于判断把任务迁移到新 CPU 的收益是否大于代价。</p>
+        <h3>任务分散</h3>
+        <p>Min 随后回到台上讨论一个相关话题：调度器在任一时刻应该让多少个 CPU 保持忙碌？把任务最大限度地分散到所有 CPU 上反而可能损害性能；利用率不高的核心会处于低功耗状态，并且随着任务的来来去去频繁地在电源状态之间切换，导致低性能与高功耗并存的糟糕组合。他说，更好的做法是使用较少的 CPU，让其余的 CPU 保持睡眠。</p>
+        <p>为此，LAVD 在启动时分析内核能耗模型（energy model，它描述了每个 CPU 在其支持的各个功耗级别下能做多少工作）中的数据，并构建一张表格，指明在每个负载水平下应该使用哪些 CPU。系统运行时，调度器只需计算总利用率，然后查表即可知道应该把任务放到哪些 CPU 上。另一个启发式策略是计算每个任务的"性能关键性"（performance criticality），它是该任务的延迟关键性与整体 CPU 使用率的函数。性能关键性高的任务会被优先放置到较大（更快）的 CPU 上。</p>
+        <p>最后，目前还在进行将 LAVD 与控制组（control group）集成的工作，以便系统管理员能够对 CPU 使用量施加限制。社区提供了一个名为 <code>scx_cgroup</code> 的新库，为自定义调度器提供控制组支持。目标是让这种限制的实施尽可能廉价，因此选择的模型是"最终实施"（eventual enforcement）：在单个实施周期内不对任何组进行节流，而是让各组的平均用量在较长时间内趋于平衡。这样一来，开销相对较大的用量统计就可以放在调度器的关键路径之外进行。</p>
+        <p>Min 在结尾时表示，LAVD 调度器已经从最初的游戏用例演进为支持服务器集群上的工作负载；Meta 正在内部探索使用它。展望未来，社区有意更好地支持 AI 工作负载，而这类负载往往更关心 <b>G</b>PU 调度而非 CPU 调度。不过就目前而言，LAVD 已在多种场景中证明了自己的价值；它的核心关键路径启发式机制从来就不是游戏所特有的。</p>
+        <p>有听众提问，LAVD 中发展出的哪些想法最终会被回馈到内核的 EEVDF 调度器中；Min 回答说，这些想法仍在稳定化过程中，但最终会尝试将其中一部分推向主线。</p>
+        <p>本次演讲的<a href="https://www.youtube.com/watch?v=wh9GJDnbaMs&amp;list=PLEVVgAZOU9P8&amp;index=20">视频</a>已在 YouTube 上发布。</p>
+        <p>[感谢 Linux Foundation（LWN 的差旅赞助商）支持我参加本次活动。]</p>
+    </div>
+</div>
+
+<div class="article" id="article7">
+    <div class="article-header">
+        <span class="article-category">Python</span>
+        <h2>Python 的两个随机数模块</h2>
+        <div class="article-meta">
+            <span>作者：Trey Hunner</span>
+            <span>2026年10月6日</span>
+            <span><a href="https://lwn.net/Articles/1097468/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>Python 的 <a href="https://docs.python.org/3/library/random.html"><code>random</code></a> 模块和 <a href="https://docs.python.org/3/library/secrets.html"><code>secrets</code></a> 模块都提供了获取随机值的工具，但其中只有一个适合用来生成密码和安全令牌。在 Python 历史上的很长一段时间里，尽管文档明确指出它不适合密码学用途，人们还是把 <code>random</code> 用于密码和令牌。2015 年，Python 核心团队曾讨论是否要让 <code>random</code> 默认变得安全，以此纠正这种误用。最终，Python 在 2016 年的 3.6 版本中加入了第二个模块：<code>secrets</code>。<code>random</code> 模块至今仍偶尔被误用，因此深入了解这两个随机数模块应当如何使用是很有意义的。</p>
+        <h3><code>random</code> 的可预测性是有意为之</h3>
+        <p>Python 的 <code>random</code> 模块提供了一些底层函数，例如 <a href="https://docs.python.org/3/library/random.html#random.random"><code>random()</code></a>，它生成一个介于 0.0（含）到 1.0（不含）之间的随机浮点数。它还提供了许多更常用的高层函数，包括用于生成随机整数的 <a href="https://docs.python.org/3/library/random.html#random.randint"><code>randint()</code></a>，以及用于从序列中随机选取一个元素的 <a href="https://docs.python.org/3/library/random.html#random.choice"><code>choice()</code></a>。</p>
+        <p><code>random</code> 模块并不是为密码学安全的随机性而设计的。它使用梅森旋转（<a href="https://www.math.sci.hiroshima-u.ac.jp/m-mat/MT/emt.html">Mersenne Twister</a>）算法生成伪随机数，该算法<a href="https://docs.python.org/3/whatsnew/2.3.html#new-improved-and-deprecated-modules:~:text=The%20random%20module%20now%20uses%20a%20new%20algorithm%2C%20the%20Mersenne%20Twister%2C%20implemented%20in%20C%2E">自 Python 2.3 起被采用</a>，此后其 API 几乎没有变化。</p>
+        <p><code>random</code> 模块使用一个<a href="https://docs.python.org/3/library/random.html#random.seed">随机种子</a>（random seed）来生成数字。种子设定之后，对该模块函数的每次调用都会从这个已播种的状态中消耗一个或多个数字——该状态是一个由 624 个 32 位数字组成的数组。当 624 个数字全部用完后，接下来的 624 个数字会根据前一个状态计算得出。</p>
+        <p>速度和可复现性是 <code>random</code> 模块设计的两大特征。用梅森旋转算法计算数字，远比为每个新随机数都去询问操作系统要快得多。<a href="https://docs.python.org/3/library/random.html#random.seed"><code>random.seed()</code></a> 函数将梅森旋转算法设定到特定状态，确保此后对 <code>random</code> 模块中函数的调用会产生可预测的输出。自动化测试常常依赖这种<a href="https://docs.python.org/3/library/random.html#notes-on-reproducibility">可复现性</a>，因为确定性输出让测试更容易。</p>
+        <p>例如，下面这个 <code>test_roll_die()</code> 函数调用了 <code>random.seed()</code>：</p>
+        <pre><code>    import random
+
+    def roll_die(rolls):
+        return [random.randint(1, 6) for _ in range(rolls)]
+
+    def test_roll_die():
+        random.seed(0)
+        assert roll_die(10) == [4, 4, 1, 3, 5, 4, 4, 3, 4, 3]
+</code></pre>
+        <p><code>test_roll_die()</code> 中的 <code>roll_die()</code> 调用总是产生相同的输出，因为那次 <code>seed()</code> 调用把 Python 的梅森旋转算法固定到了一个特定状态。</p>
+        <h3>可预测性与安全性背道而驰</h3>
+        <p>在 Python 2.4 之前，如果未指定种子，Python 会<a href="https://github.com/python/cpython/blob/v2.3.7/Lib/random.py#L90-L102">使用系统时钟</a>来生成 <code>random</code> 模块的初始种子。如果攻击者能够猜到播种发生的时刻，他们就能得知该 Python 进程中随后生成的所有随机数。到了 Python 2.4，默认初始种子改为<a href="https://github.com/python/cpython/blob/v2.4/Lib/random.py#L99-L116">从操作系统的随机数生成器读取的 16 个字节生成</a>（通过 <a href="https://docs.python.org/3/library/os.html#os.urandom"><code>os.urandom()</code></a>）；只有在那些不提供自身随机数生成器的操作系统上，才会退回使用时钟时间作为随机种子。</p>
+        <p>那个版本还为 <code>random</code> 模块增加了 <a href="https://docs.python.org/3/library/random.html#random.SystemRandom"><code>SystemRandom</code></a> 类，它提供了从操作系统获取不可预测随机性的工具。2.4 的文档把 <code>os.urandom()</code> 描述为"<q>适合密码学用途</q>"，但其对 <a href="https://docs.python.org/release/2.4.4/lib/module-random.html#:~:text=class%C2%A0SystemRandom"><code>SystemRandom</code> 的描述</a>却对安全性只字未提，只是说它的序列不可复现。</p>
+        <p>到 Python 3.5 时，操作系统生成的随机数开始被<a href="https://github.com/python/cpython/issues/65669">用于填满梅森旋转算法 624 个槽位所需的全部 2,496 字节</a>。<code>random</code> 模块的初始种子比过去安全得多——只有在极少数情况下，<a href="https://github.com/python/cpython/blob/v3.15.0rc2/Modules/_randommodule.c#L294-L314">当前时间与进程标识符的回退逻辑</a>才会被触发。</p>
+        <p>然而，即便拥有安全的初始种子，如果攻击者能够观察到 Python <code>random</code> 模块生成的 <a href="https://en.wikipedia.org/wiki/Mersenne_Twister#Characteristics">624 个连续的 32 位随机输出</a>，他们就可以重建梅森旋转算法的内部状态，并计算出过去和未来的所有生成值。像 <code>randint()</code> 和 <code>choice()</code> 这样的 <code>random</code> 模块高层函数只返回梅森旋转算法输出位的一部分，因此重建状态需要更多的输出和更多的计算，但这种额外的难度并不能让它们变得不可预测。</p>
+        <p>至少从 <a href="https://docs.python.org/release/2.2/lib/module-random.html#:~:text=completely%20unsuitable%20for%20cryptographic%20purposes">Python 2.2 起</a>，该模块的文档就一直称其生成器"<q>完全不适合密码学用途</q>"。但直到 <a href="https://docs.python.org/3.3/library/random.html">2013 年底的 Python 3.3.3</a>，文档才开始在安全用途上引导读者使用 <code>SystemRandom</code>。</p>
+        <h3>默认就该是安全的吗？</h3>
+        <p>2015 年 9 月，时任 Python 的终身仁慈独裁者（BDFL）Guido van Rossum <a href="https://lwn.net/Articles/657344/">发起了一场讨论</a>，话题是人们正在不该使用 <code>random</code> 模块的密码学场景中使用它。这场讨论的起因是 OpenBSD 创始人 Theo de Raadt 发来的几封邮件，<a href="https://lwn.net/Articles/657269/">LWN 当时也做了报道</a>。van Rossum 承认文档中已有不要将该模块用于安全的警告，但也指出"<q>没人读文档</q>"。</p>
+        <p>六天后，Alyssa Coghlan 撰写了 <a href="https://peps.python.org/pep-0504/">PEP 504</a>（"Using the System RNG by default"），提议让 <code>random</code> 模块默认使用 <code>random.SystemRandom</code> 生成器类，而不是默认的 <a href="https://docs.python.org/3/library/random.html#random.Random"><code>random.Random</code></a> 生成器类。按照该提案，明确需要梅森旋转算法确定性行为的 Python 用户可以调用 <code>random.seed()</code> 切换回 <code>random.Random</code> 实例。van Rossum <a href="https://lwn.net/Articles/657447/">不希望</a>改变 <code>random</code> 模块的默认行为，他<a href="https://lwn.net/Articles/657474/">表示</a>"<q>MT（梅森旋转算法）也比 os.urandom() 或 SystemRandom 快一个数量级以上</q>"。在那第一条消息中，他提到"<q>我们已经有 random.SystemRandom() 了</q>"，因此他认为没有必要急于寻求解决方案。</p>
+        <p>PEP 504 提出后不久，Steven D'Aprano 写了 <a href="https://peps.python.org/pep-0506/">PEP 506</a>（"Adding A Secrets Module To The Standard Library"），提议为 Python 增加一个提供密码学强度随机数的新模块。Coghlan（当时用的是她以前的名字）随后<a href="https://lwn.net/Articles/659772/">撤回</a>了 PEP 504，<a href="https://lwn.net/Articles/659643/">转而支持 PEP 506</a>，后者被接受并纳入了 Python 3.6。</p>
+        <h3><code>secrets</code>：安全的随机模块</h3>
+        <p>Python 的 <code>secrets</code> 模块提供了用于从序列中随机选取元素的 <a href="https://docs.python.org/3/library/secrets.html#secrets.choice"><code>choice()</code></a>、生成小于给定数值的随机整数的 <a href="https://docs.python.org/3/library/secrets.html#secrets.randbelow"><code>randbelow()</code></a>，以及生成指定位数整数的 <a href="https://docs.python.org/3/library/secrets.html#secrets.randbits"><code>randbits()</code></a>（相当于 <a href="https://docs.python.org/3/library/random.html#random.getrandbits"><code>random.getrandbits()</code></a>）。它还提供了生成随机令牌以及执行可防时序攻击（timing attack）的相等性比较的函数。</p>
+        <p>与 <code>random</code> 模块不同，<code>secrets</code> 并<em>不</em>使用梅森旋转算法来生成伪随机数。<code>secrets</code> 模块中的每个函数都完全从操作系统的随机数生成器获取随机性，而操作系统会持续用采样自不可预测事件（如硬件中断时机）的位来重新播种。</p>
+        <p>不过，与 <code>random</code> 相比，<code>secrets</code> 模块有两个主要缺点：无法为自动化测试强制保证可复现性，而且 <code>secrets</code> 中的函数比 <code>random</code> 中的对应函数慢。<code>secrets</code> 模块的设计目标就是产生不可预测的数字，因此失去可复现性是必要的代价。</p>
+        <p>我在运行 Python 3.15.0rc2 的机器上，分别用 <code>random</code> 和 <code>secrets</code> 生成了 1000 万个 0 到 99 之间的随机数。<code>random.randint(0, 99)</code> 每秒能生成 500 多万个数字，而 <code>secrets.randbelow(100)</code> 每秒不到 100 万个，<code>secrets.randbelow()</code> 因此慢了近七倍：</p>
+        <pre><code>    &gt;&gt;&gt; from timeit import timeit
+    &gt;&gt;&gt; n = 10**7
+    &gt;&gt;&gt; for statement, setup in [
+    ...     ("random.randint(0, 99)", "import random"),
+    ...     ("secrets.randbelow(100)", "import secrets"),
+    ... ]:
+    ...     seconds = timeit(statement, setup, number=n)
+    ...     print(f"{statement}: {n / seconds:,.0f} per second")
+    random.randint(0, 99): 5,866,763 per second
+    secrets.randbelow(100): 891,087 per second
+</code></pre>
+        <p><code>secrets</code> 函数与 <code>random</code> 函数之间的速度差距<em>确实</em>可以测量，但对大多数应用来说可能微不足道。需要安全随机性的代码很少需要一次生成大量随机数，但它们绝对需要这些随机数不可预测。</p>
+        <h3><code>secrets</code> 的 API 更小</h3>
+        <p><code>secrets</code> 模块并不是 <code>random</code> 模块的直接替代品——后者还包含 <a href="https://docs.python.org/3/library/random.html#random.choices"><code>choices()</code></a>、<a href="https://docs.python.org/3/library/random.html#random.sample"><code>sample()</code></a>、<a href="https://docs.python.org/3/library/random.html#random.shuffle"><code>shuffle()</code></a> 以及其他各种 <code>secrets</code> 模块所没有的函数。如果 Python 用户需要不可预测的随机性，就无法使用那些其他随机函数——至少不能直接从 <code>random</code> 模块使用。他们可以改用 <code>SystemRandom</code> 类，这个类在 <code>random</code> 和 <code>secrets</code> 两个模块中都有提供。</p>
+        <p>Python <code>random</code> 模块的所有顶层函数都是作为 <a href="https://docs.python.org/3/library/random.html#random.Random"><code>random.Random</code></a> 类某个特定实例的方法实现的：</p>
+        <pre><code>    &gt;&gt;&gt; import random
+    &gt;&gt;&gt; random.choice
+    &lt;bound method Random.choice of &lt;random.Random object at 0x25c2e9f0&gt;&gt;
+    &gt;&gt;&gt; random.seed
+    &lt;bound method Random.seed of &lt;random.Random object at 0x25c2e9f0&gt;&gt;
+    &gt;&gt;&gt; random.choice.__self__ is random._inst  # private implementation detail
+    True
+</code></pre>
+        <p><code>random._inst</code> 对象是 <code>random.Random</code> 的默认实例，<code>random</code> 模块的所有函数都绑定到它。这使得一次 <code>random.seed()</code> 调用能够影响其后每一次模块级函数调用的输出。<code>secrets</code> 模块的 <code>choice()</code> 函数也以类似的方式实现：</p>
+        <pre><code>    &gt;&gt;&gt; import secrets
+    &gt;&gt;&gt; secrets.choice
+    &lt;bound method Random.choice of &lt;random.SystemRandom object at 0x25c3ac20&gt;&gt;
+    &gt;&gt;&gt; secrets.choice.__self__ is secrets._sysrand  # private implementation detail
+    True
+</code></pre>
+        <p>区别在于，<code>random</code> 模块<a href="https://github.com/python/cpython/blob/v3.15.0rc2/Lib/random.py#L941-L965">将这些名字绑定</a>到 <code>random.Random</code> 类实例的方法上，而 <code>secrets</code> 模块则将它们<a href="https://github.com/python/cpython/blob/v3.15.0rc2/Lib/secrets.py#L20-L23">绑定</a>到 <code>random.SystemRandom</code> 实例上。<code>SystemRandom</code> 类继承自 <code>random.Random</code>，提供相同的 API，但其所有方法都依赖 <code>os.urandom()</code>。因此，只要创建一个 <code>SystemRandom</code> 实例，Python 用户仍然可以使用 <code>secrets</code> 模块没有提供的那些 <code>random</code> 工具来生成不可预测的随机数：</p>
+        <pre><code>    &gt;&gt;&gt; import secrets
+    &gt;&gt;&gt; system_random = secrets.SystemRandom()
+    &gt;&gt;&gt; system_random.sample(range(100), k=5)
+    [90, 64, 94, 74, 36]
+</code></pre>
+        <h3><code>secrets</code> 用于秘密，其余交给 <code>random</code></h3>
+        <p>如今，<a href="https://docs.python.org/3/library/random.html#module-random"><code>random</code> 模块的文档</a>展示了一条警告，将那些出于安全和密码学目的需要随机数的人指向它的兄弟模块 <code>secrets</code>。但 Python 的 <code>random</code> 模块仍偶尔被误用于密码学用途——今年早些时候 <a href="https://github.com/urwid/urwid/security/advisories/GHSA-rjwp-g85x-gmjv">urwid 项目发布的一份安全公告</a>就是一例。这正是 <code>secrets</code> 模块想要减少的那类误用。不过，自 Python 2.4 起，标准库就已经通过 <code>SystemRandom</code> 提供了不可预测的随机性；<code>secrets</code> 模块主要是增加了一个更容易被发现的 API。Coghlan 在 2015 年的一封邮件中<a href="https://lwn.net/Articles/659805/">解释</a>了其中的理由：</p>
+        <blockquote><p>我认为这里的核心目标是引导人们在安全敏感任务中使用正确的随机数生成器（RNG）。相比解释 random.Random 和 random.SystemRandom 之间的技术差异，"随机秘密用 secrets 模块里的 RNG，建模和仿真用 random 模块里的 RNG"是一个更容易讲清楚的说法。</p></blockquote>
+        <p>即使一个既快速、又可复现、还安全的随机数生成器是可能实现的，Python 核心团队也不想通过弃用梅森旋转算法来改变现有的 <code>random</code> API。于是 Python 有了两个生成随机性的模块：<code>secrets</code> 用于随机秘密，其余一切交给 <code>random</code>。</p>
+    </div>
+</div>
+
+
+            <div class="article" id="briefs">
+    <div class="article-header">
+        <span class="article-category">社区简讯</span>
+        <h2>📝 Brief items（社区简讯）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for October 8, 2026</span>
+            <span><a href="https://lwn.net/Articles/1097861/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+        <h3>安全</h3>
+
+        <h4>OpenSSH 10.6 发布</h4>
+        <p><a href="https://www.openssh.org/txt/release-10.6">OpenSSH 10.6</a> 已发布。公告指出，OpenSSH 团队近期收到了大量由 AI 辅助生成的安全漏洞报告：“我们非常欢迎这些报告，尤其是当它们经过人工甄别、分析并附带测试用例，特别是同时附上修复方案的时候。”因此，项目方计划更频繁地发布版本，以便更快地将更新送达用户，而不是把漏洞修复积攒到下一次计划发布时一并推出。</p>
+        <p>本次发布的值得关注的变更包括：启用混合后量子签名算法 <code>ssh-mldsa44-ed25519</code>；为 <a href="https://man.openbsd.org/sftp"><code>sftp</code></a> 的 <code>lmkdir</code>/<code>mkdir</code> 命令新增 <code>-p</code> 选项；以及在 <a href="https://man.openbsd.org/ssh"><code>ssh</code></a> 和 <a href="https://man.openbsd.org/sshd"><code>sshd</code></a> 中禁用 LZ77 字典编码器以缓解侧信道泄露（这会降低 Compression 选项的效果）。此外，允许在两台远程主机之间直接复制的 <a href="https://man.openbsd.org/scp#R"><code>scp&nbsp;-R</code></a> 选项因安全风险将被弃用，未来该选项将被忽略。全部变更和漏洞修复的详情请参见官方公告。</p>
+
+        <h4>本周安全引述</h4>
+        <blockquote>
+            <p>“因为赏金计划发现了太多漏洞就把它关掉，实在算不上什么令人愉快的结果。”</p>
+            <p>—— <a href="https://blogs.gnome.org/mcatanzaro/2026/10/02/the-era-of-software-quality-or-the-era-of-ostriches/">Michael Catanzaro</a></p>
+        </blockquote>
+
+        <h3>内核开发</h3>
+
+        <h4>内核发布状态</h4>
+        <p>当前的开发内核是 <strong>7.3-rc6</strong>，于 10 月 4 日发布。Linus 表示：</p>
+        <blockquote>
+            <p>“下周的情况可能会有些不同：年度维护者峰会和 Linux Plumbers 大会即将举行，我和其他一些维护者都会在路上。这或许会、或许不会改变 -rc7 的统计数据，但不太可能影响发布节奏——不过我随后一周要休一年一度的家庭假期，这可能会让下一个合并窗口有点乱。”</p>
+        </blockquote>
+        <p>本次发布周期已收到来自 2,926 位开发者的 18,168 个非合并变更集，其中 764 人是首次为内核做贡献。发布历史如下：</p>
+        <table>
+            <tr><th>RC</th><th>日期</th><th>提交数</th></tr>
+            <tr><td><strong>v7.3-rc1</strong></td><td>2026-08-30</td><td>16267</td></tr>
+            <tr><td><strong>v7.3-rc2</strong></td><td>2026-09-06</td><td>681</td></tr>
+            <tr><td><strong>v7.3-rc3</strong></td><td>2026-09-13</td><td>733</td></tr>
+            <tr><td><strong>v7.3-rc4</strong></td><td>2026-09-20</td><td>598</td></tr>
+            <tr><td><strong>v7.3-rc5</strong></td><td>2026-09-27</td><td>649</td></tr>
+            <tr><td><strong>v7.3-rc6</strong></td><td>2026-10-04</td><td>596</td></tr>
+        </table>
+        <p>更多详情请参见 <a href="/ksdb/releases/v7.3/">LWN KSDB v7.3 页面</a>。</p>
+        <p><strong>稳定版更新</strong>：<a href="/Articles/1098405/">7.2.9</a>、<a href="/Articles/1098406/">6.18.55</a>、<a href="/Articles/1098407/">6.12.112</a>、<a href="/Articles/1098408/">6.6.158</a>、<a href="/Articles/1098409/">6.1.189</a>、<a href="/Articles/1098410/">5.15.222</a> 和 <a href="/Articles/1098411/">5.10.271</a> 已于 10 月 3 日发布。</p>
+
+        <h4>Linux Test Project 2026 年 9 月稳定版发布</h4>
+        <p><a href="https://github.com/linux-test-project/ltp#linux-test-project">Linux Test Project</a> <a href="https://lwn.net/ml/all/ar4TexudzfhsKBwT%40yuki.lan/">宣布</a>了其 2026 年 9 月的稳定版发布。自 <a href="https://lwn.net/ml/all/ahmZ_HcEEuyPzPFq%40yuki.lan/">2026 年 5 月版本</a>以来，共有来自 41 位作者的 382 个补丁。新增测试、变更等详情请参见公告。</p>
+
+        <h3>发行版</h3>
+
+        <h4>新的 Raspberry Pi Desktop 终于面向 x86-64 发布</h4>
+        <p>Simon Long <a href="https://www.raspberrypi.com/news/raspberry-pi-desktop-now-available-for-pc-and-mac/">宣布</a>了期待已久的 Raspberry Pi OS 桌面版发布，基于 <a href="https://www.debian.org/releases/trixie/">Debian 13（"trixie"）</a>，面向 x86-64 系统。</p>
+        <blockquote>
+            <p>“在 Debian 的 Buster 和 Bullseye 版本时我们还能挤出时间更新桌面版，但后来大家都忙于其他事情，虽然 Bullseye 版本仍留在网站上供需要的人使用，我们实在抽不出时间发布更新的版本。但人们一直问个不停——我们每周都会收到两三封邮件询问 PC 桌面版何时更新，而我们一直无法给出答案，因为说实话我们自己也不知道什么时候能腾出时间来做这件事。我们不断尝试为此安排时间，但并不容易。[……]”</p>
+            <p>“今年早些时候，我们（确切地说是 Serge）终于让最新版桌面系统跑在了 Debian Trixie 镜像之上。它现在基于 64 位 Debian（amd64 架构），而不是旧的 32 位版本，因为 Debian 本身已经停止对 PC 架构的 32 位支持。这应该不是大问题——过去 15 年左右制造的大多数 PC 都能顺利运行 64 位版 Debian，大多数基于 Intel 的 Mac 也是如此。（Debian 对 Apple Silicon 的支持仍处于实验阶段，所以很遗憾，手持最新最炫水果产品的朋友们暂时无法运行它。）”</p>
+        </blockquote>
+
+        <h3>开发</h3>
+
+        <h4>RustConf 录像发布</h4>
+        <p>Rust 基金会已在 YouTube 上发布了在加拿大蒙特利尔举行的 <a href="https://rustconf.com/">RustConf 2026</a> 的<a href="https://youtube.com/playlist?list=PLCIkLZab-UIM&si=3D0SOWZ4GWCtD5GC">录像</a>。大会的<a href="https://www.flickr.com/photos/rustfoundation/collections/72157725686653391/">照片</a>也已发布。LWN 今年<a href="https://lwn.net/Archives/ConferenceIndex/#RustConf-2026">报道了 RustConf 的四场演讲</a>。</p>
+
+        <h4>Rust 1.99.0 发布</h4>
+        <p>Rust 语言 <a href="https://blog.rust-lang.org/2026/10/01/Rust-1.99.0/">1.99.0 版</a>已发布。本次变更包括对 <code>extern "C"</code> 可变参数函数的支持、新增获取裸指针大小和对齐信息的函数、若干稳定化的 API 等。</p>
+
+        <h4>Picard 3.0 发布</h4>
+        <p><a href="https://picard.musicbrainz.org/">MusicBrainz Picard</a> 标签编辑器 <a href="https://blog.metabrainz.org/2026/10/04/picard-3-0-released/">3.0 版</a>已发布。“本次发布带来了许多变化，包括升级到 Qt6、全新的插件系统、多处用户界面改进、封面图处理、[国际标准录音码（ISRC）]提交功能等等。”</p>
+        <p>LWN 曾于今年 4 月<a href="https://lwn.net/Articles/1066384/">介绍过</a>Picard。</p>
+
+        <h4>Zig 0.17 发布</h4>
+        <p>Zig 编程语言 <a href="https://ziglang.org/download/0.17.0/release-notes.html">0.17 版</a>已发布。</p>
+        <blockquote>
+            <p>“本次发布凝聚了 <strong>5 个月</strong>的工作：来自 <strong>206 位不同贡献者</strong>的改动，分布在 <strong>925 个提交</strong>之中。”</p>
+            <p>“这个发布周期原本预计会更短，最终却规模可观：构建系统（Build System）经过重构，引入了构建服务器协议（Build Server Protocol）；ELF 链接器也得到增强，我们预期增量编译（Incremental Compilation）现在能在 x86_64-linux 上对所有人正常工作。”</p>
+        </blockquote>
+        <p>LWN 上一次<a href="https://lwn.net/Articles/1046084/">报道</a>Zig 是在 2025 年 12 月。</p>
+
+        <h4>本周开发引述</h4>
+        <blockquote>
+            <p>“因为一个社区与你的战略愿景、价值观不再一致，或者仅仅因为它已经向前走远，离开它都无可厚非。你当初加入是因为认同它，当认同不复存在时你就可以离开。项目就像忒修斯之船，而我们都是那些随时间被更换掉的朽木板。”</p>
+            <p>—— <a href="https://mastodon.social/@ebassi/117399866976836772">Emmanuele Bassi</a></p>
+        </blockquote>
+        <blockquote>
+            <p>“我从一个看似很平常的问题开始：‘Docker 是如何删除文件的？’答案竟牵涉到魔法文件名、不透明目录、一整块保留的文件名命名空间，以及一个在导出再导入后文件系统会发生变化的 Docker 镜像。一个无辜的问题能挖出这么多东西，不赖吧！”</p>
+            <p>“如果要浓缩成一个心智模型，那就是：<strong>层（layer）不是微型文件系统，而是一组有序的文件系统变更集</strong>。容器看到的文件系统，就是按 OCI［开放容器倡议］规则依次解释完所有变更集后的结果。新增和修改就是普通的 tar 条目，删除则是 whiteout（遮盖符）——这个约定意味着，任何以 .wh. 开头的普通文件都无法在 OCI 镜像的往返过程中幸存。”</p>
+            <p>“我依然认为 tar 是个绝妙的选择。它简单、无趣、无处不在，而无趣的技术往往活得长久。Whiteout 不过是为了让 tar 超越其自身表达能力所需要的一点点协议粘合剂。”</p>
+            <p>—— <a href="https://loige.co/hidden-design-compromises-of-docker-layers/">Luciano Mammino</a></p>
+        </blockquote>
+
+    </div>
+</div>
+
+
+<!-- 公告 -->
+            <div class="article" id="announcements">
+                <div class="article-header">
+                    <span class="article-category">公告</span>
+                    <h2>📢 Announcements（公告）</h2>
+                    <div class="article-meta">
+                        <span>LWN.net Weekly Edition for October 8, 2026</span>
+                        <span><a href="https://lwn.net/Articles/1097862/" target="_blank">英文原文</a></span>
+                    </div>
+                </div>
+                <div class="article-body">
+                    <h3>新闻简报（Newsletters）</h3>
+                    <p><strong>发行版与系统管理</strong>：DistroWatch Weekly (October 5)；This week in Fedora (October 5)；openSUSE Tumbleweed Review of the Week (October 2)；SparkyLinux News (October 1)；Ubuntu Weekly News (September 28)。</p>
+                    <p><strong>开发</strong>：Emacs News (October 5)；What's cooking in git.git (October 1)；What's cooking in git.git (October 5)；Git Rev News (September 30)；This Week in GNOME (October 3)；Koha Community Newsletter (September)；Last Week in Kubernetes Development (September 30)；LibreOffice project and community recap (October 1)；LLVM Weekly (October 5)；This Week in Matrix (October 2)；OCaml Weekly News (October 6)；Perl Weekly (October 5)；This Week in Plasma (October 3)；PyCoder's Weekly (October 6)；Weekly Rakudo News (September 29)；Weekly Rakudo News (October 5)；Ruby Weekly News (October 1)；This Week in Rust (September 30)；Wikimedia Tech News (October 5)。</p>
+                    <p><strong>会议记录</strong>：Fedora FESCo meeting minutes (October 6)；This week in the Perl Steering Committee (October 5)。</p>
+                    <p><strong>其他</strong>：Free Software Supporter (October)。</p>
+                    <h3>演讲征集（Calls for Presentations）</h3>
+                    <p>以下是摘自 LWN.net CFP 日历的演讲征集截止日期：</p>
+                    <table>
+                        <thead>
+                            <tr><th>截止日期</th><th>活动日期</th><th>活动名称</th><th>地点</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>10 月 9 日</td><td>11 月 20–21 日</td><td>OLF Conference</td><td>哥伦布，俄亥俄州，美国</td></tr>
+                            <tr><td>10 月 26 日</td><td>12 月 1–3 日</td><td>Yocto Project 虚拟峰会 2026.12</td><td>线上</td></tr>
+                            <tr><td>11 月 1 日</td><td>4 月 1–4 日</td><td>Southern California Linux Expo</td><td>帕萨迪纳，加州，美国</td></tr>
+                            <tr><td>11 月 2 日</td><td>2 月 23 日</td><td>AlpOSS 2027</td><td>埃希罗勒（格勒诺布尔），法国</td></tr>
+                        </tbody>
+                    </table>
+                    <h3>即将举行的活动（Upcoming Events）</h3>
+                    <table>
+                        <thead>
+                            <tr><th>日期</th><th>活动名称</th><th>地点</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>10 月 7–9 日</td><td>Open Source Summit Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 7–9 日</td><td>Embedded Linux Conference Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 8 日</td><td>Linux Security Summit Europe</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 10–11 日</td><td>GStreamer Conference 2026</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 13–15 日</td><td>OpenSSL Conference</td><td>布拉格，捷克</td></tr>
+                            <tr><td>10 月 14–17 日</td><td>PyCon South Africa</td><td>开普敦，南非</td></tr>
+                            <tr><td>10 月 16–18 日</td><td>VideoLAN 开发者日</td><td>罗马，意大利</td></tr>
+                            <tr><td>10 月 18–20 日</td><td>All Things Open</td><td>罗利，北卡罗来纳州，美国</td></tr>
+                            <tr><td>10 月 20–23 日</td><td>The Matrix Conference</td><td>马尔默，瑞典</td></tr>
+                            <tr><td>10 月 20–23 日</td><td>PostgreSQL Conference Europe</td><td>瓦伦西亚，西班牙</td></tr>
+                            <tr><td>10 月 30 日 – 11 月 1 日</td><td>Qubes OS Summit</td><td>柏林，德国</td></tr>
+                            <tr><td>11 月 3–4 日</td><td>Open vSwitch 与 OVN 2026 秋季会议</td><td>海尔布隆，德国</td></tr>
+                            <tr><td>11 月 6–7 日</td><td>德州 Linux 节</td><td>奥斯汀，得克萨斯州，美国</td></tr>
+                            <tr><td>11 月 7–8 日</td><td>OpenFest 2026</td><td>索非亚，保加利亚</td></tr>
+                            <tr><td>11 月 7–8 日</td><td>OpenALT</td><td>布尔诺，捷克</td></tr>
+                            <tr><td>11 月 12–13 日</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+                            <tr><td>11 月 14–15 日</td><td>Capitole du Libre 2026</td><td>图卢兹，法国</td></tr>
+                            <tr><td>11 月 17–19 日</td><td>开源监控大会</td><td>纽伦堡，德国</td></tr>
+                            <tr><td>11 月 20–21 日</td><td>OLF Conference</td><td>哥伦布，俄亥俄州，美国</td></tr>
+                            <tr><td>11 月 28 日</td><td>FOSS for All Conference 2026</td><td>首尔，韩国</td></tr>
+                            <tr><td>12 月 1–3 日</td><td>Yocto Project 虚拟峰会 2026.12</td><td>线上</td></tr>
+                        </tbody>
+                    </table>
+                    <h3>安全更新（Security updates）</h3>
+                    <p>本周 LWN 共收录 <strong>729 条</strong>发行版安全更新公告，按发行版分布：<strong>Fedora</strong>（313 条）、<strong>SUSE</strong>（123 条）、<strong>Oracle</strong>（68 条）、<strong>Red Hat</strong>（67 条）、<strong>AlmaLinux</strong>（54 条）、<strong>Ubuntu</strong>（52 条）、<strong>Debian</strong>（41 条）、<strong>Mageia</strong>（7 条）、<strong>Slackware</strong>（4 条）。完整列表请见<a href="https://lwn.net/Articles/1097862/" target="_blank">英文原文</a>。</p>
+                    <h3>本周关注内核补丁（Kernel patches of interest）</h3>
+                    <p>本周共收录 <strong>277 个</strong>值得关注的内核补丁系列，按主题分布：内核发布（8）、体系结构相关（18）、BPF 相关（4）、核心内核（13）、开发工具（8）、设备驱动（141）、设备驱动基础设施（10）、文档（3）、文件系统与块层（17）、内存管理（15）、网络（20）、安全相关（2）、虚拟化与容器（10）、杂项（8）。</p>
+                    <p>其中比较值得注意的包括：</p>
+                    <ul>
+                        <li><strong>网络</strong>：QUIC 协议基础设施与核心子组件、可编译纯 IPv6 内核网络栈、WiFi RTNL 锁进一步重构；</li>
+                        <li><strong>内存管理</strong>：xswap 可扩展交换设备（三阶段系列）、mTHP 友好的内存规整、1GB 大页可靠分配、guest_memfd/iommufd 内存提供者；</li>
+                        <li><strong>文件系统与块层</strong>：基于 BPF 的 I/O 调度器、XFS 获得 fs-verity 支持、exfat 大目录文件创建提速、DRBD 9 重构、NFS over RDMA 的 PCI P2PDMA 直通；</li>
+                        <li><strong>虚拟化</strong>：KVM x86 为客户机启用 APX、arm64 Realm（CCA）基础支持、pKVM hypervisor 堆分配器；</li>
+                        <li><strong>BPF</strong>：支持由 rust-bpf 编译的程序、有界循环的标量演化优化；</li>
+                        <li><strong>调度</strong>：sched_ext NUMA 平衡支持、短切片任务延迟优化。</li>
+                    </ul>
+                    <p>完整补丁列表（含各系列链接）请见<a href="https://lwn.net/Articles/1097862/" target="_blank">英文原文</a>。</p>
+                </div>
+            </div>
+</main>
+
+                <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar bottom" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-10-01.html">📰 最新</a>
+            <a class="nav-btn" href="2026-09-24.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年10月1日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <footer class="footer">
+            <p>内容翻译自 <a href="https://lwn.net" target="_blank">LWN.net</a>，遵循 Creative Commons 协议。</p>
+            <p>本期来源：<a href="https://lwn.net/Articles/1096293/" target="_blank">LWN.net Weekly Edition for October 1, 2026</a></p>
+            <p>更新时间：2026年10月9日</p>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
