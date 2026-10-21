@@ -613,3 +613,132 @@ blockquote cite {
     background: var(--accent-color);
     color: #ffffff;
 }
+
+/* ============ 悬浮目录（Floating TOC / Scrollspy） ============ */
+
+/* 平滑锚点滚动 */
+html {
+    scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+}
+
+/* 悬浮目录面板：默认隐藏，由 JS 与媒体查询控制 */
+.toc-float {
+    position: fixed;
+    top: 90px;
+    right: 20px;
+    width: 260px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 10px;
+    box-shadow: 0 4px 16px var(--shadow);
+    z-index: 950;
+    display: none;
+}
+
+.toc-float h2 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin: 0 0 8px;
+    padding: 0 10px 6px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.toc-float ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.toc-float li {
+    margin: 2px 0;
+}
+
+.toc-float a {
+    display: block;
+    padding: 6px 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    border-radius: 4px;
+    transition: color 0.2s, background 0.2s, border-color 0.2s;
+    word-break: break-word;
+}
+
+.toc-float a:hover {
+    color: var(--accent-color);
+    background: var(--bg-secondary);
+}
+
+.toc-float a.active {
+    color: var(--accent-color);
+    background: var(--bg-secondary);
+    border-left-color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* 页首目录同步高亮 */
+.toc a.active {
+    color: var(--accent-hover);
+    background: var(--bg-tertiary);
+}
+
+/* 窄屏下的悬浮目录开关按钮 */
+.toc-float-btn {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 19px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 2px 8px var(--shadow);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.toc-float-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 4px 12px var(--shadow);
+}
+
+/* 宽屏（容器两侧空间足够）：面板常驻显示 */
+@media (min-width: 1760px) {
+    .toc-float {
+        display: block;
+    }
+}
+
+/* 窄屏：显示开关按钮，面板经 .open 以浮层形式展开 */
+@media (max-width: 1759.98px) {
+    .toc-float-btn {
+        display: flex;
+    }
+
+    .toc-float.open {
+        display: block;
+        top: auto;
+        bottom: 80px;
+        right: 20px;
+        width: min(300px, calc(100vw - 40px));
+        max-height: min(60vh, 480px);
+    }
+}
