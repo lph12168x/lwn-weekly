@@ -14,9 +14,9 @@
 
 | 期号 | 发布日期 | 链接 |
 |------|----------|------|
+| 2026-10-15 | 2026年10月15日 | [在线阅读](https://lph12168x.github.io/LWN-Weekly/2026-10-15.html) / [查看源码](2026-10-15.html) |
 | 2026-10-08 | 2026年10月8日 | [在线阅读](https://lph12168x.github.io/LWN-Weekly/2026-10-08.html) / [查看源码](2026-10-08.html) |
 | 2026-10-01 | 2026年10月1日 | [在线阅读](https://lph12168x.github.io/LWN-Weekly/2026-10-01.html) / [查看源码](2026-10-01.html) |
-| 2026-09-24 | 2026年9月24日 | [在线阅读](https://lph12168x.github.io/LWN-Weekly/2026-09-24.html) / [查看源码](2026-09-24.html) |
 
 > 全部期次请见 [index.html](index.html) 或 [GitHub Pages 站点](https://lph12168x.github.io/LWN-Weekly)。
 
