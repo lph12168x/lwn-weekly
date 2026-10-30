@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LWN 周刊 - 2026年10月22日</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128240;</text></svg>">
+<script src="toc.js" defer></script>
+</head>
+
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+        <span class="theme-icon">&#127769;</span>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">LWN 周刊中文版</div>
+            <h1>LWN.net Weekly Edition</h1>
+            <p class="edition-date">2026年10月22日</p>
+            <p class="edition-desc">Linux 和自由软件周刊 - 中文翻译</p>
+            <a href="index.html" class="back-link">&larr; 返回期刊列表</a>
+        </header>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-10-22.html">📰 最新</a>
+            <a class="nav-btn" href="2026-10-15.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年10月22日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <main class="content">
+            <!-- 目录 -->
+            <div class="toc">
+                <h2>📑 目录</h2>
+                <ul>
+                    <li><a href="#article1">Android 内核中的厂商钩子</a></li>
+                    <li><a href="#article2">面向可复现发行版的哈希模块完整性</a></li>
+                    <li><a href="#article3">内核 Rust 中的安全自引用数据结构</a></li>
+                    <li><a href="#article4">Linux NFS 服务器的近期与未来变化</a></li>
+                    <li><a href="#article5">SUSE 全局禁用 setuid 的努力</a></li>
+                    <li><a href="#article6">讨论 XArray 的重写</a></li>
+                    <li><a href="#article7">Rust 中的跨 crate 前向声明</a></li>
+                    <li><a href="#article8">7.3 内核开发统计</a></li>
+                    <li><a href="#article9">理解 Nix flakes</a></li>
+                    <li><a href="#briefs">📝 Brief items（社区简讯）</a></li>
+                    <li><a href="#announcements">📢 Announcements（公告）</a></li>
+                </ul>
+            </div>
+
+
+            <div class="article" id="article1">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>Android 内核中的厂商钩子</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月15日</span>
+            <span><a href="https://lwn.net/Articles/1098493/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>Android 内核中的厂商钩子</h3>
+    <p>自 Android 诞生以来，它所使用的内核就与主线内核（mainline）产生了显著的分歧。虽然其中许多差异随着时间推移已经得到解决，并且转向<a href="https://source.android.com/docs/core/architecture/kernel/generic-kernel-image" target="_blank">通用内核镜像</a>（generic kernel image）也帮助 Android 与主线走得更近，但当前的设备仍然携带大量树外（out-of-tree）改动。这类改动的首选形式是<a href="https://source.android.com/docs/core/architecture/kernel/kernel-code#vendor-hooks" target="_blank">厂商钩子</a>（vendor hooks）。在 <a href="https://lpc.events/event/20/" target="_blank">2026 Linux Plumbers Conference</a> 上，Todd Kjos 在 Android 议题轨道中主持了一场节奏紧凑的会议，讨论厂商钩子及其使用方式。</p>
+    <p>他开场介绍说，6.6 内核是目前运行在最多 Android 系统上的内核版本；而 6.18 目前主要出现在旗舰设备上。Android 6.6 内核携带了大量（略多于 3100 个）树外补丁，其中近一半（1531 个）是来自更新内核版本特性的向后移植（backport）。还有一组相对较小（287 个补丁）的"来自邮件列表"（from list）改动，它们正在邮件列表上讨论，但尚未进入主线。其余 1306 个补丁，约占 42%，是"纯 Android"改动，它们既没有进入上游，目前也没有进入上游的打算。其中略多于三分之一是厂商钩子（其余大部分是构建系统和配置方面的改动）。</p>
+    <p>从最底层来看，厂商钩子只是被添加到 Android 内核中的一种特殊用途的跟踪点（tracepoint）。当 Android 厂商想要对通用内核做出改动时，会在相应位置放置一个厂商钩子；代码通常形如：</p>
+    <pre><code>    trace_android_vh_feature_name(parameters);
+</code></pre>
+    <p>该厂商的设备会加载一个特殊的内核模块，附加到厂商钩子跟踪点上，从而在该点拦截控制流。附加的钩子可以修改数据结构、注入新代码、短路主线代码等等；它是几乎没有限制的内核代码。他说，这些钩子让厂商能够在不干扰他人的情况下把自己的特殊代码加入内核。</p>
+    <p>最后，Android 专属补丁中有 15% 是为厂商钩子服务的符号导出（symbol export）。Android 试图为这些钩子维护一个稳定的 ABI，Kjos 说这常常限制了可以做出的改动。</p>
+    <p>Android 内核中近一半的厂商钩子位于内存管理子系统和 CPU 调度器中；厂商正是最努力在这些方面实现产品差异化的。其中一些改动正在通往上游的路上，许多则不是。</p>
+    <p>他说，使用厂商钩子的首要原因是紧迫性；当前的产品需要改动，而上游化的过程实在太慢。厂商往往有"良好的意愿"，但缺乏将其改动主线化所需工作的耐心。有时他们最终会兑现承诺，但更多时候不会。厂商钩子的另一个原因是支持没有上游驱动的硬件。</p>
+    <p>总体而言，通用内核镜像的政策是：向内核添加特性（当然，除了将它们贡献到上游之外）的唯一途径就是厂商钩子。Android 维护者并不了解所有现存的系统，也无法判断哪些提议的改动真正重要。因此，Kjos 说，对厂商钩子的政策是宽松的。</p>
+    <p>目前使用中最复杂的厂商钩子是高通（Qualcomm）的 Window Assisted Load Tracking（WALT）特性，它是对主线中使用的<a href="https://lwn.net/Articles/531853/" target="_blank">每实体负载跟踪（per-entity load tracking，PELT）</a>机制的替代。负载跟踪器向 CPU 调度器告知系统中每个任务实际使用的资源，从而支持更好的调度与放置决策；据说 WALT（十年前曾<a href="https://lwn.net/Articles/704903/" target="_blank">提交上游</a>）比 PELT 更适合移动工作负载。他说，WALT 的一些想法多年来已经逐步融入 PELT。</p>
+    <p>调度器中厂商钩子的另一个常见用途是避免优先级反转（priority inversion）问题。一些厂商调整内核的锁定原语（locking primitive）；另一些则在调度器中为重要进程维护一个特殊的运行队列。目标始终是确保对用户操作的快速响应以及不丢帧的流畅显示。</p>
+    <p>内核中大约有 800 个厂商钩子，数量相当可观。Kjos 最后总结说，Android 开发者希望减少这个数字，并询问如何改善这种状况。</p>
+    <p>注意到许多调整都集中在调度器上，我问是否考虑过引导厂商转向<a href="https://lwn.net/Articles/922405/" target="_blank">可扩展调度器类</a>（sched_ext）作为厂商钩子的替代方案。Kjos 回答说，sched_ext 现已在 Android 内核中得到支持；他略带懊悔地说，这不可避免地导致厂商钩子也被添加到了 sched_ext 基础设施之中。他补充说，老实讲，他认为与其转向完全树外的调度器实现，不如继续使用厂商钩子。在 Android 议题轨道的稍后环节，Aiqun Yu 介绍了将实时任务的调度移入 sched_ext 以移除部分厂商钩子的工作。</p>
+    <p>另一位与会者指出，减少厂商钩子数量的一种方法就是干脆在添加它们时更加强硬地拒绝。当然，这说起来容易做起来难。Kjos 回应说，Android 团队缺乏判断所有这些钩子的专业知识，因此很难断言任何一个给定的添加是无效的。此时会议时间用完，讨论继续向前推进。</p>
+    <p><a href="https://lpc.events/event/20/contributions/2556/attachments/1982/4497/LPC2026-Android-VH.pdf" target="_blank">本次演讲的幻灯片</a>已可获取。</p>
+    <p>[感谢 LWN 的差旅赞助商 Linux Foundation 支持我参加此次大会。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article2">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>面向可复现发行版的哈希模块完整性</h2>
+        <div class="article-meta">
+            <span>作者：Jake Edge</span>
+            <span>2026年10月21日</span>
+            <span><a href="https://lwn.net/Articles/1100026/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>面向可复现发行版的哈希模块完整性</h3>
+    <p>我们上一次关注<a href="https://lwn.net/Articles/1012946/" target="_blank">基于哈希的内核模块完整性检查</a>是在一年半多之前。自那以后，该<a href="https://lwn.net/ml/all/20260505-module-hashes-v5-0-e174a5a49fce@weissschuh.net/" target="_blank">补丁集</a>已经历了多次修订。在 2026 <a href="https://lpc.events/" target="_blank">Linux Plumbers Conference</a>（LPC）上，Thomas Weißschuh 描述了对内核模块完整性保证的需求，同时仍要提供可复现构建（reproducible build），他的补丁如何实现这一点，以及一些可能的后续工作设想。</p>
+    <p>他首先指出，他从 2018 年作为爱好者起步以来一直在从事内核相关工作；如今他受雇于 Linutronix，内核开发是他工作的一部分。随后，他宣读了来自 <a href="https://reproducible-builds.org/" target="_blank">Reproducible Builds 项目</a>的<a href="https://reproducible-builds.org/docs/definition/" target="_blank">可复现构建定义</a>，该项目多年来一直与发行版和上游项目（包括内核）合作：</p>
+    <blockquote><p>如果给定相同的源代码、构建环境和构建指令，任何一方都能逐位（bit-by-bit）重现所有指定产物的完全相同副本，则该构建是可复现的。</p></blockquote>
+    <p>Weißschuh 说，这一定义中最重要的两部分是"逐位"和"任何一方"。如果一个构建过程能够满足这些要求，它就能为任何需要它的人所用，即使他们的具体要求不如定义所规定的那么严格。他指出，同样在<a href="https://lpc.events/event/20/sessions/276/#20261007" target="_blank">构建系统微型会议</a>（Build Systems microconference）中的另外两场演讲——关于 <a href="https://lpc.events/event/20/contributions/2581/" target="_blank">OpenWrt 可复现性</a>和 <a href="https://lpc.events/event/20/contributions/2584/" target="_blank">WhatsApp 的逐位可复现内核</a>——与会者可能也会感兴趣。</p>
+    <p>可复现的社区发行版需要独立的重建者来验证它们的软件包确实是可复现的。"'有一些发行版相互协作，构建对方发行版的软件包。这是一种完全不同的软件包，[构建]在自己的基础设施上，然后它们可以交叉检查一切是否顺利。' "还有一些门户，用户可以在上面提交自己构建的软件包的哈希值，以便与其他人的结果进行比较。除此之外，还有经密码学签名的公开透明日志（transparency log），收集来自各实体的构建信息，可用于决定是否信任某个特定的软件包构建。</p>
+    <p>他说他关注的是 Debian、Arch Linux 等社区发行版；它们目前已达到 95% 或更高的可复现率。事实上，Debian 约为 99%，并将很快把可复现性作为其软件包的一项要求加入<a href="https://www.debian.org/doc/debian-policy/" target="_blank">政策手册</a>，不过他不确定这会在何时发生。</p>
+    <p>目前，已签名的模块将其签名附加在 <code>.ko</code> 文件的末尾；内核可以使用内置于内核镜像中的公钥来验证签名。内核会包含该公钥的 X.509 证书，但要可复现地构建带签名的模块，私钥也必须可用。这从安全角度显然行不通，因为攻击者随后可以为任意模块签名，这就失去了意义。最常见的签名流程是在构建时生成一个密钥对；公钥内置于内核中，私钥在用于对同时构建的各模块签名之后即被丢弃。这是安全的，但之后便无法复现。</p>
+    <p>内核模块对内核内部结构、内存等等拥有完全的访问权限，因此显然需要保护它们（并防范它们）。内核的<a href="https://man7.org/linux/man-pages/man7/kernel_lockdown.7.html" target="_blank">锁定模式</a>（lockdown mode）"'试图通过锁定某些接口来防止 root 用户危害内核，它还会阻止未签名的模块被加载'"。其他系统（如 Android）则有不同的机制来防止未经授权的模块被加载。</p>
+    <p>发行版在处理内核模块时做出了不同的权衡。Arch Linux 使用构建后即丢弃的临时密钥来构建其模块，因此它选择安全性优先于可复现性；而 NixOS 不使用模块签名，优先考虑可复现性。Debian 同时支持安全性和可复现性，但它有一套"'更复杂的打包流程'"，为部分签名的模块使用特殊的非公开密钥，而对可复现的内核模块构建则不加签名。</p>
+    <h4>哈希列表</h4>
+    <p>他和其他人想出的解决方案是创建一个包含所有已授权模块哈希值的列表，并将其存储在内核镜像中。该列表将被加载到内存中，用于验证任何被加载的模块。OpenWrt 正在考虑这一方案，但它占用大量内存；例如，5000 个模块、每个 32 字节的 SHA-256 哈希值，会产生"'150KB 的内存，它们将永远从内核中消失'"。绕过这一问题的一种方法是只按需将列表的部分内容加载到内存，但这会让事情复杂化。"'构建更复杂了，运行时加载也更复杂了，所以它并不太好。'"这个方案由 Reproducible Builds 项目的"kpcyrd"发现，Weißschuh 也独立地发现了它，两者都在 2024 年；十年前它也曾作为某商业 Linux 厂商产品的一部分发布过，不过他不确定能否说出这家公司的名字，所以没有说。</p>
+    <p>他的补丁集的一位审阅者建议使用<a href="https://en.wikipedia.org/wiki/Merkle_tree" target="_blank"> Merkle 树</a>来代替哈希列表。Merkle 树是一种哈希值的二叉树。树中的每个叶子是一个内核模块的哈希。树的下一层由模块哈希对的哈希组成，再往上是这些节点对的哈希，依此类推，直到树根。当加载一个模块时，将其哈希与通往根路径上的其他哈希组合起来，然后与存储为信任根（root of trust）的哈希进行比较；如果匹配，则模块有效。可以使用模块在叶子节点中的索引以及通往根路径上所需节点的哈希来创建模块签名。</p>
+    <p>使用 Merkle 树可以通过将签名添加到模块的 <code>.ko</code> 文件中来解决内存问题，该签名在验证和加载之后可以被丢弃。创建树只需要使用哈希函数，它是确定性的，因此是可复现的。信任根是树根的单个哈希以及树的深度；这是唯一需要留在内存中的信息。这个信任根比现有的 X.509 密钥证书或其补丁集早期版本使用的哈希列表都要小。</p>
+    <p>他说这种方式有一些好处。它将消除在运行时进行 X.509 证书处理的需要；这段代码很复杂，并且带有算法灵活性等特性，而这些特性对于验证与内核一同构建的模块来说并不需要。构建时对 OpenSSL 的依赖也可以移除，转而使用计算哈希和创建 Merkle 树的更简单工具。一家企业发行商注意到了另一个好处：只需要对信任根签名。此前，该发行版一直使用硬件安全模块（HSM）对数千个模块逐一签名，HSM 瓶颈拖慢了构建。</p>
+    <h4>未来工作</h4>
+    <p>目前，<a href="https://docs.kernel.org/kbuild/modules.html#module-versioning" target="_blank">modversions</a> 用于让为给定内核版本构建的模块加载到具有"兼容"函数原型和数据结构的内核中。对于与内核一起构建的模块来说，这种能力并不需要，而且可以从 Merkle 树中验证，因此对于这些内置模块可以将其移除。类似地，某些符号导出可以限制为仅对列在树中的模块可用。拥有可验证的模块还意味着通过 <a href="https://elixir.bootlin.com/linux/v7.3/source/include/linux/moduleparam.h#L33" target="_blank">MODULE_INFO()</a> 宏指定的元数据可以被视为可信；Weißschuh 说，目前模块可以随意伪造放入该元数据中的内容。一旦内核能够可靠地验证内置模块，其他东西也可以与"内置"属性绑定在一起。</p>
+    <p>虽然这一新特性"'听起来非常好'"，但要将其与内核构建过程集成，还有一些工作要做。Kbuild 目前的设置是先构建内核镜像，然后从中计算一些数据，例如 <a href="https://docs.kernel.org/bpf/btf.html" target="_blank">BPF 类型格式</a>（BPF Type Format，BTF）信息，然后再构建模块。为了把模块哈希放入内核镜像，必须先构建模块。他的补丁中有一些 <code>#ifdef</code> 条件来处理这个问题，但相当混乱，他希望做一些更干净的处理。</p>
+    <p>模块在安装时通常会被剥离（strip），移除所有调试符号并大幅减小其体积，这发生在构建完成之后。但剥离模块会改变其哈希，因此对于他的方案，剥离必须在构建期间进行。他的补丁在构建时剥离模块以计算哈希，但仍像以前一样提供未剥离的版本用于打包。这依赖于两次剥离操作产生相同的二进制文件，作为解决方案他并不完全满意，但尚未找到更好的办法。</p>
+    <p>在他的补丁的一次评审中，Sashiko 指出，当 makefile 同时以 <code>vmlinux</code> 和 <code>modules</code> 目标被调用时，Kbuild 中存在一个 bug。"'按照 Kbuild 目前的设置方式，它现在会是竞态的并会出错。'"他说也许没有人真正在意，但 Sashiko 确实发现了；"'如果你在 Sashiko 出现之前提交东西太慢，得到的就是这个'"，他笑着说。</p>
+    <p>他还希望今后研究更多的事情。他想重构 Kbuild 或 makefile，以去掉他不得不添加的"黑魔法"（hackery）；他对 Kbuild 了解得不够，希望能与一些专家讨论。另一个悬而未决的问题是，这种新的模块签名机制应该如何与内核的<a href="https://ima-doc.readthedocs.io/en/latest/ima-concepts.html" target="_blank">完整性度量架构</a>（Integrity Measurement Architecture，IMA）交互。目前，IMA 可以验证附加到每个模块的签名，因此他想知道是否需要扩展 IMA 以支持 Merkle 树方法。此外，内核中已经有其他 Merkle 树实现（例如用于 <a href="https://docs.kernel.org/filesystems/fsverity.html" target="_blank">fs-verity</a> 的实现），内核代码树中是否应该为所有这些提供一个共享实现？</p>
+    <p>他以补丁的状态作结。Weißschuh 说，这一特性受到各方的喜爱，包括 Reproducible Builds 项目、社区发行版和内核加密开发者。他正在寻求对这些补丁的评审，尤其是在加密和 Kbuild 领域；"'目前没有多少评审在进行'"。他在 <a href="https://git.kernel.org/pub/scm/linux/kernel/git/thomas.weissschuh/linux.git/log/?h=b4/module-hashes" target="_blank">kernel.org 上有一个代码树</a>，其中有一个他打算保持更新至最新主线的分支。</p>
+    <p>第一个"提问"来自 Matthew Garrett，他想把自己加入支持这些补丁者的名单之中；"'lockdown 是我的错，我喜欢这个'"验证方案。fs-verity 维护者 Eric Biggers 也表示他喜欢这个方案，因为它比内核中现有的签名处理代码简单得多。他指出，它要求所有模块都与内核一起构建，因为之后添加其他模块是不可能的。Weißschuh 表示同意，但说有人可以扩展该方案，使其适用于之后构建并纳入其自身 Merkle 树的额外模块；这些信息可以在启动时传入内核，以扩展允许模块的列表。</p>
+    <p>Biggers 说，他也参与开发过 <a href="https://docs.kernel.org/admin-guide/device-mapper/verity.html" target="_blank">dm-verity</a>，它使用 Merkle 树，但他认为在它、fs-verity 和模块验证之间没有共享 Merkle 树实现的机会。SHA-256 代码当然应该共享，但每个 Merkle 树都有自己的布局和使用方式，因此共性很少。Weißschuh 说他在验证模块时使用相同的 SHA-256 函数，但目前构建时仍在使用 OpenSSL 进行 SHA-256 计算；如他先前所说，如果需要，这一依赖可以移除，转而使用更简单的工具。</p>
+    <p>本次演讲的 <a href="https://www.youtube.com/watch?v=9XEz2GMWPRA" target="_blank">YouTube 视频</a>和<a href="https://lpc.events/event/20/contributions/2583/attachments/2237/4914/module-hashes.pdf" target="_blank">幻灯片</a>已可获取。</p>
+    <p>[感谢 LWN 的差旅赞助商 Linux Foundation 协助我参加在布拉格举行的 LPC。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article3">
+    <div class="article-header">
+        <span class="article-category">Rust</span>
+        <h2>内核 Rust 中的安全自引用数据结构</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月16日</span>
+            <span><a href="https://lwn.net/Articles/1099224/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <p>无需 unsafe 代码即可使用的自引用结构（self-referential structure），多年来一直是 Rust 的一大难题。在很多场景下，自引用数据结构都是算法上的优雅之选，但要按照 Rust 的生命周期（lifetime）规则来实现它却几乎不可能。在 Kangrejos 2026 大会上，Gary Guo 结合内核的 <a href="https://rust.docs.kernel.org/pin_init/index.html" target="_blank">pin_init crate</a> 提出了一种巧妙的解决方案；这个 crate 用于帮助创建不可移动（immovable）的数据结构，通常是为了与 C 互操作。Guo 的改动有望移除 <a href="https://rust-for-linux.com/nova-gpu-driver" target="_blank">Nova 驱动</a>中大部分与生命周期相关的 unsafe 代码，并最终惠及其他 Rust 组件。</p>
+
+    <h3>类型论背景</h3>
+    <p>Guo 首先从他的<a href="https://garyguo.net/uploads/Talks/2026-pin-init-kangrejos.pdf" target="_blank">幻灯片</a>中搬出了一些理解这个问题及其解决方案所必需的背景定义。许多编程语言都有子类型（subtyping）的概念。例如在 Python 中，所有类都是 object 的子类型。Rust 的子类型极为有限，只适用于那些仅在生命周期上有所不同的类型。举例来说，当生命周期 <code>'a</code> 长于 <code>'b</code> 时，引用类型 <code>&amp;'a Foo</code> 被视为 <code>&amp;'b Foo</code> 的子类型。换个说法：只要程序要求一个存活期至少与 <code>'b</code> 一样长的引用，那么提供一个 <code>&amp;'a Foo</code> 就是有效的，前提是 <code>'a</code> 确实是一个比 <code>'b</code> 更长的生命周期。</p>
+    <p>他说，对于泛型类型，我们可以引入一些与子类型相关的进一步关系。如果某个类型 Sub 是 Super 的子类型，而泛型类型 Generic 满足 <code>Generic&lt;Sub&gt;</code> 是 <code>Generic&lt;Super&gt;</code> 的子类型，那么就称 Generic 是协变的（covariant）。内建引用就是协变类型的一个例子：<code>&amp;&amp;'a Foo</code>（指向 Foo 引用的引用）在与上述例子相同的条件下是 <code>&amp;&amp;'b Foo</code> 的子类型。另一方面，有些类型的工作方式恰好相反。当 <code>Generic&lt;Sub&gt;</code> 是 <code>Generic&lt;Super&gt;</code> 的超类型时，就称 Generic 是逆变的（contravariant）。一个例子是函数类型；<code>fn(&amp;'b Foo)</code> 是 <code>fn(&amp;'a Foo)</code> 的子类型，因为它的要求更宽松。把一个期望接收存活期至少与 <code>'b</code> 一样长的引用的函数，传给一段只会提供存活 <code>'a</code> 之久的东西的代码，是有效的——只要 <code>'a</code> 比 <code>'b</code> 活得长。</p>
+    <p>当然，大多数泛型类型即使接受相同的类型参数，彼此之间也既不是子类型也不是超类型。这种情况称为不变的（invariance）。可变容器几乎总是不变的，因为如果可以向其中写入所含项的超类型，就可能导致容器里装着错误类型的项。一个 <code>&amp;mut &amp;'a Foo</code> 和一个 <code>&amp;mut &amp;'b Foo</code> 在任何方向上都不可互换，因为可变引用既可被读取（协变操作）也可被写入（逆变操作）。</p>
+    <p>Guo 解释说，另一个重要的背景概念是良构性（well-formedness）。在 Rust 程序中引用一个类型，都需要编译器检查该类型是良构的（即被点名的类型确实被允许存在）。例如，如果存在两个完全不重叠的生命周期 <code>'c</code> 和 <code>'d</code>，那么试图写出 <code>"&amp;'c &amp;'d Foo"</code> 这样的类型就没有意义，因为这种东西根本不可能存在。当 <code>'c</code> 生命周期开始时，不可能还有任何 <code>'d</code> 引用存在，反之亦然。写出上面那样的嵌套引用，要求 <code>'d</code> 比 <code>'c</code> 存活得更久。</p>
+    <p>Rust 程序员通常不必太操心良构性，因为编译器会自动插入必要的类型约束。一个确实需要手动调整的场景是：当编译器警告某个泛型类型参数必须存活 <code>'static</code> 生命周期时——这个要求来自该类型需要比程序中其他某个生命周期活得更久，而唯一比所有其他生命周期都长的就是 <code>'static</code>。</p>
+    <p>关于 Rust 中的良构性，有一个微妙细节需要特别指出：函数签名中的类型推断与函数体中的类型推断是有区别的。当一个类型出现在函数签名中时，编译器假定它必须是良构的，并生成必须由函数调用方满足的约束来确保这一点。当一个类型出现在函数体中时，编译器则直接检查所写的类型是否良构。</p>
+    <p>Guo 需要介绍的最后一块内容要稍微复杂一些。多态（polymorphism）是泛型在类型论中的说法；如果一个函数接受泛型类型参数、因而可以对若干不同类型调用，它就是多态的。各语言在实现多态的具体方式上有所不同，主要区别在于能否定义多态的函数指针，还是函数指针必须预先指定具体类型。Rust 选择了前者，即所谓高阶多态（higher-rank polymorphism），不过它只允许这种多态作用于生命周期参数。因此，下面的 Rust 代码是可以工作的：</p>
+    <pre><code>fn foo&lt;'a&gt;(x: &amp;'a u32) {}
+fn test() {
+    // bar 是一个指向函数的引用 ...
+    let bar = &amp;foo;
+    // ... 该函数可以在两个不同生命周期的
+    // 引用上被调用：
+    bar(&amp;identity(1));
+    bar(&amp;identity(2));
+}</code></pre>
+    <p>注意，这里的 identity() 函数（它只是简单地返回输入值）是必需的，用于阻止编译器把两个生命周期推断为 <code>'static</code> 从而相等。由于这个例子对两个不同的临时值取引用，前者的清理必然发生在后者执行之前，所以这两个生命周期是不相交的。</p>
+    <p>那个例子使用类型推断来确定 bar 的类型，但如果要求显式写出它的类型，程序员会写 <code>"&amp;dyn for&lt;'a&gt; Fn(&amp;'a u32)"</code>。也就是说，一个指向函数的指针，其参数是对 u32 的引用，且该引用对调用者所能点名的任何生命周期都有效。</p>
+
+    <h3>设备资源生命周期</h3>
+    <p>有了这些背景，Guo 就能解释内核为什么需要自引用结构了。设备的某些资源只有在设备处于绑定（bound）状态时才可访问。例如，拔掉一个设备可能导致它被解绑（unbind），此后访问它的设备内存就是无效的。在 Rust 驱动绑定中对此建模的最初方案是 <a href="https://rust.docs.kernel.org/kernel/devres/struct.Devres.html" target="_blank">Devres</a> 类型，它在内部使用 <a href="https://rust.docs.kernel.org/kernel/revocable/struct.Revocable.html" target="_blank">Revocable</a> 指针，强制用户在每次访问时都检查设备是否仍然存在。这很麻烦，因为它在驱动代码中引入了可能失败的访问路径，而驱动其实本来就该知道设备何时绑定、何时解绑。</p>
+    <p>后来，一个进行中的补丁集需要在某个类型的 <a href="https://doc.rust-lang.org/std/ops/trait.Drop.html" target="_blank">Drop</a> 实现中访问设备，而 Drop 实现是不允许失败的。用现有的抽象来修复这个问题，就得重写该类型使它不引用设备，这将演变成对驱动逻辑的大规模重构。而且，既然人类检查一下就能明显看出在相关上下文中设备不可能被解绑，这样做还会引入好几个不可达的错误路径。于是，Guo 开始寻找一种用 Rust 生命周期来建模这个问题的方法，这样就能用编译器来证明各种错误路径确实是不必要的。</p>
+    <p>第一个问题是处理类型擦除（type erasure）。驱动可以提供"辅助总线"（auxiliary bus），即暴露给其他驱动的接口。当另一个驱动绑定到辅助总线时，它会收到一个 <a href="https://rust.docs.kernel.org/kernel/auxiliary/struct.Device.html" target="_blank">auxiliary::Device</a> 结构，该结构擦除了其绑定驱动的一切类型信息。如果驱动的主结构不含任何泛型生命周期参数，那么用 <a href="https://rust.docs.kernel.org/core/any/trait.Any.html" target="_blank">Any</a> 把 Device 转换为期望的类型是很容易的：</p>
+    <pre><code>impl auxiliary::Device {
+    fn registration_data&lt;'this, T: Any&gt;(&amp;'this self)
+        -&gt; Option&lt;&amp;'this T&gt;;
+}</code></pre>
+    <p>与内核中的实现相比，上面是一个简化了的类型，但它表达的是同一个操作：给定一个 Device 的引用和某个期望类型 T，registration_data() 要么返回一个对 T 的、在相同生命周期内有效的引用，要么失败。这只有在 T 实现 Any 时才行，而只有不包含非 <code>'static</code> 生命周期的类型才被允许实现 Any。因此，为了让驱动资源可以关联生命周期，Guo 需要修改 registration_data() API，避免使用 Any。</p>
+    <p>他提出的方案如下：</p>
+    <pre><code>impl auxiliary::Device {
+    fn registration_data&lt;'this,
+                         for&lt;'a&gt; T&lt;'a&gt;
+        &gt;(&amp;'this self)
+        -&gt; Option&lt;&amp;'this T&lt;'this&gt;&gt;;
+}</code></pre>
+    <p>也就是说，要求驱动类型 T 对任意生命周期都是良构的，用高阶多态类型来表述（严格来说这是一个高阶种类类型，higher-kinded type，即向类型变量传递泛型参数的类型）。这意味着，现在尝试把 Device 向下转换为 T 时，代码总能产生一个与所提供引用存活期一样长的 T 值。这是安全的，因为提供辅助总线的驱动本身就需要存活那么久。这一改动实质上允许生命周期穿透类型擦除接口。</p>
+    <p>问题在于 Rust 目前还不支持书写上面的代码。将来它可能会支持，因为编译器团队一直在缓慢而谨慎地扩展语言对高阶多态类型的支持，以避免破坏类型系统。需要书写高阶类型的代码并不多，所以这一般不构成问题。</p>
+    <p>不过，语言中其他部分确实支持高阶多态类型，这意味着可以通过定义一些辅助 trait 并重写函数签名来使用它们，从而实现一个变通方案。正确实现辅助 trait 相当繁琐（有时还会暴露当前 trait 求解器中的 bug），所以内核提供了 <a href="https://rust.docs.kernel.org/kernel/types/macro.CovariantForLt.html" target="_blank">CovariantForLt!() 宏</a>（以及一个<a href="https://rust.docs.kernel.org/kernel/types/macro.ForLt.html" target="_blank">非协变版本</a>）来自动实现这些样板代码。有了它，签名实质上变成：</p>
+    <pre><code>impl auxiliary::Device {
+    fn registration_data&lt;'this,
+                         T: CovariantForLt + 'static
+        &gt;(&amp;'this self)
+        -&gt; Option&lt;&amp;'this T::Of&lt;'this&gt;&gt;
+}</code></pre>
+    <p>内核中实际的签名还增加了一层 Pin 包装，并用 Result 来提供更有信息量的错误消息。把类型擦除的 auxiliary::Device 结构转换回带生命周期的类型化驱动结构这一难题解决之后，现在就有可能把现有使用 Devres 的驱动结构改写为使用普通引用。例如：</p>
+    <pre><code>struct MyDriver {
+    device: ARef&lt;Device&gt;,
+    pci_bar: Arc&lt;Devres&lt;Bar&lt;BAR_SIZE&gt;&gt;&gt;,
+}</code></pre>
+    <p>变成：</p>
+    <pre><code>struct MyDriver&lt;'bound&gt; {
+    device: &amp;'bound Device,
+    pci_bar: Arc&lt;Bar&lt;'bound, BAR_SIZE&gt;&gt;,
+}</code></pre>
+    <p>这样好一些，但其中仍然包含一个引用计数指针 Arc，而它在概念上本不应需要：从概念上讲，PCI 基址寄存器（BAR）应该与 Device 结构存活同样长的时间。这个问题可以绕过去；Nova 驱动使用 unsafe 代码来初始化这样一个结构：</p>
+    <pre><code>#[pin_data]
+struct NovaCore&lt;'bound&gt; {
+    reg: auxiliary::Registration&lt;
+        'bound, ForLt!(NovaCoreApi&lt;'_&gt;)
+    &gt;,
+    gpu: Gpu&lt;'bound&gt;,
+    bar: Bar&lt;'bound, BAR_SIZE&gt;,
+}</code></pre>
+    <p>这段代码之所以是 unsafe 的，是因为 gpu 在内部持有指向 BAR 的引用，所以它不应比 Bar 结构活得更久，但这个声明却说它们存活同样长的时间。这使得构造和析构该类型的值都需要少量 unsafe 代码。如果能教会现有的 pin_init!() 宏处理所有 unsafe 部分，从而让创建 NovaCore 结构变得安全，那会是一个更好的方案。这整个工作的初衷本是消除驱动中不必要的错误路径；用更多 unsafe 代码取而代之可算不上什么大改进。</p>
+    <p>Guo 说，这是 Rust 生态中一个已知的问题。若干现有 crate，如 <a href="https://docs.rs/moveit/latest/moveit/" target="_blank">moveit</a>、<a href="https://docs.rs/rental/latest/rental/" target="_blank">rental</a>、<a href="https://docs.rs/yoke/latest/yoke/" target="_blank">yoke</a> 和 <a href="https://docs.rs/ouroboros/latest/ouroboros/" target="_blank">ouroboros</a>，都为安全代码实现了自引用结构初始化。然而内核的要求使得采用它们相当困难。这些用户态 crate 都默认在某些情况下隐式分配内存是可以接受的，但内核中一般不允许这样做。此外，现有的许多 crate 是不健全的（unsound）——它们没有正确实现自己的 unsafe 组件，用它们写出的看似安全的代码可能破坏 Rust 的语言保证。</p>
+    <p>于是，Guo 决定自己琢磨出一个解决方案。借助<a href="https://lwn.net/ml/all/20261008-dev-selfref-v2-0-e280b3c8fba5@garyguo.net/" target="_blank">他的补丁集</a>，现在可以这样书写 Nova 的驱动结构：</p>
+    <pre><code>#[pin_data]
+struct NovaCore&lt;'bound&gt; {
+    reg: auxiliary::Registration&lt;
+        'gpu, ForLt!(NovaCoreApi&lt;'_&gt;)
+    &gt;,
+    gpu: Gpu&lt;'bar&gt;,
+    bar: Bar&lt;'bound, BAR_SIZE&gt;,
+}</code></pre>
+    <p>并且用普通的 pin_init!() 调用来初始化得到的结构。他相当确信自己的方案是健全的，尽管演讲的后半部分都在解释实现这一点所付出的种种艰辛。关键的语法变化是，现在 #[pin_data] 宏允许把结构体成员的名字用作生命周期。这样，代码就可以准确记录 gpu 持有对 bar 的引用、或者 reg 引用 gpu 这样的事实。而这些信息又使得该宏能够生成正确构造与析构自引用结构的代码。</p>
+    <p>实际访问自引用字段则有些不同，因为语言本身并不真正支持访问自引用字段。作为替代，#[pin_data] 宏会生成辅助函数。名为 foo 的字段会生成一个叫 foo() 的方法（针对协变字段）或 with_foo()（针对不变字段）。对结构的写入可以通过 with_project() 辅助函数完成。如果 <a href="https://lwn.net/Articles/1096028/" target="_blank">Beyond the &amp; 倡议</a>取得进展，这种语法还有可能再改进一些。</p>
+
+    <h3>通往可靠性的漫长艰难之路</h3>
+    <p>然而，Guo 解释道，写一个能让那种语法工作的基本宏并不是真正的难点。占用了他大部分时间的，是确保最终得到的接口完全健全（sound）。为了说明原因，他展示了一个最简单的例子，然后逐一剖析了几种潜在的宏实现及其错误之处。</p>
+    <pre><code>#[pin_data]
+struct MyStruct {
+    borrow: &amp;'owner String,
+    owner: String,
+}</code></pre>
+    <p>最简单的展开方式是把 <code>&amp;'owner String</code> 类型转换为 <code>&amp;'static String</code>，然后检查对该字段的访问。这行不通，因为用户代码可以不经检查直接访问 borrow 字段，从而做出违反 <code>'owner</code> 生命周期的事情。</p>
+    <p>防止这一点并不特别困难。pin_init crate 可以定义一个私有包装类型 Erase，并用它包住字段的值。这样其他代码就无法直接访问字段的值了。但这也同样不健全，因为 <a href="https://doc.rust-lang.org/beta/unstable-book/language-features/auto-traits.html" target="_blank">auto trait</a> 仍然能观察到被包装的类型，进而基于 <code>'static</code> 生命周期做出错误推断。在这个例子里这不可观察，因为 String 是线程安全的（<a href="https://rust.docs.kernel.org/core/marker/trait.Sync.html" target="_blank">Sync</a>），但换成其他类型就可能出问题。如果把给定的例子展开成使用 <code>'static</code>，编译器会推断它应当实现 Send，这就允许把该结构发送到另一个线程，而这不一定被允许。</p>
+    <p>所以，为了防止这一点，又得求助于高阶多态。pin_init crate 定义了一个精巧得多的包装类型，它能让编译器正确推断 auto trait 的实现。这个精巧包装类型最复杂的部分在于，它需要递归地书写，以处理一个字段引用多个其他字段的生命周期的情况。在下面的代码中，针对 <code>(T,)</code> 的 trait 实现是递归的基例（base case），其中单项元组类型 <code>(_,)</code> 被用作"该停下了"的标记。递归情形则使用函数类型作为引入生命周期的包装，因为函数类型允许以高阶多态的方式书写。</p>
+    <pre><code>trait EraseLifetime {
+    type Erased;
+}
+impl&lt;T&gt; EraseLifetime for (T,) {
+    type Erased = T;
+}
+impl&lt;T&gt; EraseLifetime for T where
+    T: for&lt;'a&gt; FnOnce&lt;(&amp;'a (),), Output: EraseLifetime&gt;,
+{
+    type Erased = &lt;
+        &lt;T as FnOnce&lt;(&amp;'static (),)&gt;&gt;::Output
+        as EraseLifetime
+    &gt;::Erased;
+}
+
+#[repr(transparent)]
+pub struct Erase&lt;F: EraseLifetime&gt;(F::Erased);
+unsafe impl&lt;T: Send&gt; Send for Erase&lt;(T,)&gt; {}
+unsafe impl&lt;F: EraseLifetime&gt; Send for Erase&lt;F&gt;
+where
+    F: for&lt;'a&gt; FnOnce&lt;(&amp;'a (),), Output::EraseLifetime&gt;,
+    for&lt;'a&gt; Erase&lt;&lt;F as FnOnce&lt;(&amp;'a (),)&gt;&gt;::Output&gt;: Send,
+{}</code></pre>
+    <p>最终得到一种让宏能够编码一个实质上充当 <code>for&lt;'a&gt; Foo&lt;'a&gt;</code> 的类型的方法，尽管 Rust 还不允许对非函数类型这样写。那个最小示例可以展开为：</p>
+    <pre><code>struct MyStruct {
+    borrow: Erase&lt;
+        for&lt;'owner&gt; fn(&amp;'owner ()) -&gt; (&amp;'owner String,)
+    &gt;,
+    owner: String,
+}</code></pre>
+    <p>这样，pin_init 之外的代码无法直接访问 borrow 里的数据，但它也不会拿到诸如 <code>'static</code> 这样的错误生命周期，所以编译器很满意。Rust 有一个不稳定特性 <a href="https://github.com/rust-lang/rust/issues/130516" target="_blank">unsafe binders</a>，它可以让整个包装类型都被去掉，直接写成：</p>
+    <pre><code>struct MyStruct {
+    borrow: unsafe&lt;'owner&gt; &amp;'owner String,
+    owner: String,
+}</code></pre>
+    <p>不过在该特性稳定之前，基于包装的变通方案同样能让 pin_init 限制对底层字段的访问，而且由于实现是 pin_init 内部的东西，用户基本无需关心。Guo 也警告说，如果内核将来把固定（pinning）的语义改为按字节粒度，上述实现就会变得不健全，需要更新。</p>
+
+    <h3>停下、drop、打滚</h3>
+    <p>不过还有一些工作要做：上面这些让自引用结构得以被安全地构造，但在释放它们时仍可能出问题。"这是这门语言里我最讨厌的部分之一。讨厌的部分有很多。"Guo 说。在 Rust 中，编译器会按顺序 <a href="https://doc.rust-lang.org/std/ops/trait.Drop.html#method.drop" target="_blank">drop</a> 结构的字段。如果 owner 字段排在前面，它就会先被释放，这会让 borrow 变成悬垂引用，而这是不被允许的。</p>
+    <p>通过确保字段只能引用排在更后面的字段，来检查字段的声明顺序是否正确是相当容易的。但仅靠这一项检查还不够。考虑这个病态的例子：</p>
+    <pre><code>#[pin_data]
+struct MyStruct {
+    what_the_heck: &amp;'later_owner &amp;'owner (),
+    borrow: &amp;'owner String,
+    owner: String,
+    later_borrow: &amp;'later_owner String,
+    later_owner: String,
+}</code></pre>
+    <p><code>&amp;'later_owner &amp;'owner ()</code> 的存在会让编译器假定 <code>'owner</code> 必须是比 <code>'later_owner</code> 更长的生命周期，但事实并非如此，因为 owner 会先被释放。这就使得把一个 <code>&amp;'owner String</code> 转换成 <code>&amp;'later_owner String</code> 成为可能，于是用户代码可以把 borrow 中的值移动到 later_borrow，并在 owner 已被释放之后再访问它。</p>
+    <p>这是因为编译器假定结构定义中的引用是良构的——在缺乏用宏对生命周期做奇怪操作的情况下，这个假定一般是安全的。幸运的是，有一个单独的上下文会对良构性进行检查而非假定：函数体内部。因此，解决方案是让 #[pin_data] 生成一个永远不会被调用的新函数，按字段被释放的顺序声明具有相同类型的局部变量。即使它不会被调用，编译器仍会对它做类型检查，这就让上面的例子产生一个编译错误。</p>
+
+    <h4>访问</h4>
+    <p>创建和析构都处理妥当后，Guo 把注意力转向了字段访问。直接访问被不透明包装挡住了，但开发者仍然需要以某种方式访问那些值。对协变字段来说，生成一个接受整体结构引用、返回特定字段引用的方法很容易。非协变字段则更复杂，因为代码需要确保所涉及的生命周期不会被无意间延长。Guo 通过引入一个基于回调的 API 来做到这一点，它使用高阶多态函数 trait 约束，确保所提供的回调能够满足自引用类型施加的要求。</p>
+    <p>这在技术上让用户得以访问结构的字段，但要同时访问多个非协变字段并不容易。因此，该宏还生成一个 project() 方法，它产生一个把被借用字段降级为共享引用的新类型。不变字段则被移除，因为它们无法以这种方式安全降级。其结果是一个新类型，可以对结构的大多数字段同时提供便利的只读访问。</p>
+    <p>但有时代码需要同时对多个字段进行可变访问，或访问不变字段。为处理这种情况，Guo 的代码生成了最后一个方法 with_project()，它使用同样的基于回调的接口，提供对一个投影类型的访问，该投影类型持有指向自引用类型各字段的可变引用。</p>
+    <p>"这也许是自引用库有史以来做得最彻底的防御之一。"Guo 说。尽管代码生成很复杂，他相信最终的设计是健全的，而且在内核约束下已经尽可能符合人体工程学。由于健全性所依赖的每一个性质都是通过生成利用 Rust 类型系统执行检查的代码来验证的，他确信这个设计是好的。</p>
+
+    <h3>下一个问题</h3>
+    <p>至少在 Danilo Krummrich 尝试在 Nova 中使用这个新设计之前，他是这么确信的——结果 Krummrich 给出了一个本应能工作、却导致一个费解的编译错误的例子。其例子的核心部分如下：</p>
+    <pre><code>#[pin_data]
+pub(crate) struct CommandQueue&lt;'a&gt; {
+    #[pin]
+    #[not_covariant]
+    inner: Mutex&lt;CommandQueueInner&lt;'a&gt;&gt;,
+}</code></pre>
+    <p>Nvidia GPU 有一个命令队列，用于与 GPU 系统处理器（GSP）通信。访问由互斥锁保护，这样命令队列结构就可以在线程间共享。实际上，这段代码从不往 inner 结构里放入带生命周期的新数据，但编译器无从得知这一点。因此，引入互斥锁使得该字段对 <code>'a</code> 是不变的。如果这种不变性不传播到包含命令队列引用的其他结构、最终抵达顶层的 NovaCore 结构，那倒不是问题。</p>
+    <p>这在构造辅助设备时引出了麻烦。NovaCore 中的辅助注册字段使用了上面讨论过的 ForLt!() 宏。该宏只允许结构对单个生命周期泛型化，在这个场景下就是整个驱动的生命周期。而由命令队列传播来的生命周期，由于命令队列的不变性而被固定下来，于是辅助注册就必须被赋予两个互不兼容的生命周期。</p>
+    <p>Guo 最终找到了一个变通办法：在命令队列结构中保留一个指向整个设备的引用，让互斥锁内的数据可以直接引用它的生命周期。由于良构性约束，这让编译器看出两个句法上不同的生命周期其实是兼容的，从而消除了问题。</p>
+    <pre><code>#[pin_data]
+pub(crate) struct CommandQueue&lt;'a&gt; {
+    #[pin]
+    #[not_covariant]
+    inner: Mutex&lt;CommandQueueInner&lt;'dev&gt;&gt;,
+    dev: &amp;'a Device&lt;Bound&gt;,
+}</code></pre>
+    <p>但这个变通办法真的健全吗？事实证明，不健全，而且它暴露了 #[pin_data] 实现中的一个缺陷。为了解释这个变通办法为何无效，Guo 需要引入存在性生命周期（existential lifetime）的概念。</p>
+
+    <h3>存在性生命周期</h3>
+    <p>讲到这里，Guo 切换到了一页展示形式化类型论推理规则的幻灯片，引来一片半信半疑的笑声。Guo 坚持认为这确实是最好的理解方式。他到目前为止展示的代码例子都包含了高阶全称量化（higher-ranked universal quantification）：<code>for&lt;'a&gt; &amp;'a Foo</code> 是一个对 <code>'a</code> 的任意取值都有效的类型。存在性生命周期则相反（或者更准确地说，是它的<a href="https://en.wikipedia.org/wiki/Dual_%28category_theory%29" target="_blank">范畴对偶</a>）：一个对某个生命周期 <code>'a</code> 有效的类型，但程序员无需指明自己谈论的究竟是哪个具体的生命周期。Rust 基本上不支持它们，但如果支持的话，诸如 <code>exists&lt;'a&gt; Foo&lt;'a&gt;</code> 这样的语法大概可以被理解为：存在某种生命周期取值使得 <code>Foo&lt;'a&gt;</code> 成为有效类型，但并不点名具体是哪个取值。</p>
+    <p>如果存在这样的类型，那么就可以用它来书写自引用结构，由 exists 子句负责引入各个字段的生命周期：</p>
+    <pre><code>struct MyStruct {
+    borrow: exists&lt;'owner&gt; &amp;'owner String,
+    owner: String,
+}</code></pre>
+    <p>这很有用，因为它省去了向自引用结构传递泛型生命周期参数的需要，使类型本身不再携带生命周期。而且，即使 Rust 不直接支持存在类型，也有办法把它写出来。存在类型的 <a href="https://en.wikipedia.org/wiki/Church_encoding" target="_blank">Church 编码</a>允许用全称量化的高阶多态类型来表达它们。存在类型：</p>
+    <pre><code>type X = exists&lt;'a&gt; Foo&lt;'a&gt;;</code></pre>
+    <p>变成：</p>
+    <pre><code>trait ExistsFoo {
+    fn with&lt;R&gt;(
+        self,
+        f: impl for&lt;'a&gt; FnOnce(Foo&lt;'a&gt;) -&gt; R
+    ) -&gt; R;
+}
+
+type X = dyn ExistsFoo;</code></pre>
+    <p>这正是生成的 with_*() 方法所采用的编码。Guo 称这个方法"基本上就是把 ForLt!() 里外翻转"，尽管这种对应关系并不那么一目了然。</p>
+    <p>这一对应关系确实表明，那个有问题的命令队列类型可以用 exists 重写。这样得到的类型在结构上与下面类似：</p>
+    <pre><code>type X&lt;'a&gt; = exists&lt;'b&gt; (&amp;'b &amp;'a String, Mutex&lt;&amp;'b String&gt;);</code></pre>
+    <p>把该类型视为对 <code>'a</code> 协变是不健全的。第一个引用的存在意味着 <code>'a</code> 比 <code>'b</code> 活得长。而在那个假设下，一般而言这并不成立，因为 <code>'a</code> 可能被协变地缩短，导致释放后使用（use-after-free）的 bug。这很奇怪，因为对应的、不使用存在类型的结构类型是健全的：</p>
+    <pre><code>type X&lt;'a, 'b&gt; = (&amp;'b &amp;'a String, Mutex&lt;&amp;'b String&gt;);</code></pre>
+    <p>在这个版本里，编译器拥有足够的信息断言 <code>'b</code> 构成了 <code>'a</code> 的下界。因此，它会禁止把 <code>'a</code> 缩短到不再比 <code>'b</code> 活得久的程度。而在假想的存在类型版本中，编译器无法做出这一判断，因为生命周期 <code>'b</code> 实质上已被 exists 绑定擦除了。</p>
+    <p>所以，这提示了一条针对存在性生命周期更具限制性的子类型规则：要想宣称一个涉及存在类型的表达式对某个自由生命周期 <code>'a</code> 是协变的，该生命周期必须出现在协变位置，并且按照良构性条件所暗示的，任何被擦除的非协变生命周期都不得作为它的下界。不过，被擦除的非协变生命周期作为 <code>'a</code> 的上界是可以接受的。这条替代规则会让那个有问题的存在类型对 <code>'a</code> 成为不变的，从而是安全的。</p>
+    <p>Guo 说，Rust 今天并不存在存在性生命周期，但如果将来实现了，它们就必须遵循这条规则才是健全的。</p>
+
+    <h3>穿回镜中</h3>
+    <p>有了这个洞见，就有可能把那个有问题的类型转换回命令队列结构当初书写的形式。这会给生成的代码增加一项额外的检查，并正确地使编译器判定 <code>CommandQueue&lt;'a&gt;</code> 对 <code>'a</code> 是不变的。</p>
+    <p>这补上了健全性漏洞，但仍留下一个问题：在命令队列结构中采用那个变通办法的全部动机，就是确保该类型对 <code>'a</code> 是协变的，这样它的不变性才不会向上传播到根驱动、给辅助绑定器（auxiliary binder）惹麻烦。因此，若有一种办法能把这一点正确地写出来，那就再好不过了。</p>
+    <p>解决方案是对 #[pin_data] 宏做一点小扩展，允许它引入新的生命周期，用作生命周期参数的上界（即必须比该生命周期参数活得更久的生命周期）。由于这是存在性生命周期那条更具限制性的子类型规则的一个例外，它允许引入一个不会被滥用来制造释放后使用 bug 的存在性生命周期。但存在类型的 Church 编码写起来会很复杂，所以该宏采用了一些自定义语法来书写 exists 绑定，尽管 Rust 通常并不支持这些。其结果是，命令队列类型可以这样书写：</p>
+    <pre><code>#[pin_data]
+pub(crate) struct CommandQueue&lt;'a&gt;
+where
+    exists&lt;'cmdq&gt;: 'a,
+{
+    #[pin]
+    #[not_covariant]
+    inner: Mutex&lt;CommandQueueInner&lt;'cmdq&gt;&gt;,
+}</code></pre>
+    <p>Guo 说，有了这些，Nova 中所有与生命周期相关的 unsafe 代码都可以被移除，只有 debugfs 代码还需要一次额外的接口改动。在实现方面，它给 pin_init 增加的代码少得出奇，因为许多实现可以与协变的自引用字段共享。</p>
+
+    <h3>后续步骤</h3>
+    <p>这次 Guo 相当确定 #[pin_data] 的最终实现是正确的。它也不应该要求用户理解他在演讲中过的大部分细节。在多数情况下，用户应该只需把字段名用作生命周期就能写出自引用结构：</p>
+    <pre><code>#[pin_data]
+struct Example {
+    borrower: &amp;'owner Foo,
+    owner: Foo,
+}</code></pre>
+    <p>如果用户做了无效的事情，比如把 borrower 写在 owner 之后，宏会给出解释性的报错。类似地，它会尽可能自动推断诸如 #[not_covariant] 之类的辅助注解的使用。Guo 对错误消息的质量并不完全满意；他原本希望在这个内核周期内先把一个受限版本送入主线，这样他就有时间在剩余的工作中改进错误消息和文档。会后的一些讨论说服他把全部工作作为<a href="https://lwn.net/ml/all/20261008-dev-selfref-v2-0-e280b3c8fba5@garyguo.net/" target="_blank">一个系列</a>发布出来。</p>
+    <p>尽管 Guo 为确保方案对用户简单而付出的可贵努力值得称赞，但对 pin_init 的评审者来说，这个方案并不特别简单。到 Guo 演讲结束时，与会的许多内核开发者看起来都有点被震住了。Guo 能否为自己的补丁集争取到像样的评审，仍有待观察。</p>
+    <p><em>[感谢 Linux Foundation——LWN 的差旅赞助商——对本次 Kangrejos 之行提供的协助。]</em></p>
+    </div>
+</div>
+
+            <div class="article" id="article4">
+    <div class="article-header">
+        <span class="article-category">文件系统</span>
+        <h2>Linux NFS 服务器的近期与未来变化</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月16日</span>
+            <span><a href="https://lwn.net/Articles/1098611/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>Linux NFS 服务器的近期与未来变化</h3>
+    <p>NFS 网络文件系统协议在类 Unix 操作系统（以及更广泛的领域）上有着悠久的历史。不过，NFS 仍在不断演进，各种实现也需要跟上步伐。在 2026 年 <a href="https://lpc.events/" target="_blank">Linux Plumbers Conference</a> 上，NFS 开发者 Jeff Layton 概述了 Linux 实现近期获得的多项增强，并对不久的将来可能出现的变化给出了一些提示。</p>
+    <p>Layton 一上来就列举了 NFS 服务器新增的一长串特性，首先从 <a href="https://docs.kernel.org/filesystems/nfs/localio.html" target="_blank">LOCALIO</a> 谈起。虽然 NFS 服务器通常位于远程计算机上，但在某些情况下，客户端和服务器可以位于同一台物理主机上；例如容器化的工作负载就可能出现这种情况。现在有了一种协议，可以让双方确定它们是否位于同一台主机上，如果是，就绕过大部分协议处理，将请求直接路由到文件系统，从而显著提升性能。</p>
+    <p>服务器支持远程复制请求已经有一段时间了；如果文件正被复制到同一服务器上的另一个位置，在该服务器上直接执行这一操作，而不是让数据经由客户端中转，显然更为合理。复制到第三台服务器的操作同样可以绕过客户端。同步远程复制操作早已得到支持；而增加对异步操作的支持则困难得多，并且需要先修复规范中的一些问题。该特性现已实现并默认启用。</p>
+    <p>他说，对 I/O 缓存的控制是一项重大改进。从历史上看，服务器只使用缓冲 I/O（buffered I/O），当大量数据被移动时，这会填满服务器的页缓存（page cache）。但 NFS 服务器实际上从页缓存中获益不多；由于 NFS 客户端自身会进行激进的缓存，服务器页缓存的命中率往往很低。现在，服务器可以执行非缓存 I/O 操作，要么使用直接 I/O（direct I/O），要么显式请求禁用缓存。该特性目前由服务器选项控制，将来会作为选项暴露在 <a href="https://www.man7.org/linux/man-pages/man5/exports.5.html" target="_blank"><code>exports</code> 文件</a>中。</p>
+    <p>还有一些工作用于提高若干实现上的限制。RPC 帧现在最大可达 4MB，服务器可以拥有 8MB 的缓冲区。线程池的大小可以动态调整，按需增加或删除服务器线程；该特性默认关闭，但未来可能会有所改变。最后，通过拆分全局互斥锁（mutex），性能也得到了提升——他说这一设计在"20 世纪 90 年代还算不错"。现在每个网络连接都有独立的互斥锁，并且由一个缩小了的（但仍然是全局的）互斥锁来保护文件缓存。</p>
+    <p>Layton 提到了服务器对<a href="https://lwn.net/Articles/946394/" target="_blank">多粒度时间戳（multi-grain timestamps）</a>的使用。NFS 协议在缓存失效方面严重依赖元数据属性，尤其是文件修改时间。在 Linux 上，这些时间传统上是粗粒度的；当多次更改发生而文件的时间戳却似乎没有变化时，就可能导致问题。使用多粒度时间戳可确保每次文件更改都会引起可观察到的时间戳变化。Btrfs、ext4、XFS 和 tmpfs 文件系统现在已经支持多粒度时间戳，还有更多文件系统正在跟进。</p>
+    <p>传统上，服务器是文件时间戳的权威保管者。NFSv4.1 的属性委托（attribute delegation）特性允许客户端来管理它们（以及文件大小），从而减少与服务器的通信量。在 <a href="https://www.rfc-editor.org/info/rfc9754/" target="_blank">RFC 9754</a> 中描述的这一特性，实现起来相当棘手。不过 Layton 说，"凡是和时间戳有关的东西最终都很棘手"。</p>
+    <p>NFSv4 写委托（write delegation）同样允许客户端进行更激进的缓存。近期的变更增加了对以只写方式打开的文件的写委托支持；这对单客户端、写密集型工作负载很有帮助。</p>
+    <p>NFSv4.1 目录委托（directory delegation）可以改善客户端对目录项的缓存，并且该特性还提供对变更的异步通知。服务器现在可以向客户端发送增量更新，而不是完全撤销委托。他说这一特性几乎得到了完整支持，但缺少对"子属性"（child attribute）委托的支持——这种委托覆盖给定目录下的所有子项。这些委托对可扩展性不利，所以他并没有实现它们。客户端现在也已支持可撤销的委托。这一特性加速了"唯一重要的基准测试"——内核构建。</p>
+    <p>动态会话大小调整（dynamic session resizing）将提供对服务器上每个客户端资源消耗的更多控制。每个客户端可用的槽位（slot）数量会根据工作负载以及服务器上可用的资源而变化。</p>
+    <p>NFS 访问控制列表（ACL）的最初规范遵循的是类似 Windows 的模型；这是一次试图把 Windows 用户吸引到 NFS 上来的尝试，但并没有真正成功。NFSv4.2 的 POSIX ACL 扩展放弃了这种方式；现在服务器可以在客户端和服务器之间直接传递 POSIX ACL。</p>
+    <p>签名 NFS 文件句柄（file handle）已被加入，用于防御句柄猜测攻击。能够正确猜出文件句柄的攻击者可以访问原本无法触及的文件。现在文件句柄可以进行加密签名，并且在允许通过句柄访问之前会验证该签名。能够嗅探网络流量的攻击者仍然可以截获有效的文件句柄，但将这一特性与 TLS 相结合可以提供一个"相当安全"的解决方案。</p>
+    <p>他说，大小写折叠（case folding）并不是他很在意的功能，但一些 Windows 用户在意，而且 NFS 规范也允许这样做。现在，如果服务器端的文件系统实现了大小写折叠，这一行为也可以呈现给客户端。</p>
+    <p>接下来是 NFS 再导出（re-export），即一台服务器把它自己正在通过 NFS 访问的文件系统再导出出去。这一特性有一些用例，包括为不支持较新协议的客户端提供支持。有些站点希望为 NFS 构建缓存代理；如今 AWS 和 Google 云上就有这样的做法。他建议阅读篇幅很长的 <a href="https://lore.kernel.org/all/943482310.31162206.1599499860595.JavaMail.zimbra@dneg.com/" target="_blank">"Adventures in NFS re-exporting" 邮件线程</a>以了解更多信息。</p>
+    <p>长期以来，NFS 服务器一直通过一个虚拟文件系统接口来管理，这种方式很不好用。通过增加 netlink API，这个问题得到了解决，它也更容易实现且更具可扩展性。<code>nfs-utils</code> 软件包中有一个使用该接口的新命令 <code>nfsdctl</code>。新特性将只能通过这个 API 来控制；旧的 <code>/proc/fs/nfsd</code> 接口已被弃用。<code>mountd</code> 守护进程也已迁移到 netlink。</p>
+    <p>内核的 <a href="https://en.wikipedia.org/wiki/External_Data_Representation" target="_blank">XDR</a> 代码曾经是手写的，但现在有 <code>xdrgen</code> 工具链可以自动生成它。这样出错的可能性大大降低。该工具目前生成 C 代码，但将来会改为生成 Rust。他说，<a href="https://en.wikipedia.org/wiki/Sun_RPC" target="_blank">Sun RPC</a> 层是内核一个很大的攻击面；把它迁移到一门安全的语言是合理的。</p>
+    <p><a href="https://docs.kernel.org/filesystems/nfs/nfsd-maintainer-entry-profile.html" target="_blank">有一份新文档</a>面向 NFS 代码的贡献者；不过 Layton 表示怀疑，是否真的有人在读它。</p>
+    <p>和其他所有人一样，NFS 维护者也正在面对大量质量参差不齐的补丁。由于 NFS 服务器暴露在网络之上，认真对待安全性十分重要，因此开发者一直在尽力修复尽可能多的漏洞报告。最严重的那些问题（"worst of the worst"）目前已在上游修复。</p>
+    <p>演讲以对即将到来的变化的快速浏览作结。I/O 缓存控制不久后将移入 <code>exportfs</code> 命令。对 <a href="https://docs.kernel.org/admin-guide/nfs/pnfs-scsi-server.html" target="_blank">pNFS SCSI 布局</a>的支持正在改进，加固是优先事项。未来会有更多协议代码由 <code>xdrgen</code> 生成，更多控制操作将迁移到 netlink API。"TLS 会话标记"（TLS session tagging）将允许管理员使用证书来限制对文件系统的访问。对老旧的 NFSv2 协议的支持将被移除；Layton 说没有真正的理由再去使用它，移除工作只是在等待各发行版将其关闭。最后，他提到了在虚拟文件系统层面支持并行目录修改操作的工作——目前这类操作是串行执行的。他说 NFS 总体上并不需要这个特性，但对于那些包含大量文件创建和删除操作的工作负载而言，它可能是有益的。</p>
+    <p>[感谢 Linux Foundation（LWN 的差旅赞助商）为我参加此次活动提供差旅支持。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article5">
+    <div class="article-header">
+        <span class="article-category">安全</span>
+        <h2>SUSE 全局禁用 setuid 的努力</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年10月20日</span>
+            <span><a href="https://lwn.net/Articles/1100257/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>SUSE 全局禁用 setuid 的努力</h3>
+    <p>setuid（以及 setgid）二进制程序长期以来一直是 Linux 系统上令人头疼的问题和安全漏洞的来源。人们普遍认为应当避免使用它们；例如，SUSE 的安全团队就<a href="https://en.opensuse.org/openSUSE:Package_security_guidelines#Setuid_Binaries" target="_blank">禁止在软件包中包含 setuid 或 setgid 二进制程序</a>，除非它们经过审查并被明确允许。Thorsten Kukuk 想要更进一步，将它们完全禁用。在 <a href="https://all-systems-go.io/" target="_blank">2026 年 All Systems Go!</a> 大会上，他谈到了自己在系统范围内禁用 setuid 的工作，以及仍然存在的一些障碍。</p>
+    <p>我今年没有亲临 All Systems Go! 大会，而是在这场演讲的<a href="https://media.ccc.de/v/all-systems-go-2026-387-making-nonewprivs-the-default" target="_blank">视频</a>发布后观看了它，并对照着<a href="https://cfp.all-systems-go.io/media/all-systems-go-2026/submissions/CG9K7H/resources/NoNewPrivs-ASG-2026-10-01_Ow35Mx2.pdf" target="_blank">幻灯片</a>。</p>
+    <h3>setuid 的问题</h3>
+    <p>Kukuk 介绍自己是 SUSE 的杰出工程师（distinguished engineer）。他领导着 SUSE 的"未来技术团队"（Future Technology Team），负责将可能引起客户兴趣的新技术集成到 SUSE 的产品中。他一直在探索的领域之一，是针对 PID 1 本身使用 systemd 的 "<a href="https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html#NoNewPrivileges=" target="_blank"><code>NoNewPrivileges=yes</code></a>" 配置选项，从而为所有进程启用内核的 <a href="https://static.lwn.net/kerneldoc/userspace-api/no_new_privs.html" target="_blank"><code>no_new_privs</code></a> 标志。</p>
+    <p>他解释说，当一个 setuid、setgid 或带有文件能力（file <a href="https://www.man7.org/linux/man-pages/man7/capabilities.7.html" target="_blank">capabilities</a>）的二进制程序调用 <a href="https://man7.org/linux/man-pages/man2/execve.2.html" target="_blank"><code>execve()</code></a> 时，新进程也会获得这些特权。然而，如果设置了 <code>no_new_privs</code> 标志，这一点就会被阻止，而且该设置在后续的 <code>execve()</code>、<a href="https://man7.org/linux/man-pages/man2/clone.2.html" target="_blank"><code>clone()</code></a> 和 <a href="https://man7.org/linux/man-pages/man2/fork.2.html" target="_blank"><code>fork()</code></a> 系统调用中持续生效。他指出，<code>no_new_privs</code> 并不能阻止不涉及 <code>execve()</code> 的特权变更；拥有相应权限的任务仍然可以调用 <a href="https://man7.org/linux/man-pages/man2/setuid.2.html" target="_blank"><code>setuid()</code></a> 或 <a href="https://man7.org/linux/man-pages/man2/setresuid.2.html" target="_blank"><code>setresuid()</code></a>。</p>
+    <p>这个标志之所以重要，是因为如果 setuid 程序存在缺陷，setuid 二进制程序就为攻击者提供了一条轻易提升权限的途径。他说，SUSE 安全团队的反馈是："一个[调用特权程序的]定义良好的 IPC 服务，比任何 setuid 二进制程序都要好得多"。这个团队多年前就想禁用 setuid 程序，"但一直没有资源和时间去做"。</p>
+    <p>当 <a href="https://copy.fail/" target="_blank">Copy Fail</a> 漏洞披露公布时，Kukuk 在启用了 <code>NoNewPrivileges=yes</code> 的系统上试用了那些通用的、与发行版无关的漏洞利用程序。"没有一个能奏效。"在前 LLM 时代，他会说禁用 setuid 二进制程序"本来可以挡住每一个脚本小子"。不过他怀疑现在还能不能挡住所有人，因为有些人会直接用 LLM 来针对特定系统定制攻击。但这并不意味着禁用 setuid 二进制程序就不值得。</p>
+    <h3>寻找 setuid 二进制程序</h3>
+    <p>Kukuk 说，他着手找出应用程序所使用的全部 setuid 二进制程序或文件能力，并首先聚焦于服务器配置（profile），以免被可能使用它们的众多桌面应用所淹没。他后来补充说，他自己的桌面已经在使用 <code>NoNewPrivileges=</code> 了。"即使在 KDE 桌面上它也能正常工作，至少对我需要的应用而言是如此"。</p>
+    <p>他编写了一个名为 <code>scan-caps</code> 的实用工具（它是 <a href="https://github.com/thkukuk/account-utils#account-utils" target="_blank">account-utils</a> 的一部分），用于列出所有配置了 setuid、setgid 或能力的二进制程序。他在幻灯片上展示了他在这项工作中识别出的一长串实用工具和应用程序，例如 <a href="https://github.com/shadow-maint/shadow#shadow-utils" target="_blank">shadow-utils 密码工具套件</a>、<a href="https://github.com/linux-pam/linux-pam#:~:text=Hello%21" target="_blank">Linux 可插拔认证模块（PAM）</a>、<a href="https://github.com/polkit-org/polkit#overview" target="_blank">polkit</a>、<a href="https://man7.org/linux/man-pages/man1/su.1@@shadow-utils.html" target="_blank"><code>su</code></a>、<a href="https://man7.org/linux/man-pages/man8/sudo.8.html" target="_blank"><code>sudo</code></a> 等等。</p>
+    <p>他的目标是确保大多数工具无需任何改动就能为用户正常工作。"如果我们使用 shadow 套件的替代品，我们不应该察觉到它在用别的东西。配置、行为都应该保持不变"。有一小部分他称之为"侵入式软件包"（intrusive packages）的东西会带来行为变化。例如，如果 <code>sudo</code> 被 <a href="https://www.man7.org/linux/man-pages/man1/run0.1.html" target="_blank"><code>run0</code></a> 取代，用户就必须改变管理系统的方式。"一种情况是编辑 <a href="https://man7.org/linux/man-pages/man5/sudoers.5.html" target="_blank"><code>sudoers</code></a> 文件，另一种情况是创建 polkit 规则。这是一种破坏性变更。"</p>
+    <h3>账户管理</h3>
+    <p>Kukuk 从账户管理着手他的工作，"因为密码认证是你总需要的东西"。他找到的所有与账户管理相关的 setuid 二进制程序——<code>sudo</code>、Linux PAM，甚至 <a href="https://mariadb.com/docs/server/reference/plugins/authentication-plugins/authentication-with-pluggable-authentication-modules-pam/authentication-plugin-pam" target="_blank">MariaDB 的认证</a>——都可能需要访问 <code>/etc/shadow</code> 来读取用户的条目。他决定将其委托给通过 <a href="https://varlink.org/" target="_blank">varlink</a> 接口通信的 systemd 服务（<a href="https://manpages.opensuse.org/Tumbleweed/account-utils/pwaccessd.8.en.html" target="_blank"><code>pwaccessd</code></a> 和 <a href="https://manpages.opensuse.org/Tumbleweed/account-utils/pwupdd.8.en.html" target="_blank"><code>pwupdd</code></a>）。<code>pwaccessd</code> 服务允许访问用户自己的 <code>/etc/passwd</code> 或 <code>/etc/shadow</code> 条目，而 <code>pwupd</code> 服务则让用户更改自己的密码等等。他说这些服务以 root 身份运行，但尽可能被沙箱化；它们只能访问 <code>/etc/passwd</code> 和 <code>/etc/shadow</code>。"即使你设法突破出来或调用它，你也做不了更多的事情。"</p>
+    <p>他的 account-utils 套件包含了诸如 <a href="https://man7.org/linux/man-pages/man1/chage.1.html" target="_blank"><code>chage</code></a>、<a href="https://man7.org/linux/man-pages/man1/chsh.1.html" target="_blank"><code>chsh</code></a> 和 <a href="https://man7.org/linux/man-pages/man1/passwd.1.html" target="_blank"><code>passwd</code></a> 等标准实用工具的版本，它们使用 systemd 服务而非 GNU C 库函数来修改用户密码等。他最初的想法是"增强"shadow-utils 套件，使其与新的 systemd 服务通信。"看了代码之后，我发现不重写全部代码就没有办法附加这样的调用。于是我创建了全新的、非常小的客户端二进制程序，PAM unix 也如法炮制"。</p>
+    <p>最终结果是：不再需要额外的特权，而且所有处理认证的工具现在都使用同一套规则。如果需要修改这些规则，配置集中在一处（<a href="https://manpages.opensuse.org/Tumbleweed/account-utils/pwaccessd.conf.5.en.html" target="_blank"><code>pwaccessd.conf</code></a>），管理员不必去找出所有处理认证的应用程序。还有一个 PAM 模块（<code>pam_unix_ng.so</code>），它使用 <code>pwaccessd</code> 来访问账户信息并进行认证。诸如 MySQL 或 MariaDB 这类需要访问用户密码进行认证的应用程序，可以通过 <code>pwaccessd.conf</code> 加入访问列表。</p>
+    <p>Kukuk 说，<code>run0</code> 是唯一能够替代那些需要 setuid 二进制程序的系统管理工具——<code>su</code>、<code>sudo</code> 和 polkit 的 <a href="https://www.freedesktop.org/software/polkit/docs/latest/pkexec.1.html" target="_blank"><code>pkexec</code></a>——的工具。然而他说，<code>run0</code> 作为替代品存在一些问题。他列举的第一个问题是，在终端会话中使用 <code>run0</code> 的桌面用户很可能会看到 KDE 或 GNOME 弹出的认证对话框，而不是像预期的那样在终端输入密码。（这是一个<a href="https://github.com/systemd/systemd/issues/40886" target="_blank">已知问题</a>。）</p>
+    <p>他说他已经看到了相当多关于这种行为的缺陷报告，其中有一些认为这个提示是恶意软件造成的。为了让 <code>run0</code> 对用户不那么出乎意料，他为它创建了<a href="https://github.com/thkukuk/run0-wrappers#run0-wrappers" target="_blank">一个包装器（wrapper）</a>，支持 <code>pkexec</code>、<code>su</code> 和 <code>sudo</code> 最重要的选项。"还没有遇到过包装器无法替代脚本中真正的 <code>sudo</code> 或 <code>su</code> 调用的情况。"</p>
+    <h3>其他场景</h3>
+    <p>还有一些他快速带过的其他情形，比如在容器中运行 setuid 二进制程序。他说他有一个使用 eBPF 标记"可信"容器的计划，这样就不会为这些容器设置 <code>no_new_privs</code> 标志。</p>
+    <p>但 Kukuk 说，最大的问题在于容器中到底是否需要 setuid 二进制程序。他查看了 40 个容器，发现 <code>su</code> 只是被用来放弃特权，而不是获取新特权。然而，<code>sudo</code> 会受到设置 <code>no_new_privs</code> 的影响，完全拒绝工作。他确实发现自己的 <a href="https://pi-hole.net/" target="_blank">Pi-hole</a> 容器无法工作，这出乎他的意料。"我所有的工具都告诉我它应该能工作，所以我需要深入研究一下"。</p>
+    <p>他说，唯一真正的问题出在使用 <a href="https://lwn.net/Articles/1049423/" target="_blank">Distrobox</a> 之类工具的发行版容器上。用户往往以普通用户身份运行它们，但在容器内使用 <code>sudo</code> 和 <code>su</code> 变成 root 来安装软件。对这些情况的解决办法是在容器外使用 <code>podman exec</code> 或 <code>docker exec</code>。他还发现，以<a href="https://rootlesscontaine.rs/" target="_blank">无根（rootless）方式</a>运行容器在 Podman 下可行，但在 Docker 下不行。Docker 无法工作的原因在于它依赖 <a href="https://github.com/rootless-containers/rootlesskit#rootlesskit-linux-native-fakeroot-using-user-namespaces" target="_blank">RootlessKit</a>，而后者在管理特权的方式上存在一个<a href="https://github.com/rootless-containers/rootlesskit/issues/551" target="_blank">缺陷</a>。这个问题可能会在即将发布的版本中得到修复，但他对此并不确定。</p>
+    <p><a href="https://en.wikipedia.org/wiki/Filesystem_in_Userspace" target="_blank">用户空间文件系统（FUSE）</a>的挂载也需要一个 setuid 二进制程序。他指出，他使用 <a href="https://signal.org/#signal" target="_blank">Signal</a> 桌面应用的 AppImage，它<a href="https://github.com/appimage/appimagekit/wiki/fuse" target="_blank">需要 FUSE</a>，而 <a href="https://www.man7.org/linux/man-pages/man1/fusermount3.1.html" target="_blank"><code>fusermount3</code></a> 二进制程序是 setuid root 的。他说他目前使用的是 <a href="https://github.com/Skyb0rg007/defused#defused---a-setuid-less-fusermount-implementation" target="_blank">defused</a>，这是一个不需要 setuid 的 fusermount 实现。</p>
+    <p><a href="https://postfix.org/" target="_blank">Postfix</a> 有三个 setgid 二进制程序：<a href="https://www.postfix.org/postdrop.1.html" target="_blank"><code>postdrop</code></a>、<a href="https://www.postfix.org/postlog.1.html" target="_blank"><code>postlog</code></a> 和 <a href="https://www.postfix.org/postqueue.1.html" target="_blank"><code>postqueue</code></a>。他说上游有<a href="https://www.mail-archive.com/postfix-users@postfix.org/msg108400.html" target="_blank">一些工作</a>旨在创建一个 "postdmux" systemd 服务，从而消除这些二进制程序对 setgid 的需求，但目前尚不清楚它何时会落地。</p>
+    <p>Kukuk 说，<a href="https://github.com/SELinuxProject/selinux#selinux-userspace" target="_blank">SELinux</a> 策略已在大多数情况下针对启用 <code>NoNewPrivileges=yes</code> 运行做了调整，但 <code>run0</code> 的策略仍不完整。例如，他说如果启用了 SELinux，目前无法将 <code>run0</code> 与 <code>chown</code>、<code>passwd</code> 或本地脚本一起使用。他指出，他的所有 <a href="https://get.opensuse.org/tumbleweed/" target="_blank">openSUSE Tumbleweed</a> 和 <a href="https://microos.opensuse.org/" target="_blank">MicroOS</a> 系统现在都在启用 <code>NoNewPrivileges=yes</code> 的情况下运行，唯独他的 Pi-hole DNS 服务器除外。</p>
+    <h3>问答</h3>
+    <p>一位听众询问，account-utils 的工作能否与 KDE 系统设置中的用户管理模块正确集成。Kukuk 说，KDE 使用的是 PAM 接口，"它不知道底层模块在做什么，也不在乎"。他说这应当是完全透明的，他的 PAM 模块与原来的模块在行为上没有任何差别。</p>
+    <p>另一个人想知道 openSUSE Tumbleweed 的计划是什么，以及 account-utils 是否会默认启用。Kukuk 说，MicroOS 的新安装已经在使用 account-utils。由于 Tumbleweed 是滚动发布发行版，事情要棘手一些。他说，他与维护者讨论过如何修复或规避使用 RPM 时的奇怪问题，例如依赖冲突和过时的软件包。他的计划是让它成为 Tumbleweed 新安装的默认配置。</p>
+    <p>SUSE 和 openSUSE 最近才把默认的强制访问控制（MAC）系统从 <a href="https://apparmor.net/" target="_blank">AppArmor</a> 切换为 SELinux。最后一个问题是，Kukuk 是否尝试过用 AppArmor 而不是 SELinux 来做他的 <code>NoNewPrivileges</code> 实验。Kukuk 说，有人告诉他 AppArmor 与 <code>NoNewPrivileges</code> 之间存在"大问题"，但他没有这方面的经验。他说他认为 Canonical 拥有"最娴熟的" AppArmor 开发者，可能是最有条件去研究这个问题的一方。"我们所有的安全专家都是 SELinux 专家，所以公司里甚至没有人具备研究它的知识"。说罢，再无提问，演讲到此结束。</p>
+    </div>
+</div>
+
+            <div class="article" id="article6">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>讨论 XArray 的重写</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月20日</span>
+            <span><a href="https://lwn.net/Articles/1100520/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>在 XFS 上支持大于页大小的块</h3>
+    <p>在 XFS 上支持大于页大小（page size）的块这项工作一直很艰难。许多 XFS 用户运行的是稳定版内核，这意味着他们并不会在新的 XFS 代码发布时就对其进行测试。这让 Daniel Gomez 思考：是否可以为 XFS 底层的某些数据结构（尤其是 <a href="https://docs.kernel.org/core-api/xarray.html" target="_blank">XArray</a>）采用 Rust 实现，从而减少代码中潜藏的 bug 数量。在 Kangrejos 2026 上，他主持了一场关于把 XArray 转换为 Rust 可能存在问题的讨论。与会的内核开发者们提出了许多对替换 XArray 代码持谨慎态度的理由，但 Gomez 仍决心尝试这种可能性，并援引了安全性和性能两方面的改进。</p>
+    <p>Gomez 说，XFS 于 2021 年 12 月加入了对大 folio（large folio）的支持，这是整个内核向 folio 迁移这一总体工作的一部分。2023 年 6 月，一些 XFS 用户报告了文件系统损坏问题：某些文件的页最终混入了其他文件中。原因被证明是加入 folio 支持时引入的一个 bug。Gomez 强调，这个 bug 在内核中存在了多年而无人察觉，可能正是因为用户依赖的是稳定版内核。</p>
+    <p>最终，XFS 开发者不得不在寻找根本原因期间回退 folio 支持。这带来了一个问题，因为<a href="https://lwn.net/Articles/1009548/" target="_blank">在 XFS 上启用更大块大小</a>的工作依赖于向 folio 的转换，因此只能搁置。最终，维护者们把问题追溯到了对 XArray API 的一次误用：代码在没有加锁的情况下执行了树操作。通过重构来改变 XFS 代码使用锁的方式修复了这个问题。但这让 Gomez 思考：如果当时是 Rust 实现，是否能在第一时间就防止这个 bug 被提交。</p>
+    <h3>XArray 背景知识</h3>
+    <p>Gomez 说，XArray 是一个假装成数组的<a href="https://en.wikipedia.org/wiki/Radix_tree" target="_blank">基数树（radix tree）</a>。XArray 在内核中随处可见。虽然内核<a href="https://lwn.net/Articles/175432/" target="_blank">支持基数树</a>已经有一段时间了，但除此之外还有许多不同的子系统在使用自定义的临时数据结构。最终，Matthew Wilcox 承担起了把它们整合到单一实现上的任务。这些使用者中的大多数只需要一个可扩展的数组，这正是 XArray 呈现的基本接口。对于那些需要对底层树进行更细致控制的场景，还有一个暴露更多操作的高级 XArray 接口。</p>
+    <p>使用名为 <code>xa_*()</code> 的函数的简单 API 会自动处理加锁。通过这个 API 从 XArray 读取使用的是读复制更新（read-copy-update，RCU），写入则经过一个内部的自旋锁（spinlock）。名为 <code>xas_*()</code> 的高级 API 则把加锁留给使用者。Gomez 把使用它描述为"有点像在树内部有一个游标（cursor），指向某个给定的索引"，随后可以移动它并对其进行操作。他说，高级 API 主要由页缓存（page cache）使用，不过包括 XFS 在内的一些文件系统也在使用它。</p>
+    <p>Kent Overstreet 认为，对于这个用例来说，基数树是错误的数据结构。他说，<a href="https://lwn.net/Articles/845507/" target="_blank">maple tree</a>（一种针对内存内使用而优化的 <a href="https://en.wikipedia.org/wiki/B-tree" target="_blank">B-tree</a>）会更合适。Gomez 说，页缓存维护者们曾讨论过用 maple tree 替换 XArray 的使用，但尚未做到。他还指出，XArray 拥有许多内核的 maple tree 实现所不具备的特性，他不确定这些特性能否被移植过去。</p>
+    <p>XArray 的广泛使用也让任何移植尝试变得复杂。Gomez 说，内核中共有 351 个使用者，涉及 126 个不同的维护者条目，覆盖了一个或多个 XArray。他接着说，2026 年已经有三个由误用 XArray 导致的 CVE，应该还有其他与安全无关的 bug。</p>
+    <h3>预防 bug</h3>
+    <p>他说，放弃 XArray 的理由是为了预防 bug。Rust 代码即使内部使用了 unsafe 代码，也可以提供无法从安全的 Rust 代码层面被误用的安全接口。内核中 XArray 的使用者如此之多，其中一些很可能正在误用 XArray 接口，而这很难被发现。Gomez 说，人们常说 XArray 的实现久经考验，任何新实现都需要海量的测试才能赶上来。但他并不买账，因为当出现涉及 XArray 的 bug 时，可能要过很多年才会有人注意到，即便这些 bug 很严重。</p>
+    <p>于是，他和同事们已经开始着手 XArray 的 Rust 实现，只是为了看看它能否消除他们使用 C 版本时观察到的那些 bug。他们已经取得了一些令人鼓舞的结果，但在投入更多时间之前，Gomez 想问一问：用 Rust 重写内核的一个核心部件，这究竟是否可行。到目前为止，Rust 只是在内核的边缘被采用——在驱动程序以及支持它们所需的 Rust 代码中。把 XArray 移植到 Rust 将会是一个巨大的改动。</p>
+    <p>Miguel Ojeda 说，如果 XArray 存在 Rust 用户，那么添加一个 Rust 实现的 XArray 是很容易说得通的。Rust for Linux 项目已经获得许可，可以在必要时用 Rust 复制内核的某些部分，以便向驱动程序和其他 Rust 组件呈现安全的 Rust API。他说，为 C 调用者提供 C API 就比较棘手了。通常，Greg Kroah-Hartman 不会接受这类代码。各个维护者可以在自己的子系统内绕过这条规则，但他们需要被彻底说服才会这么做。Ojeda 说，实际上，核心特性的 Rust 重实现可能需要等到 Rust 得到内核支持的每一种体系结构的支持之后。</p>
+    <p>他接着说，这并不是说这项工作缺乏价值。他向任何需要拿去向经理证明 Rust 抽象工作合理性的人提供了一份核心内核维护者关于 Rust 在内核中的长期计划的言论集。</p>
+    <p>Daniel Almieda 指出，<a href="https://rust-for-linux.com/tyr-gpu-driver" target="_blank">Tyr 驱动</a>中作业队列（job queue）的计划是使用 C 版本的 XArray；如果 Gomez 真的添加了 Rust 实现，Tyr 可能会是第一个 Rust 用户。Gomez 认为这很有帮助，但他个人更关心的是发现和预防现有的 bug，比如 XFS 中的那个。Almieda 说，Tyr 也将为作业队列暴露一个 C API，因此两人应该就如何处理这一点展开合作，Gomez 对此表示同意。</p>
+    <p>Alistair Francis 问，考虑到调用它的 C 代码仍然可能误用接口，Gomez 为什么认为用 Rust 重写 XArray 会有助于解决由误用接口导致的问题。Gomez 认为，拥有一个把安全使用它的每项要求都明确记录在相关函数类型中的 API 是有帮助的，即便对 C 用户而言也是如此。</p>
+    <p>Gomez 曾<a href="https://lwn.net/ml/all/aZRncP-sKLLS2K1U@macos/" target="_blank">提议</a>在 2026 年 5 月的 Linux 存储、文件系统、内存管理与 BPF 峰会上讨论这个话题；在对其提案的讨论中，他收到了一些回应。Wilcox 告诉他，考虑到 Rust 体系结构支持方面的现状，考虑重写 XArray 为时尚早。Andreas Hindborg 则说，值得做实验看看 Rust 在他的场景中是否会有帮助。最终，Gomez 决定继续进行这个实验，至少要深入到能看出症结所在的程度上。</p>
+    <h3>实现中的问题</h3>
+    <p>这次尝试遇到的第一个问题，是 XArray 对其树节点中每个槽位（slot）使用指针标记（pointer tagging）的方式。Gomez 本希望 Rust 编译器能够自动完成这种优化，但事实并非如此，所以他不得不手工实现。这种优化在上一个议题中讨论过，是 Rust 项目正在努力的方向。</p>
+    <p>另一个问题与尾调用优化（tail-call optimization）有关。对 C 代码的朴素移植明显变慢了，因为 LLVM 无法把树处理代码的递归调用变成循环。问题在于 Rust 代码自动插入了 <a href="https://doc.rust-lang.org/std/ops/trait.Drop.html#method.drop" target="_blank"><code>Drop::drop()</code></a> 调用，而 C 代码中并没有这些调用，这阻止了递归调用成为尾调用。Gomez 能够通过重构代码来绕过这个问题，但一个 <code>#[must_tail]</code> 属性本可以让他的工作轻松许多。</p>
+    <p>最后一个问题是允许节点大小不同的 XArray。Rust 代码可以使用 const 泛型（const generics）来表达这一点，但 const 泛型是一个不稳定的特性。Benno Lossin 提出了一种涉及用宏来生成不同节点大小的变通方案；Gomez 说这没有什么问题，但他更希望在可行的时候使用 const 泛型。</p>
+    <p>在解决这些问题之后，代码的 Rust 版本确实可以工作了。虽然针对使用 XArray 的内核特性已有现成的基准测试，但 Gomez 认为它们并不适合用来比较两种实现，于是他自己编写了一个专注于数据结构的基准测试。他认为，把那段代码改造成一个通用的内核数据结构基准测试库可能会有用。</p>
+    <p>目前，他的 Rust 代码比 C 实现"快一点"，不过并非所有较为冷僻的 XArray 特性都已实现，所以他还不想断然说 Rust 实现更快。更重要的是，这个接口安全得多：它使用了一些技巧，在运行时验证自己是否被正确使用。说到这里，他开放了现场讨论：这种做法的潜在收益是否超过了所有反对重写 XArray 的理由？</p>
+    <h3>讨论</h3>
+    <p>Josh Triplett 认为，虽然 Gomez 可以尝试论证 Rust 代码在安全性上更优，但如果他转而专注于性能，遇到的阻力会更小。他说："如果你能证明它快 50% 到 70%，那就真的很难反驳了。"Overstreet 问 Rust 是否利用了 LLVM 的 <code>noalias</code> 属性；由于 Rust 对引用何时别名（alias）掌握更多信息，它有可能把这些信息传递给 LLVM，从而在同样的整体算法下生成更好的代码。Ojeda 说，Rust 代码确实会发出 <code>noalias</code> 属性，但他不确定 LLVM 在多大程度上利用了这一点。简单情况会产生更好的代码生成，但更复杂的代码就难以评估了。</p>
+    <p>Gary Guo 认为，别名信息对 Rust 内核代码并无益处，因为许多类型为了与 C 互操作而被标记为使用 <a href="https://doc.rust-lang.org/std/cell/struct.UnsafeCell.html" target="_blank"><code>UnsafeCell</code></a>，这会禁用 Rust 的许多别名保证。因此，该属性带来的收益只会体现在那些从不跨越两种语言边界的类型上。Ojeda 对此表示赞同，说这也是 <a href="https://rust-for-linux.com/" target="_blank">Rust for Linux 项目</a>首先专注于在内核边缘添加 Rust 支持的另一个原因，因为这能让 Rust 代码更加自包含。</p>
+    <p>Hindborg 建议，可以通过对 C 调用者施加安全要求来消除其中一些开销。应当可以生成一份在与 Rust 类型交互时需要检查的事项清单。如果这些内容被自动纳入文档，并由 C 程序员在每个调用点进行检查，那么 Rust 代码就可以省去一些防御性编程。C 调用者仍然可能违反 Rust 的安全性质，但 C 程序员本来就必须小心阅读他们所用函数的文档，至少这样一来这些要求会被写进文档。</p>
+    <p>他接着说，C 实现现有的 XArray 文档并没有包含安全使用该 API 所需满足的要求方面的信息。这可能也是其 API 会被误用的原因之一。</p>
+    <p>已经没有更多现场评论了，于是 Gomez 简要谈了他对未来的计划。Rust XArray 代码的核心功能已经稳固，但在减少内存占用方面还有更多工作要做。目前，这棵树只会扩张而从不收缩，这一点需要修复。代码还需要补充 entry、预加载（preloading）和 RCU 相关的 API。其中最后一项尤其会受益于 Lossin 在 <a href="https://goals.rust-lang.org/2025h2/field-projections.html" target="_blank">字段投影（field projections）</a>方面的工作。</p>
+    <p>会议之后，Gomez 已经<a href="https://lwn.net/ml/all/20261005-rxarray-next-v2-1-187f689b52e4@samsung.com/" target="_blank">分享了他的补丁集</a>（交由 Wilcox 审阅），并且<a href="https://lwn.net/ml/all/20261012115028.73246-1-da.gomez%40kernel.org/" target="_blank">请求将其纳入 7.4 内核</a>。目前的工作还不完整，XArray 的用户可能暂时还不应该切换过去，但代码已经可以用来测试和研究了。</p>
+    <p>[ 感谢 Linux Foundation——LWN 的差旅赞助商——协助我们前往 Kangrejos。 ]</p>
+    </div>
+</div>
+
+            <div class="article" id="article7">
+    <div class="article-header">
+        <span class="article-category">Rust</span>
+        <h2>Rust 中的跨 crate 前向声明</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月19日</span>
+            <span><a href="https://lwn.net/Articles/1099596/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>概述</h3>
+    <p>Rust 有若干临时性的机制，允许用户代码影响标准库的执行方式。例如，自定义 panic 处理器（panic handler）和自定义分配器（allocator）都需要注册核心标准库代码需要调用的函数。随着更多类似特性被规划出来，Jana Dönszelmann 注意到了这一正在形成的模式，并构建了一个通用解决方案，引入了 C 语言弱符号（weak symbol）链接的一种更安全、带检查的类似物。在 Kangrejos 2026 上，她解释了这个新语言特性的工作原理，并提议用它来清理内核对 Rust 代码中整数溢出的处理。</p>
+    <p>Dönszelmann 过去两年一直是 Rust 编译器的全职贡献者，最近一直忙于<a href="https://blog.rust-lang.org/2026/08/21/enabling-next-solver-on-nightly/" target="_blank">新 trait 求解器（trait solver）</a>的工作。在做 trait 求解器的间隙，她原型化了一个新的编译器标志 <code>-Coverflow-checks=report</code>，它很可能对内核有用。目前，当 Rust 代码中发生整数溢出时，开发者可以选择 panic，或者静默地回绕（wrap）溢出的值。库中也提供了可返回错误的受检数学运算方法，但许多溢出发生在使用普通数学运算符的代码中。</p>
+    <p>在内核中，Rust 代码的溢出即 panic（panic-on-overflow）在 debug 和 release 构建中都是启用的。Rust for Linux 的开发者通过尽早引入这条规则，希望把溢出彻底挡在 Rust 代码之外，但这个决定与内核的其他部分产生了一些摩擦。尤其是 Linus Torvalds，他<a href="https://lwn.net/ml/all/CAHk-=wg=q7ptcMyUAqPGDbX_DKHivJVppc8bP0zpQqzOky_avA@mail.gmail.com/" target="_blank">认为</a>意外的整数溢出不应该让整个内核崩溃。</p>
+    <p>理论上，这种行为可以通过自定义 panic 处理器来配置。内核已经<a href="https://elixir.bootlin.com/linux/v7.2.9/source/rust/kernel/lib.rs#L216" target="_blank">定义了一个</a>，因为默认的面向用户空间的实现在内核中没有意义。问题在于，目前 Rust 把 panic 处理器定义为一个永不返回的函数。这个假设深深植根于语言之中，以至于提供一个调用 <a href="https://elixir.bootlin.com/linux/v7.2.9/source/include/asm-generic/bug.h#L85" target="_blank"><code>WARN()</code></a> 之后继续运行的自定义 panic 处理器根本不可行。</p>
+    <h3>前向声明</h3>
+    <p>Dönszelmann 说，自定义 panic 处理器也是这门语言一个古怪角落的例子，因为核心库本身已经需要知道如何 panic。因此，它前向声明存在某个 panic 处理器，并把定义 panic 处理器的工作留给后续的 crate。这在 C 中很正常，但在 Rust 中极不寻常——Rust 通常依赖单个 crate 内部与顺序无关的名称解析来解决 C 中会用前向声明处理的问题。于是，标准库中只有三个前向声明的用例：panic 处理、自定义分配器和调试日志。它们全都是作为特殊情况处理的。</p>
+    <p>Dönszelmann 一直希望用一个正规的语言特性来替换这些机制，让 Rust 程序能够安全地处理跨 crate 的前向引用。这只对极少数库有用，但它能避免它们依赖自定义的链接期（link-time）逻辑。它还会让添加一个单独的函数变得相对容易——该函数允许在错误发生时进行报告并继续运行。</p>
+    <p>这个语言特性目前使用的名称是<a href="https://goals.rust-lang.org/2025h1/eii.html" target="_blank">"可外部实现的项"（externally implementable items）</a>，但 Dönszelmann 说这是一个临时名称，等特性稳定之后可能会更换。该特性在 Rust 编译器的 nightly 版本中可用。通过在函数签名上添加 <code>#[eii]</code> 注解来标示一个可外部实现的项。如果本 crate 定义了函数体，那么在没有其他 crate 定义该项时，它会作为后备实现使用。如果另一个 crate 确实定义了这个函数，函数体就会被忽略。如果两个 crate 都试图定义该函数，或者既没有后备实现也没有其他定义，就会产生编译器错误。这个条件由编译器出于安全目的进行检查，但实际实现使用的是弱链接，从而让各个 crate 仍然可以并行生成代码。</p>
+    <p>有了语言中的这套基础设施，Dönszelmann 的原型增加了一个名为 <code>report_integer_overflow()</code> 的新可外部实现项，只要启用了她添加的新编译器标志，它就会在发生整数溢出时被自动调用。它是一个普通函数，可以返回到调用代码，因此编译器不会把后续代码当作死代码。默认实现只是简单地转入现有的 panic 处理器，所以一个程序既要用 <code>-Coverflow-checks=report</code> 构建，又要定义自己的处理器，才能从新行为中受益。</p>
+    <p>Dönszelmann 认为这基本上就是内核所需要的东西，但她承认自己是编译器开发者而不是内核开发者，并表示在她真正提议把这个原型纳入语言之前，她想先听听与会的内核人士对这个特性的看法。可外部实现的项如今已经在编译器中实现，但目标平台支持有限。Windows 使得正确使用弱链接变得困难，因此可外部实现的项目前仅限于类 Unix 平台。她预测，如果设计获得共识，稳定这个新的溢出检查模式并不困难，因为代码相当简单。</p>
+    <h3>讨论</h3>
+    <p>Miguel Ojeda 认为值得添加这个新的编译器标志以供内核使用。Gary Guo 问可外部实现的项能否被内联（inline）。Dönszelmann 说它们目前不会被内联，但原则上可以。Guo 听到这一点很高兴，因为他一直担心普遍使用可外部实现的项会带来的性能影响，但当 Ojeda 指出内核大概不会在意对 <code>WARN()</code> 的调用是否为冷路径（cold）时，他表示了同意。</p>
+    <p>Alice Ryhl 对使用弱链接表示担忧。她见过一个符号被另一个符号覆盖从而导致问题的情况。Greg Kroah-Hartman 说弱符号在内核中很常见，不认为这里再多一处使用会成为问题。Dönszelmann 澄清说，虽然普通的弱链接可能出现相互冲突的符号实现，但由于 Rust 编译器能看到正在编译的整个 crate 图，它可以确保给定的符号至多只有一个定义。</p>
+    <p>Andreas Hindborg 说他有一个针对块层（block layer）Rust 代码的基准测试，并主动提出在上面试用 Dönszelmann 的代码，看看溢出报告函数额外增加的返回路径是否会导致性能回退。Dönszelmann 欢迎大家试用这个特性，但她认为与现有的 panic 处理器实现相比，它不会有任何性能影响。Nadrieril 问可外部实现的项是否支持动态链接。Dönszelmann 称这是个"陷阱问题"，并指出使用动态链接时，就不再清楚如何确保在整个程序中只存在一个实现。她说这更像是一个哲学问题而非技术问题——如果人们愿意定义预期的行为是什么，那大概是可以实现的。</p>
+    <p>Guo 和 Ryhl 提出了一些不使用弱链接来实现该特性的替代方式；Dönszelmann 指出，这些方式中的大多数对试图获取静态项（static item）地址的程序都不适用。Ojeda 认为 Dönszelmann 提出的方案要好于单纯接受静默溢出——否则 Torvalds 可能会推动后者。所以他对尝试这一改动持赞成态度。Josh Triplett 建议，也许正确的选择是停止当前的内核线程，而不是让整个内核崩溃。此时议题时间已到，但在会后的讨论中，Guo 指出让一个内核线程在 Rust 代码中死掉实际上是不健全的（unsound），因为该线程的栈会被释放而不是泄漏。Triplett 认为这听起来可以修复，但同意在问题解决之前，避免让线程崩溃是有道理的。</p>
+    <p>[ 感谢 Linux Foundation——LWN 的差旅赞助商——协助我们前往 Kangrejos。 ]</p>
+    </div>
+</div>
+
+            <div class="article" id="article8">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>7.3 内核开发统计</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月19日</span>
+            <span><a href="https://lwn.net/Articles/1100241/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>概述</h3>
+    <p>Linus Torvalds 在经历了通常为期九周的开发周期之后，于 10 月 18 日<a href="https://lwn.net/ml/all/CAHk-=wgwnBm2zDdRM7u016NVHkv9KqbZW7AZ=8wZrqGyv_V+5A@mail.gmail.com/" target="_blank">发布</a>了 7.3 内核。这个开发周期在大量 LLM（大型语言模型）辅助贡献的推动下，打破了几乎一切可以想象的纪录。与往常一样，我们汇总了一些统计数据，展示这个预计将成为下一个长期支持（LTS）内核的版本是如何凝聚而成的。此外，本期还尝试回答一个问题：自动化补丁审查是否真的在减少进入内核的缺陷数量。</p>
+    <p>这个开发周期是项目历史上首次总提交数突破 20,000 的周期，其中 18,765 个为非合并（non-merge）提交。这些提交新增了近 920,000 行代码，同时删除了约 270,000 行，净增长约 650,000 行——需要消化的新代码相当多。这些代码由 3,021 名开发者贡献，一举粉碎了 7.2 周期刚刚创下的 2,652 人的短暂纪录。为了直观感受贡献者数量的变化趋势，下图展示了整个 git 历史中每个版本的贡献者数量：</p>
+    <p>本轮最活跃的开发者如下：</p>
+    <table>
+        <tr><th colspan="3">7.3 最活跃开发者（按变更集数量）</th></tr>
+        <tr><th>开发者</th><th>变更集数</th><th>占比</th></tr>
+        <tr><td>Christian Brauner</td><td>216</td><td>1.2%</td></tr>
+        <tr><td>Bui Duc Phuc</td><td>206</td><td>1.1%</td></tr>
+        <tr><td>Pengpeng Hou</td><td>165</td><td>0.9%</td></tr>
+        <tr><td>Sean Christopherson</td><td>161</td><td>0.9%</td></tr>
+        <tr><td>Pan Chuang</td><td>150</td><td>0.8%</td></tr>
+        <tr><td>Tejun Heo</td><td>142</td><td>0.8%</td></tr>
+        <tr><td>Maxime Ripard</td><td>134</td><td>0.7%</td></tr>
+        <tr><td>Krzysztof Kozlowski</td><td>131</td><td>0.7%</td></tr>
+        <tr><td>SJ Park</td><td>123</td><td>0.7%</td></tr>
+        <tr><td>Alex Hung</td><td>122</td><td>0.7%</td></tr>
+        <tr><td>Namjae Jeon</td><td>120</td><td>0.6%</td></tr>
+        <tr><td>Uwe Kleine-König</td><td>115</td><td>0.6%</td></tr>
+        <tr><td>Alex Deucher</td><td>111</td><td>0.6%</td></tr>
+        <tr><td>Takashi Iwai</td><td>104</td><td>0.6%</td></tr>
+        <tr><td>Breno Leitao</td><td>99</td><td>0.5%</td></tr>
+        <tr><td>Rosen Penev</td><td>96</td><td>0.5%</td></tr>
+        <tr><td>Imre Deak</td><td>95</td><td>0.5%</td></tr>
+        <tr><td>Kumar Kartikeya Dwivedi</td><td>91</td><td>0.5%</td></tr>
+        <tr><td>Lorenzo Stoakes</td><td>89</td><td>0.5%</td></tr>
+        <tr><td>Thomas Weißschuh</td><td>85</td><td>0.5%</td></tr>
+    </table>
+    <table>
+        <tr><th colspan="3">7.3 最活跃开发者（按更改行数）</th></tr>
+        <tr><th>开发者</th><th>更改行数</th><th>占比</th></tr>
+        <tr><td>Aurabindo Pillai</td><td>126464</td><td>12.5%</td></tr>
+        <tr><td>Alex Hung</td><td>40082</td><td>4.0%</td></tr>
+        <tr><td>Jeff Chen</td><td>35827</td><td>3.5%</td></tr>
+        <tr><td>Dongdong Hao</td><td>17046</td><td>1.7%</td></tr>
+        <tr><td>Christian Brauner</td><td>14873</td><td>1.5%</td></tr>
+        <tr><td>Lachlan Hodges</td><td>13949</td><td>1.4%</td></tr>
+        <tr><td>Dimitri Sivanich</td><td>13580</td><td>1.3%</td></tr>
+        <tr><td>Tejun Heo</td><td>12013</td><td>1.2%</td></tr>
+        <tr><td>Mickaël Salaün</td><td>10081</td><td>1.0%</td></tr>
+        <tr><td>Eric Biggers</td><td>9349</td><td>0.9%</td></tr>
+        <tr><td>Ching-Te Ku</td><td>8576</td><td>0.8%</td></tr>
+        <tr><td>Bhawanpreet Lakha</td><td>8299</td><td>0.8%</td></tr>
+        <tr><td>Sean Christopherson</td><td>8108</td><td>0.8%</td></tr>
+        <tr><td>Ce Sun</td><td>7492</td><td>0.7%</td></tr>
+        <tr><td>Mikhail Kshevetskiy</td><td>7347</td><td>0.7%</td></tr>
+        <tr><td>David Christensen</td><td>7051</td><td>0.7%</td></tr>
+        <tr><td>Chun-Tse Shao</td><td>6411</td><td>0.6%</td></tr>
+        <tr><td>Taniya Das</td><td>6399</td><td>0.6%</td></tr>
+        <tr><td>Kumar Kartikeya Dwivedi</td><td>6377</td><td>0.6%</td></tr>
+        <tr><td>Ian Rogers</td><td>6306</td><td>0.6%</td></tr>
+    </table>
+    <p>本轮非合并变更集的最大贡献者是 <a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=246" target="_blank">Christian Brauner</a> [KSDB]，他对 binfmt_misc <a href="https://lwn.net/Articles/1086947/" target="_blank">子系统</a>做出了显著改进，并在整个虚拟文件系统层贡献了大量修复。<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=41706" target="_blank">Bui Duc Phuc</a> [KSDB] 是在 7.1 开发周期中首次亮相的贡献者，以微弱差距位居第二，其工作主要集中在声音驱动子系统的修复上。<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=39273" target="_blank">Pengpeng Hou</a> [KSDB] 于 7.0 中首次出现，在整个驱动子系统中进行了修复。<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=7" target="_blank">Sean Christopherson</a> [KSDB] 与 KVM 虚拟机监控程序（hypervisor）开展了大量合作。<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=37773" target="_blank">Pan Chuang</a> [KSDB] 此前在内核中只有三次提交（从 6.17 开始），本轮贡献了大量驱动子系统的清理工作。</p>
+    <p>在更改行数一栏中，<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=610" target="_blank">Aurabindo Pillai</a> [KSDB] 贡献了五个提交，其中不可避免地包含一大批机器生成的 amdgpu 寄存器定义。<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=391" target="_blank">Alex Hung</a> [KSDB] 添加了大量 AMD 图形测试。<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=23512" target="_blank">Jeff Chen</a> [KSDB] 贡献了三个提交，其中之一是 NXP IW61x WiFi 接口的驱动程序。<a href="https://lwn.net/ksdb/releases/v7.3/commits?dev=38564" target="_blank">Dongdong Hao</a> [KSDB] 添加了 leapraid SCSI 驱动程序及相关文档。</p>
+    <p><a href="https://lwn.net/Articles/1088776/" target="_blank">7.2 开发统计</a>中曾指出，包含 Reviewed-by 标签的提交比例在此前几个开发周期中持续下降；这一趋势在 7.3 中发生了逆转：有 1,399 个提交（7.5%）带有 Tested-by 标签，9,545 个提交（50.9%）带有 Reviewed-by 标签。最活跃的测试者和审查者如下：</p>
+    <table>
+        <tr><th colspan="3">7.3 测试与审查署名（Tested-by）</th></tr>
+        <tr><th>测试者</th><th>数量</th><th>占比</th></tr>
+        <tr><td>Dan Wheeler</td><td>261</td><td>16.5%</td></tr>
+        <tr><td>Luca Ceresoli</td><td>85</td><td>5.4%</td></tr>
+        <tr><td>Mykola Marzhan</td><td>29</td><td>1.8%</td></tr>
+        <tr><td>Tommaso Merciai</td><td>24</td><td>1.5%</td></tr>
+        <tr><td>Victor Nogueira</td><td>20</td><td>1.3%</td></tr>
+        <tr><td>Michael Kelley</td><td>19</td><td>1.2%</td></tr>
+        <tr><td>Mostafa Saleh</td><td>19</td><td>1.2%</td></tr>
+        <tr><td>Deborah Brouwer</td><td>19</td><td>1.2%</td></tr>
+        <tr><td>Wolfram Sang</td><td>18</td><td>1.1%</td></tr>
+        <tr><td>Nathan Chancellor</td><td>18</td><td>1.1%</td></tr>
+        <tr><td>Randy Dunlap</td><td>18</td><td>1.1%</td></tr>
+        <tr><td>Charlie Jenkins</td><td>16</td><td>1.0%</td></tr>
+        <tr><td>Heiko Stuebner</td><td>15</td><td>0.9%</td></tr>
+        <tr><td>K Prateek Nayak</td><td>14</td><td>0.9%</td></tr>
+        <tr><td>Samuel Salin</td><td>14</td><td>0.9%</td></tr>
+    </table>
+    <table>
+        <tr><th colspan="3">7.3 测试与审查署名（Reviewed-by）</th></tr>
+        <tr><th>审查者</th><th>数量</th><th>占比</th></tr>
+        <tr><td>Konrad Dybcio</td><td>474</td><td>3.7%</td></tr>
+        <tr><td>Dmitry Baryshkov</td><td>305</td><td>2.4%</td></tr>
+        <tr><td>Christoph Hellwig</td><td>246</td><td>1.9%</td></tr>
+        <tr><td>Andy Shevchenko</td><td>206</td><td>1.6%</td></tr>
+        <tr><td>Frank Li</td><td>198</td><td>1.6%</td></tr>
+        <tr><td>Krzysztof Kozlowski</td><td>193</td><td>1.5%</td></tr>
+        <tr><td>Simon Horman</td><td>170</td><td>1.3%</td></tr>
+        <tr><td>Ilpo Järvinen</td><td>164</td><td>1.3%</td></tr>
+        <tr><td>Luca Ceresoli</td><td>139</td><td>1.1%</td></tr>
+        <tr><td>Thomas Zimmermann</td><td>123</td><td>1.0%</td></tr>
+        <tr><td>Andrea Righi</td><td>117</td><td>0.9%</td></tr>
+        <tr><td>Bhawanpreet Lakha</td><td>111</td><td>0.9%</td></tr>
+        <tr><td>Hannes Reinecke</td><td>106</td><td>0.8%</td></tr>
+        <tr><td>Linus Walleij</td><td>105</td><td>0.8%</td></tr>
+        <tr><td>Cezary Rojewski</td><td>100</td><td>0.8%</td></tr>
+    </table>
+    <p><a href="https://lwn.net/ksdb/releases/v7.3/taglist?tag=tested-by&amp;dev=612" target="_blank">Dan Wheeler</a> [KSDB] 仍然是最多产的测试者，在这个为期 63 天的开发周期中，平均每天测试约四个 AMD 图形驱动方面的变更；无人能及。与此同时，<a href="https://lwn.net/ksdb/releases/v7.3/taglist?tag=reviewed-by&amp;dev=236" target="_blank">Konrad Dybcio</a> [KSDB] 不知用了什么办法，竟然审查了 474 个 Qualcomm 驱动与 devicetree 变更——每天超过七个。相比之下，<a href="https://lwn.net/ksdb/releases/v7.3/taglist?tag=reviewed-by&amp;dev=8" target="_blank">Dmitry Baryshkov</a> [KSDB]（每天接近五个）和 <a href="https://lwn.net/ksdb/releases/v7.3/taglist?tag=reviewed-by&amp;dev=544" target="_blank">Christoph Hellwig</a> [KSDB]（每天略少于四个）只能算是“偷懒者”了。</p>
+    <p>同样值得快速浏览一下本版本中的 Reported-by 标签。这些标签出现在 1,411 个提交中，占总数的 7.5%，具体数字如下：</p>
+    <table>
+        <tr><th colspan="3">7.3 主要缺陷报告者</th></tr>
+        <tr><th>报告者</th><th>数量</th><th>占比</th></tr>
+        <tr><td>Sashiko</td><td>304</td><td>19.4%</td></tr>
+        <tr><td>Syzbot</td><td>239</td><td>15.3%</td></tr>
+        <tr><td>kernel test robot</td><td>89</td><td>5.7%</td></tr>
+        <tr><td>Vega</td><td>83</td><td>5.3%</td></tr>
+        <tr><td>Nicholas Carlini</td><td>41</td><td>2.6%</td></tr>
+        <tr><td>Konrad Dybcio</td><td>30</td><td>1.9%</td></tr>
+        <tr><td>Xiang Mei</td><td>20</td><td>1.3%</td></tr>
+        <tr><td>Dan Carpenter</td><td>17</td><td>1.1%</td></tr>
+        <tr><td>Chris Mason</td><td>14</td><td>0.9%</td></tr>
+        <tr><td>TencentOS Corvus AI</td><td>13</td><td>0.8%</td></tr>
+        <tr><td>Yuhao Jiang</td><td>13</td><td>0.8%</td></tr>
+        <tr><td>Weiming Shi</td><td>11</td><td>0.7%</td></tr>
+        <tr><td>Martin Hodo</td><td>11</td><td>0.7%</td></tr>
+        <tr><td>Mark Brown</td><td>9</td><td>0.6%</td></tr>
+        <tr><td>autonomouscodesecurity@microsoft.com</td><td>9</td><td>0.6%</td></tr>
+    </table>
+    <p>一年前还不存在的 <a href="https://lwn.net/ksdb/releases/v7.3/taglist?tag=reported-by&amp;dev=39782" target="_blank">Sashiko</a> 审查工具 [KSDB]，如今已贡献了本版本中近 20% 的 Reported-by 标签。总体而言，近一半获得署名的缺陷报告都来自自动化系统。</p>
+    <p>有关 7.3 内核中所有这些标签使用情况的更多信息，请参阅<a href="https://lwn.net/ksdb/releases/v7.3/by_tags" target="_blank">这个 KSDB 页面</a>。</p>
+    <p>据我们所能确认的信息，7.3 的开发工作得到了 232 家雇主的支持；其中最活跃的包括：</p>
+    <table>
+        <tr><th colspan="3">7.3 最活跃雇主（按变更集数量）</th></tr>
+        <tr><th>雇主</th><th>变更集数</th><th>占比</th></tr>
+        <tr><td>（未知）</td><td>3851</td><td>20.5%</td></tr>
+        <tr><td>AMD</td><td>1186</td><td>6.3%</td></tr>
+        <tr><td>Intel</td><td>1179</td><td>6.3%</td></tr>
+        <tr><td>Google</td><td>1138</td><td>6.1%</td></tr>
+        <tr><td>Qualcomm</td><td>1115</td><td>5.9%</td></tr>
+        <tr><td>Red Hat</td><td>837</td><td>4.5%</td></tr>
+        <tr><td>（无）</td><td>679</td><td>3.6%</td></tr>
+        <tr><td>Kylinsoft</td><td>624</td><td>3.3%</td></tr>
+        <tr><td>Meta</td><td>524</td><td>2.8%</td></tr>
+        <tr><td>IBM</td><td>472</td><td>2.5%</td></tr>
+        <tr><td>NVIDIA</td><td>400</td><td>2.1%</td></tr>
+        <tr><td>SUSE</td><td>363</td><td>1.9%</td></tr>
+        <tr><td>（顾问）</td><td>303</td><td>1.6%</td></tr>
+        <tr><td>Oracle</td><td>271</td><td>1.4%</td></tr>
+        <tr><td>（学术界）</td><td>268</td><td>1.4%</td></tr>
+        <tr><td>Renesas Electronics</td><td>240</td><td>1.3%</td></tr>
+        <tr><td>NXP Semiconductors</td><td>237</td><td>1.3%</td></tr>
+        <tr><td>Arm</td><td>234</td><td>1.2%</td></tr>
+        <tr><td>Amutable</td><td>216</td><td>1.2%</td></tr>
+        <tr><td>Huawei Technologies</td><td>174</td><td>0.9%</td></tr>
+    </table>
+    <table>
+        <tr><th colspan="3">7.3 最活跃雇主（按更改行数）</th></tr>
+        <tr><th>雇主</th><th>更改行数</th><th>占比</th></tr>
+        <tr><td>AMD</td><td>225173</td><td>22.3%</td></tr>
+        <tr><td>（未知）</td><td>144387</td><td>14.3%</td></tr>
+        <tr><td>Qualcomm</td><td>61771</td><td>6.1%</td></tr>
+        <tr><td>Google</td><td>56977</td><td>5.6%</td></tr>
+        <tr><td>NXP Semiconductors</td><td>45506</td><td>4.5%</td></tr>
+        <tr><td>Intel</td><td>44774</td><td>4.4%</td></tr>
+        <tr><td>Red Hat</td><td>38420</td><td>3.8%</td></tr>
+        <tr><td>（无）</td><td>32075</td><td>3.2%</td></tr>
+        <tr><td>Meta</td><td>27768</td><td>2.7%</td></tr>
+        <tr><td>IBM</td><td>20441</td><td>2.0%</td></tr>
+        <tr><td>NVIDIA</td><td>16737</td><td>1.7%</td></tr>
+        <tr><td>Realtek</td><td>15731</td><td>1.6%</td></tr>
+        <tr><td>Amutable</td><td>14873</td><td>1.5%</td></tr>
+        <tr><td>Morse Micro</td><td>13949</td><td>1.4%</td></tr>
+        <tr><td>HP Enterprise</td><td>13698</td><td>1.4%</td></tr>
+        <tr><td>Renesas Electronics</td><td>11756</td><td>1.2%</td></tr>
+        <tr><td>（顾问）</td><td>11405</td><td>1.1%</td></tr>
+        <tr><td>Cloudflare</td><td>10070</td><td>1.0%</td></tr>
+        <tr><td>Collabora</td><td>8405</td><td>0.8%</td></tr>
+        <tr><td>Samsung</td><td>8399</td><td>0.8%</td></tr>
+    </table>
+    <p>“未知”类别持续增长的背后是新开发者的不断涌入；他们中的大多数人可能是利用业余时间参与开发，但很难确切核实。一个值得注意的有趣趋势是，开发中国麒麟（Kylin OS）发行版的 <a href="https://www.kylinos.cn/" target="_blank">Kylinsoft</a> 的贡献在增加。有 92 名隶属于该公司的开发者为 7.3 做出了贡献，其中大多数人只提交了寥寥数个提交。作为一个群体，他们似乎正在按照 LLM 识别出的缺陷清单逐一处理。</p>
+    <h3>首次参与的开发者与“年轻缺陷”</h3>
+    <p>上述麒麟软件（Kylinsoft）的员工中，有相当一部分是在 7.3 周期中首次为内核做出贡献。总而言之，本轮共出现了 807 名新开发者，延续了我们在 2026 年间一直看到的趋势：</p>
+    <p>为 7.3 做出贡献的开发者中，足足有超过四分之一是从未在社区中露过面的人。新贡献者的增长趋势显然不可能永远持续下去；维护者已经渐渐跟不上这股洪流。但目前也没有任何放缓的迹象。</p>
+    <p>这些新贡献者的改动遍布内核各处。其中许多是琐碎的修改——拼写错误修复之类——但也有许多是对重要内核子系统的重大变更。很明显，其中不少贡献者并不真正理解他们用 LLM 修改的代码，这引发了人们对其补丁质量的担忧，也让人担心一个被此类补丁淹没的内核的长期可维护性。</p>
+    <p>最近常听到的一种说法是，自动化补丁审查的出现提高了新进代码的质量，使得在更少人工干预的情况下接受更多代码变得更为安全。要判断这是否属实需要数年时间，因为许多缺陷需要那么久才会显现。不过，可以通过考察那些早期就暴露出来的缺陷，来获得风向的初步指示：</p>
+    <p>图中下方（蓝色）柱形是带有 Fixes 标签、表明缺陷在上一个版本中被引入的提交数量。因此，右侧 7.3 的蓝色柱形就是 7.3 中修复 7.2 所引入缺陷的提交数量。该数值在近期的版本历史中显得相对稳定，没有明显趋势。话虽如此，请记住近来内核的整体补丁量已经增加，因此上一版本修复率保持稳定意味着总体缺陷率在下降。</p>
+    <p>上方（橙色）柱形是对同一发布周期内所合并提交的修复数量；这些缺陷从未进入过正式发布的内核。该数字在最近的版本中确实呈下降趋势，尤其是考虑到补丁量的增加。</p>
+    <p>与其去想象补丁量变化对这些数字的影响，不如直接把它们绘制成相关版本提交总数的百分比：</p>
+    <p>在这里，变化似乎更清晰了。短期即现缺陷（short-term-buggy）的提交占总数的比例近年来大致保持恒定。但该比例从 7.1 开始下降，此后下降更为明显。具体来说，在同一发布周期内出现且必须修复的缺陷似乎正在减少。这表明自动化补丁审查或许确实在过滤掉那些一旦受影响代码开始接受更广泛测试就会立即显现的缺陷。当然，另一种解释是：虽然缺陷仍以往常的速度被引入，但它们被发现和修复的速度降低了。不过，鉴于总体缺陷发现速度在加快，这种解释似乎站不住脚。真相需要多年才能揭晓，但初步迹象表明，至少就显而易见的缺陷而言，进入内核的代码质量可能确实正在改善。</p>
+    <p>随着开发社区步入 7.4 合并窗口，linux-next 中已有近 16,000 个非合并变更集。这比为 7.3 准备的补丁多出不少，预示着 7.3 创下的纪录将再一次短命。内核开发社区的形态正在发生变化，最终会走向何方远未明朗。不过，这注定是一段有趣的旅程；请保持关注，我们将一同见证它的走向。</p>
+    </div>
+</div>
+
+            <div class="article" id="article9">
+    <div class="article-header">
+        <span class="article-category">发行版</span>
+        <h2>理解 Nix flakes</h2>
+        <div class="article-meta">
+            <span>作者：Tyler Langlois</span>
+            <span>2026年10月21日</span>
+            <span><a href="https://lwn.net/Articles/1094226/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>概述</h3>
+    <p><a href="https://wiki.nixos.org/wiki/Flakes" target="_blank">Nix flakes</a> 是 <a href="https://wiki.nixos.org/wiki/Nix_(package_manager)" target="_blank">Nix 包管理工具</a>的一项实验性特性，旨在以更自包含、更可复现的方式构建项目。尽管该特性仍处于实验阶段，开源项目发布 flake.nix 文件以提供预定义开发环境和构建自动化的做法已日益流行，即使这些仓库可能并未为 <a href="https://wiki.nixos.org/wiki/NixOS" target="_blank">NixOS Linux 发行版</a>提供上游软件包或模块。虽然 Nix flakes 的历史颇为曲折，其稳定化之路也不确定，但对于选择引入它们的项目而言，flakes 能够提供实用的能力。</p>
+    <h3>为什么需要 flakes？</h3>
+    <p>flakes 的承诺是为获取和构建软件提供可靠且可复现的方法。假设某个开源项目想为 Linux 用户提供一种简便方式来搭建其软件的开发环境。各发行版的编程语言、库等版本往往各不相同，这意味着 Debian 13 上的用户与 Fedora 45 上的用户所用的软件版本会略有差异。有些依赖甚至可能根本没有为这些发行版打包。这对所有相关的人来说都是件头疼事。</p>
+    <p>项目可以通过附带一个 Nix flake 来避免这种头疼：它将依赖的版本固定下来，让每位用户无论运行哪种发行版都能安装相同的软件。最终用户往往只需一个本地（且配置妥当的）Nix 安装加上很少的（如果有的话）其他工具链要求，就能可靠地安装依赖、构建项目并运行测试。</p>
+    <p>Flakes 使用 <a href="https://wiki.nixos.org/wiki/Nix_(language)" target="_blank">Nix 语言</a>编写，主要供 Nix 包管理器使用。虽然 NixOS 可以通过 <a href="https://wiki.nixos.org/wiki/Nixos-rebuild" target="_blank">nixos-rebuild</a> 之类的工具使用 flakes，但 flakes 的运作独立于 NixOS。flake.nix 文件是 flakes 工作方式的核心：这些文件包含定义为类 URL 远程资源（通常是软件仓库）的 <a href="https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-flake.html#flake-inputs" target="_blank">inputs（输入）</a>，以及 flake 使用者可以使用的 <a href="https://wiki.nixos.org/wiki/Flakes#Output_schema" target="_blank">outputs（输出）</a>，比如软件包或针对这些包的测试。</p>
+    <p>一个简单的 flake 可能如下面这段 Nix 代码所示：</p>
+    <pre><code>{
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  };
+
+  outputs = { nixpkgs, ... }: {
+    packages.x86_64-linux.hello =
+      nixpkgs.legacyPackages.x86_64-linux.hello;
+  };
+}</code></pre>
+    <p>legacyPackages 这个名字有点误导性，因为其中的 Nix 包并非字面意义上的“遗留（legacy）包”：这个名字是一个兼容性垫片（shim），用于避免诸如 nix flake show 之类的命令在终端中列出超过 100,000 个包的情况。当使用 legacyPackages 而不是 packages 时，nix 命令在打印其值时会避免列出所有包，正如<a href="https://github.com/NixOS/nixpkgs/blob/b2e41a5bd20d4114f27fe8d96e84db06b841d035/flake.nix#L47" target="_blank">上游文档</a>所述。</p>
+    <p>向 flake.nix 文件添加名为 nixpkgs 的输入后，nix flake lock 会创建一个 flake.lock 文件，将 nixpkgs 输入固定到 NixOS/nixpkgs 仓库中 nixpkgs-unstable 分支所引用的提交上。就像 Rust 项目中的 Cargo.lock 文件或 Ruby 项目中的 Gemfile.lock 文件一样，flake.lock JSON 文件将每个输入锚定到一个具体的上游修订版。这样做使得 flake 能够一致地引用其依赖，并使用一组已知兼容的输入可靠地构建其输出。</p>
+    <p>将 flake 的输入锁定到分支的最新提交只是表达上游引用的一种方式，<a href="https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-flake#flake-reference-attributes" target="_blank">flake 引用格式</a>还允许一些其他策略，包括特定标签（tag）或绝对路径等其他形式。锁定的修订版仍是仓库的一部分，之后可以使用 nix flake update 命令进行更新（如果引用指向的是分支名之类非特定目标，而非 Git 哈希）。</p>
+    <p>flake 的 outputs 属性写作一个 Nix 函数。当 Nix 处理 flake.nix 文件时，会获取各输入并将其传递给 outputs 函数，后者便能实际使用来自 nixpkgs 等输入的具体值。在本例中，该 flake 只提供从 nixpkgs-unstable 分支中提取的 <a href="https://search.nixos.org/packages?channel=unstable#show=hello" target="_blank">hello</a> 包。</p>
+    <p>默认情况下，Nix 假定 inputs 下的每个引用本身都包含自己的 flake.nix，因而也包含自己的一组 outputs。当每个输入在 outputs 函数中被引用时（如示例代码中的 nixpkgs.legacyPackages），使用的就是这些值。</p>
+    <p>这个例子展示了如何将一个软件包打包进 Nix flake，但还有更多顶层属性可以在 flake 的 outputs 中提供其他用途。例如，devShells 提供预先装好库和环境变量的开发环境，而 nixosModules 可以被导入 NixOS 配置中加以使用。nix 命令行工具将许多属性识别为 flake 模式（schema）的一部分，尽管在这些约定名称之外，flake 的 outputs 结构是任意的。</p>
+    <p>锁定的输入是 flakes 的一个重要特征，而另一个可以说同样重要的行为是：flakes 在<a href="https://wiki.nixos.org/wiki/Flakes#Making_your_evaluations_pure" target="_blank">纯求值模式（pure evaluation mode）</a>下进行求值，这意味着默认禁止那些可能改变 Nix 计算结果的外部因素。例如，不允许读取环境变量，网络访问则通过校验和检查下载产物来加以限制。虽然这种行为可以通过 --impure 标志放宽，但强制执行它增添了 flake 的可复现品质。</p>
+    <p>应当指出，Nix flakes 的某些特性也可以由其他库或工具实现。例如，不使用 flakes 也可以借助 <a href="https://github.com/nmattia/niv#niv" target="_blank">niv</a> 实现锁定的依赖（类似于 Nix flake 输入），该项目提供类似 flake.lock 文件的能力。开发 shell 则由现有的、非实验性的命令通过 <a href="https://wiki.nixos.org/wiki/Development_environment_with_nix-shell" target="_blank">shell.nix 文件</a>支持。对许多用户来说，Nix flakes 扮演着一个更通用、更统一的总括角色，涵盖了输入、锁文件和 Nix 命令等实用概念。</p>
+    <h3>在实际中使用 flakes</h3>
+    <p>在源代码仓库中遇到 flake.nix 文件时该如何使用？首先，必须<a href="https://nixos.org/download/#download-nix" target="_blank">安装</a> nix 工具并启用 Nix flakes 后才能使用：每个 nix 命令都必须带上 --experimental-features 'nix-command flakes' 命令行选项，或者在 $HOME/.config/nix/nix.conf 或 /etc/nix/nix.conf 中设置 experimental-features = nix-command flakes 配置项，具体参见 <a href="https://wiki.nixos.org/wiki/Flakes#Setup" target="_blank">Nix flakes 设置文档</a>。</p>
+    <p>大多数与 flakes 交互的 nix 操作既可以通过仓库的本地检出完成，也可以通过 <a href="https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-flake#url-like-syntax" target="_blank">flake 引用</a>完成（后者可以是 flake 的 inputs 属性下接受的任何类 URL 格式）。例如，下面的命令会显示 Ghostty 终端模拟器的 <a href="https://github.com/ghostty-org/ghostty#----ghostty" target="_blank">Ghostty 仓库</a>提供的所有输出：</p>
+    <pre><code>nix flake show github:ghostty-org/ghostty</code></pre>
+    <p>在这个例子中，github:ghostty-org/ghostty flake 引用会在内部展开为一个上游 GitHub URL，它获取 tarball 而不是克隆整个仓库。以下 nix flake show 命令的输出为便于阅读做了删减：</p>
+    <pre><code>github:ghostty-org/ghostty/&lt;hash-value&gt;...
+├───packages
+│   └───x86_64-linux
+│       └───ghostty: package 'ghostty-1.3.2-dev+3c1ef5b-nix'
+├───devShells
+│   └───...
+├───checks
+└───...</code></pre>
+    <p>除了 x86_64-linux 架构的 ghostty 包之外，还有 checks 等其他输出，它们定义了可以通过 nix flake check 之类的命令直接针对该 flake 运行的测试。</p>
+    <p>devShells 输出尤其有用。作为一个基于 Zig 的项目，Ghostty 需要兼容的语言工具链，贡献者才能构建和测试该项目。手动安装 zig 是一种选择，但使用 Nix flake 开发 shell 可以让这一过程更轻松。进入开发 shell 需使用 develop 子命令：</p>
+    <pre><code>nix develop github:ghostty-org/ghostty</code></pre>
+    <p>在 nix 使用 flake.nix 文件中填充的环境启动 shell 之后，zig 命令就可用了：</p>
+    <pre><code>$ zig version
+0.16.0</code></pre>
+    <p>这份 zig 安装的作用域仅限于 Ghostty 的开发 shell，并不会安装到整个系统（zig 及其支持库被安装进 <a href="https://nix.dev/manual/nix/latest/store/" target="_blank">Nix store</a>）。除了 zig 之外，与开发相关的所有其他依赖也会被加入 $PATH，所需的库也一并包含在内。当 flake.lock 文件成为仓库的一部分时，nix develop 的下游用户最终将获得与最初的 Nix flake 作者完全相同版本的实用工具和库。由于开发 shell 是由 Nix store 中彼此独立的不同路径构成的，同一工具链的多个版本可以在同一台主机上共存，可执行文件和共享库互不冲突。</p>
+    <p>同样的原则适用于任何提供 flake.nix 的仓库，无论项目使用 C++、Rust 还是任何其他语言。--command 标志允许命令在指定的开发 shell 中以非交互方式运行。<a href="https://niri-wm.github.io/niri/" target="_blank">Niri</a> 和 <a href="https://pandoc.org/" target="_blank">pandoc</a> 只是众多提供 flake.nix 文件及捆绑各自构建环境的开发 shell 的项目中的一小部分：</p>
+    <pre><code>$ nix develop github:niri-wm/niri --command rustc --version
+rustc 1.97.0 (2d8144b78 2026-07-07) (built from a source tarball)
+$ nix develop github:jgm/pandoc --command ghc --version
+The Glorious Glasgow Haskell Compilation System, version 9.10.3</code></pre>
+    <p>在上述每一例中，所引用的工具链此前都不存在于宿主系统上。每条命令及项目编译所需的关联库完全通过 Nix flake 开发 shell 提供。</p>
+    <h3>一段坎坷的历史</h3>
+    <p>锁定依赖和开发 shell 都是实用的能力，那么为什么 flakes 仍然是一项被额外配置步骤所门槛化的实验性特性？</p>
+    <p>Flakes 由 Nix 的原作者 Eelco Dolstra 于 2019 年 7 月在 <a href="https://github.com/NixOS/rfcs/pull/49" target="_blank">NixOS RFC 49</a> 中首次提出。在长达一年的 RFC 流程中，最终成为 Nix flakes 的底层基础设施在 <a href="https://github.com/NixOS/nix" target="_blank">Nix GitHub 仓库</a>中持续开发。经过一段漫长的讨论之后，由于未能就采纳达成共识，该提案 PR 被关闭、RFC 于 <a href="https://github.com/NixOS/rfcs/pull/49#event-3552993451" target="_blank">2020 年 7 月</a>被撤回。关于范围、设计及其他考量的问题，在附属于 RFC 49 的（漫长的）讨论串中依然可见，并最终导致了它的关闭。</p>
+    <p>由于 RFC 49 未能通过，flakes 于 2021 年作为实验性特性被纳入 <a href="https://nix.dev/manual/nix/latest/release-notes/rl-2.4.html" target="_blank">Nix 2.4 版本</a>。Nix flakes 仅在显式启用时才可访问，这一要求在上游 Nix 项目中保持至今。正如后文所见，这正是 flake 使用方式在不同实现之间出现分裂的一个方面。</p>
+    <h3>采用情况</h3>
+    <p>在首次发布之后的几年里，Nix flakes 得到了广泛采用。在吸引了近 3,400 名 Nix 用户参与反馈的 <a href="https://nixos.org/surveys/community/2025/" target="_blank">2025 年 NixOS 社区调查</a>中，78.9% 的受访者表示他们<a href="https://nixos.org/surveys/community/2025/#experimental_features" target="_blank">正在使用 flakes</a>。由 Nix 维护者 Jörg Thalheim 对存在 shell.nix 或 flake.nix 文件的 GitHub 仓库进行的另一次规模较小的 300 个仓库<a href="https://gist.github.com/Mic92/48d72945d4c236e3a3403b9168312568" target="_blank">随机抽样</a>发现，相比传统的使用 shell.nix 文件的开发 shell 方法，flakes 的采用率相当可观。</p>
+    <p>在没有 RFC 正式规划的情况下围绕 Nix flakes 形成的社区增长，已成为 Nix 社区中一个多少令人不快的痛点。渴望使用 Nix flakes 特性的贡献者对持续存在的“实验性”标签感到沮丧，而一些曾参与最初 RFC 流程的人则对 Nix flakes 庞大的范围和设计心存不满——它可以说已经偏离了附加“实验性”标签时原本想限定的范围。</p>
+    <p>贡献者 Graham Christensen 在 2021 年<a href="https://grahamc.com/blog/flakes-are-an-obviously-good-thing/" target="_blank">写道</a>：“我相信 Flakes 的重要性惊人，并将非常强大，但 RFC 的经历让太多人在原则上转而反对它。”Lix（Nix 的替代实现）的贡献者 Jade 以更为犹豫的语气<a href="https://jade.fyi/blog/flakes-arent-real/" target="_blank">反思了 flakes</a>：“即便假设 flakes 擅长宏观层面的组合，它们往往伴随着对微观层面组合的不善运用，而后者仍然最好使用旧的原语（primitive）来完成。”前贡献者 Samuel Dionne-Riel 则<a href="https://samuel.dionne-riel.com/blog/2023/09/06/flakes-is-an-experiment-that-did-too-much-at-once.html" target="_blank">认为</a> Nix flakes 是一个一次性做得太多的实验，“这很糟，因为其中太多东西是好的，或者是好的[但]尚未成熟的想法”。</p>
+    <p>尽管存在这些和其他顾虑，flakes 的使用如今已相当普遍；许多第三方工具无论如何都能与 flakes 正常配合。在实践中，通过 Nix 使用 flakes 的命令和配置方式保持了一致，尽管在维护者移除“实验性”标签之前，这一切都没有任何保证。</p>
+    <h3>flakes 的未来？</h3>
+    <p>Nix 社区在 flakes 问题上的裂痕已经大到让各替代实现将自身对 flakes 的立场作为区分标志。Nix 包管理器（通常因其中 C++ 代码库而被称为 <a href="https://github.com/NixOS/nix" target="_blank">CppNix</a>）仍将该特性标记为实验性；<a href="https://lix.systems/" target="_blank">Lix</a> 则将 flakes 指定为“冻结特性”，计划未来将其抽取为插件；而 <a href="https://determinate.systems/products/nix/" target="_blank">Determinate Nix</a>（CppNix 的一个下游发行版）明确<a href="https://determinate.systems/blog/experimental-does-not-mean-unstable/" target="_blank">支持 flakes</a>，并已将其标记为默认启用的稳定特性。</p>
+    <p>至于 Nix 本身，<a href="https://github.com/NixOS/rfcs/blob/32c871cae67fec997c9af2bf15f4a9e41d885109/rfcs/0136-stabilize-incrementally.md#L60-L66" target="_blank">RFC 136</a>（“逐步稳定新 CLI 与 Flakes 的计划”）为 Nix flakes 成为稳定特性规划了一条前进道路。它于 2022 年 10 月被<a href="https://github.com/NixOS/rfcs/pull/136" target="_blank">提出</a>，并最终于 2023 年 8 月获得接受。目前有一个 <a href="https://github.com/NixOS/nix/milestone/27" target="_blank">flakes 稳定化里程碑</a>，用于跟踪移除 flakes“实验性”标签所需的工作。</p>
+    <p>一些工作预示着 flakes 可能迎来破坏性变更（例如<a href="https://github.com/NixOS/nix/issues/8940" target="_blank">更改 lock 属性</a>），另一些计划则带来了不那么显眼但重要的性能改进，例如“<a href="https://github.com/NixOS/nix/pull/15711" target="_blank">lazy trees</a>”（避免向 Nix store 进行多余的文件复制）。除了 flakes 特性本身的工作之外，还必须先稳定 nix 较新的命令行界面设计，然后再继续完成 flakes 的实现并将其标记为稳定特性。届时还需要一份额外的 RFC 来确定 flakes 的最终设计。</p>
+    <p>之所以需要处理命令行设计，是因为 flake 相关命令常常与其他 Nix 命令混为一谈。例如，提供诸如 <a href="https://nix.dev/manual/nix/latest/command-ref/new-cli/nix3-env-shell" target="_blank">nix env shell</a> 之类替代命令的实验性特性，与通常依赖类 flake 语义的 <a href="https://nix.dev/manual/nix/latest/command-ref/nix-shell.html" target="_blank">nix-shell</a> 形成对照。正如 RFC 文本中所指出的：</p>
+    <blockquote><p>对 Flakes 有许多批评。但其中与稳定化尤为相关的一点是，人们认为 Flakes 侵占了其他新特性的地盘，也就是说，理论上应当可以在不使用 Flakes 的情况下使用那些特性，但实际上却做不到。例如，从理论上讲，对 Nix 表达式进行纯求值没有任何理由必须依赖 Flakes。</p></blockquote>
+    <p>尽管有这些批评，<a href="https://github.com/NixOS/rfcs/blob/32c871cae67fec997c9af2bf15f4a9e41d885109/rfcs/0136-stabilize-incrementally.md#alternatives" target="_blank">RFC 仍对 flakes 的未来表示乐观</a>：</p>
+    <blockquote><p>当然，我们可以直接“撕掉创可贴”，一次性稳定所有东西。支持这一做法的理由是：已经过去了足够长的时间，（数量较少的）长期用户的顾虑并不重要。但我们认为这里的计划几乎没有坏处；我们可以只用一点点延迟就让所有人满意。如果确实如此，何乐而不为呢！</p></blockquote>
+    <p>Flakes 仍是 nix 命令行工具的一项实验性特性，但开发仍在继续。稳定化工作没有具体的目标完成日期，因此 flakes 最终何时（或是否）能晋升为稳定状态仍不明朗。不过，既然计划已经就绪、采用率仍在增长，Nix flakes 很可能会在软件版图中出现得越来越频繁。</p>
+    </div>
+</div>
+
+            <div class="article" id="briefs">
+    <div class="article-header">
+        <span class="article-category">社区简讯</span>
+        <h2>📝 Brief items（社区简讯）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for October 22, 2026</span>
+            <span><a href="https://lwn.net/Articles/1100614/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+        <h3>安全</h3>
+
+        <h4><a href="https://lwn.net/Articles/1101643/" target="_blank">eMudhra 中间 CA 遭入侵</a></h4>
+        <p>Mozilla <a href="https://blog.mozilla.org/security/2026/10/20/protecting-firefox-users-following-the-compromise-of-emudhra-intermediate-certificates/" target="_blank">宣布</a>，其收到一份报告，称与八张 <a href="https://emudhra.com/en-us/" target="_blank">eMudhra</a> 中间证书相关联的私钥已遭泄露：</p>
+        <blockquote><p>「这些密钥可能让攻击者为它们并不控制的网站签发欺诈性 HTTPS 证书。能够拦截用户连接的攻击者可以利用这些证书冒充网站，并可能读取或修改流量。」</p></blockquote>
+        <p>Mozilla 已通过其 OneCRL 集中化吊销证书列表封禁了受影响的证书，并在 <a href="https://groups.google.com/a/mozilla.org/g/dev-tech-crypto/c/vSxZxnOMMvs" target="_blank">Network Security Services（NSS）3.131.1</a> 中更新了受信任证书列表。</p>
+        <p>还有一个<a href="https://emudhra.we-have-a-problem.com/" target="_blank">单页网站</a>详细介绍了此次入侵事件。据该网站所述，这些证书自 10 月 17 日起已在 Chrome 中被封禁，苹果设备自 19 日起封禁，微软则于 20 日封禁了这些证书。该网站还提供了一张表格，显示各浏览器或其他客户端是否仍然信任这些遭泄露的证书。</p>
+        <p>NetBSD 基金会已<a href="https://mastodon.sdf.org/@netbsd/117473734072004396" target="_blank">发布了在 NetBSD 系统上封禁这些证书的操作指引</a>。其他浏览器和操作系统的用户不妨检查是否有更新，或参考相关指引来禁用这些已遭泄露的证书。</p>
+        <p><a href="https://lwn.net/Articles/1101643/#Comments" target="_blank">评论（32 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1102014/" target="_blank">PHP 发布补丁修复两个严重远程代码执行漏洞</a></h4>
+        <p>PHP 项目发布了 <a href="https://www.php.net/archive/2026.php#2026-10-21-5" target="_blank">PHP 8.5.12</a>、<a href="https://www.php.net/archive/2026.php#2026-10-21-4" target="_blank">8.4.27</a>、<a href="https://www.php.net/archive/2026.php#2026-10-21-3" target="_blank">8.3.36</a> 和 <a href="https://www.php.net/archive/2026.php#2026-10-21-2" target="_blank">8.2.35</a>，修复了两个可导致未经身份验证的远程代码执行的严重漏洞。</p>
+        <p><strong>谁受影响</strong>：所有处理 Web 请求的 PHP 安装，包括 PHP-FPM、配合 mod_php 的 Apache、php-cgi、FrankenPHP 和 LiteSpeed。我们认为 mod_php 的风险最高，已有经验证的利用方式：一个未经身份验证的请求即可在任何应用代码运行之前触发攻击。</p>
+        <p>漏洞详情：</p>
+        <p><strong>通过内存耗尽（OOM）损坏实现的 RCE</strong>，<a href="https://github.com/php/php-src/security/advisories/GHSA-w8hw-w9fx-j79w" target="_blank">CVE-2026-109618（GHSA-w8hw-w9fx-j79w）</a>：内存耗尽处理可能在 PHP 内部请求数据仅部分初始化时中断 PHP。随后的请求清理过程可能将无效数据当作有效数据处理。</p>
+        <p><strong>通过残留全局状态实现的 RCE</strong>，<a href="https://github.com/php/php-src/security/advisories/GHSA-6wmf-4rv5-p3rp" target="_blank">CVE-2026-109619（GHSA-6wmf-4rv5-p3rp）</a>：请求所持有的内部状态在其底层内存被释放后仍可能存留。同一 worker 随后处理的请求可能在正常的初始化将其重置之前使用这些残留状态。</p>
+        <p>早于 8.1 的 PHP 版本将不再从项目方获得更新，不过项目方还是提供了一些针对 <a href="https://github.com/php/php-src/tree/PHP-7.4-CVE-2026-109618-109619" target="_blank">PHP 7.4</a>、<a href="https://github.com/php/php-src/tree/PHP-8.0-CVE-2026-109618-109619" target="_blank">PHP 8.0</a> 和 <a href="https://github.com/php/php-src/tree/PHP-8.1-CVE-2026-109618-109619" target="_blank">PHP 8.1</a> 的补丁，以协助创建向后移植。据公告所述，Linux 发行版和厂商已提前收到补丁，更新后的软件包应很快就会推出。</p>
+        <p><a href="https://lwn.net/Articles/1102014/#Comments" target="_blank">评论（2 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1102060/" target="_blank">今日的 PHP 安全发布，以及我们如何强化 PHP 安全（PHP Foundation）</a></h4>
+        <p>PHP 基金会发布了一篇<a href="https://thephp.foundation/blog/2026/10/21/todays-php-security-release-and-how-were-strengthening-php-security/" target="_blank">博客文章</a>，解释了当天披露的漏洞是如何产生的，以及为何修复耗时如此之久。</p>
+        <blockquote><p>「为了修复 OOM 问题，PHP 安全团队提出了几种相互竞争的方案，但每种方案都有自身的取舍：破坏向后兼容性、带来新的拒绝服务风险，或是需要对众多第三方扩展进行修改——后者看起来根本无法协调。依靠共识运作的 PHP 安全团队难以在这些方案之间做出选择，并担心选错方案带来的后果。再加上缺乏已知的远程代码执行路径，而拥有引擎深层知识的核心开发者本就人手不足且身兼多职，这一决策过程导致修复工作在数月间反复停滞与重启。我们不会掩饰这一点：这次延误是一次结构性失败，既源于安全团队的决策流程，也源于其资源的匮乏。」</p></blockquote>
+        <p><a href="https://lwn.net/Articles/1102060/#Comments" target="_blank">评论（5 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1102044/" target="_blank">广泛部署软件中的更多漏洞</a></h4>
+        <p>Node.js 项目<a href="https://nodejs.org/en/blog/vulnerability/october-2026-security-releases" target="_blank">发布了</a>多项安全更新，修复了包括影响使用 Brotli 压缩的程序的远程代码执行漏洞在内的多个漏洞。而且，免得使用编译型语言的程序员以为自己可以松一口气，<a href="https://musl.libc.org/" target="_blank">musl libc 项目</a>也宣布了一个<a href="https://lwn.net/ml/all/20261021154307.GA4413%40brightrain.aerifal.cx/" target="_blank">新漏洞</a>：一处越界写入（out-of-bounds write），它有可能导致远程代码执行，尽管这一点尚未得到实际验证。</p>
+        <p><a href="https://lwn.net/Articles/1102044/" target="_blank">评论（5 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1102035/" target="_blank">本周安全引述</a></h4>
+        <blockquote>
+            <p>「我有一个总体性的看法（我愿意承认自己可能是错的）：PyPI 不应再作为证书分发渠道。像 certifi 这样的包在过去是必要的，用于为没有像样 CA 证书包的平台获取一套不错的 CA 证书。别忘了，Python 的年龄和 TLS 差不多，而且远早于『系统应当自带像样的 CA 证书包』这一预期的出现。如今我不知道还有哪个主流平台没有像样的 CA 证书包，因为 Python 并不是唯一需要 CA 证书的应用程序。而你的系统能否提供一套像样的 CA 证书包，究竟在多大程度上是 Python 或 pip 的责任，我也不确定。」</p>
+            <p>「也许是时候评估一下，让 Python 生态更普遍地依赖系统提供的证书存储。这将减轻提供应用程序（Python、pip）的开源维护者的工作量，转而依赖系统维护者（各发行版、浏览器、以及 Let's Encrypt 之类的服务）。系统维护者反正都得做这项工作，我们能否更多地依赖他们的成果，免得在整个生态中痛苦地重复同样的工作？」</p>
+            <p>「这对我来说仍是一个悬而未决的问题：对于基于 OpenSSL 的平台（如各 Linux 发行版）来说，实现证书吊销的最佳路径是什么。我没有花太多时间思考这个问题，但如果能以一种兼顾隐私与性能的方式实现，将大大减少对志愿者或开源项目发出的临时紧急要求。」</p>
+            <p>—— <a href="https://sethmlarson.dev/python-cert-dist-pain-points" target="_blank">Seth Larson</a></p>
+        </blockquote>
+        <p><a href="https://lwn.net/Articles/1102035/#Comments" target="_blank">评论（2 条）</a></p>
+
+        <h3>内核开发</h3>
+
+        <h4><a href="https://lwn.net/Articles/1102038/" target="_blank">内核发布状态</a></h4>
+        <p>7.3 内核已<a href="https://lwn.net/Articles/1101170/" target="_blank">发布</a>，发布日期为 10 月 18 日。Linus 表示：</p>
+        <blockquote><p>「现在是周日下午，这一周我不知怎么地保持住了清醒，一直记得今天是星期几，所以这次发布没有被莫名其妙地推迟。奇迹不断，不是吗？」</p><p>「总之，过去一周似乎没有发生什么特别的事情，所以如预期那样，最终的 7.3 已经发布，明天 7.4 的合并窗口将开启。不过我正在休一年一度的家庭假期，所以明早我不会一上来就合并任何东西，而是会把一天中的大部分时间花在船上和水下。下午我会回来继续合并工作，但预计我的日程安排在一段时间内会有点不寻常。」</p></blockquote>
+        <p>本次发布在各个方面都打破了纪录；它纳入了来自 3,021 位开发者的 18,765 个非合并提交，其中 807 人是首次参与内核开发的开发者。</p>
+        <p>本次发布的重要变化包括：<a href="https://lwn.net/Articles/1086947/" target="_blank">一些重要的 binfmt_misc 扩展</a>、旨在提升大型系统性能的<a href="https://lwn.net/Articles/1089244/#:~:text=There%20have%20been%20some%20subtle%20but%20significant%20changes" target="_blank">组调度方面的工作</a>、令所有操作都失败的新文件系统 <a href="https://docs.kernel.org/next/filesystems/failfs.html" target="_blank">failfs</a>、<a href="https://lwn.net/Articles/1082717/" target="_blank">fchroot() 系统调用</a>、面向 BPF 程序的全局每 CPU 数据、<a href="https://lwn.net/Articles/1056014/" target="_blank">sched_ext 子调度器特性的完成</a>、虚拟机的<a href="https://lwn.net/Articles/1080162/#uffd" target="_blank">工作集跟踪</a>、ntfs3 文件系统对<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=be310476e8868ebe7a2ce8fb0e7b229535723963" target="_blank">替代数据流的支持</a>、<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=61a09cfc121472013f99ae75066676739a5db626" target="_blank">一长串 SMB 服务器改进</a>等等。详情请参阅 LWN 的合并窗口总结（<a href="https://lwn.net/Articles/1089244/" target="_blank">第一部分</a>、<a href="https://lwn.net/Articles/1089791/" target="_blank">第二部分</a>）以及 <a href="https://kernelnewbies.org/Linux_7.3" target="_blank">KernelNewbies 7.3 页面</a>。</p>
+        <p>本次发布共包含来自 3,020 位开发者的 18,765 个非合并变更集，其中 806 人是首次为内核做出贡献的贡献者。发布历程如下：</p>
+        <table>
+            <thead>
+                <tr><th>RC</th><th>日期</th><th>提交数</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>v7.3-rc1</td><td>2026-08-30</td><td>16267</td></tr>
+                <tr><td>v7.3-rc2</td><td>2026-09-06</td><td>681</td></tr>
+                <tr><td>v7.3-rc3</td><td>2026-09-13</td><td>733</td></tr>
+                <tr><td>v7.3-rc4</td><td>2026-09-20</td><td>598</td></tr>
+                <tr><td>v7.3-rc5</td><td>2026-09-27</td><td>649</td></tr>
+                <tr><td>v7.3-rc6</td><td>2026-10-04</td><td>596</td></tr>
+                <tr><td>v7.3-rc7</td><td>2026-10-11</td><td>447</td></tr>
+                <tr><td>（正式版）</td><td>2026-10-18</td><td>289</td></tr>
+            </tbody>
+        </table>
+        <p>更多细节请参阅 <a href="https://lwn.net/ksdb/releases/v7.3/" target="_blank">LWN KSDB v7.3 页面</a>。</p>
+        <p>稳定版更新：10 月 15 日发布了 <a href="https://lwn.net/Articles/1100616/" target="_blank">7.2.11</a>、<a href="https://lwn.net/Articles/1100617/" target="_blank">6.18.57</a>、<a href="https://lwn.net/Articles/1100618/" target="_blank">6.12.113</a>、<a href="https://lwn.net/Articles/1100619/" target="_blank">6.6.159</a>、<a href="https://lwn.net/Articles/1100620/" target="_blank">6.1.190</a>、<a href="https://lwn.net/Articles/1100621/" target="_blank">5.15.223</a> 和 <a href="https://lwn.net/Articles/1100622/" target="_blank">5.10.272</a>；随后 10 月 21 日发布了 <a href="https://lwn.net/Articles/1101759/" target="_blank">7.2.12</a>、<a href="https://lwn.net/Articles/1101760/" target="_blank">6.18.58</a>、<a href="https://lwn.net/Articles/1101761/" target="_blank">6.12.114</a> 和 <a href="https://lwn.net/Articles/1101762/" target="_blank">6.6.160</a>。</p>
+        <p><a href="https://lwn.net/Articles/1102038/#Comments" target="_blank">评论（暂无）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1102024/" target="_blank">上游化 Tyr：Rust、DRM 与 Linux 内核（Collabora）</a></h4>
+        <p>Collabora 博客<a href="https://www.collabora.com/news-and-blog/blog/2026/10/21/upstreaming-tyr-rust-drm-and-the-linux-kernel/" target="_blank">介绍了</a> Arm Mali GPU 驱动 Tyr 的最新进展。</p>
+        <blockquote><p>「我们面临的最大挑战之一，是在 Rust 内核抽象和驱动接口本身也在不断开发的同时开发 Tyr。随着驱动接口自然而然地被修订和改进，我们已经多次重写 Tyr，以适应不断壮大的 Rust 生态。这不仅让进展远慢于使用成熟 API 时的速度，而且在诸如任务调度等能力上，进展也不得不停滞，等待抽象被妥善设计、评审、测试并合入上游。」</p><p>「但正是在这个不断演进的环境中工作，Tyr 才能发挥其最大的价值。作为这些新 Rust 抽象的使用者，Tyr 有助于暴露它们的需求与局限。」</p></blockquote>
+        <p><a href="https://lwn.net/Articles/1102024/#Comments" target="_blank">评论（暂无）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1101169/" target="_blank">本周引述</a></h4>
+        <blockquote>
+            <p>「我刚刚在大约一天的时间窗口内收到了同一补丁集从 v1 到 v11 的提交。」</p>
+            <p>「除了 Sashiko 之外，无论是我还是其他任何人都未给出任何评审反馈。而我相信，正是这一点触发了这一连串的即时重新提交。」</p>
+            <p>「我不认为这是可持续的。」</p>
+            <p>—— <a href="https://lwn.net/ml/all/nn69829p-nn62-ppn7-968q-64o246ss90or@xreary.bet" target="_blank">Jiri Kosina</a></p>
+        </blockquote>
+        <blockquote>
+            <p>「我觉得这样挺好。我鼓励开发者们让这些『刷屏』继续下去。」</p>
+            <p>「你可以在自己的收件箱里模拟 GitHub 风格的 v1→v2→v3 压缩。让你的 agent 监视收件箱，当 vN+1 到达时归档 vN，并总结 v1→vN 的讨论。这样你总能看到最新的补丁集，以及你不在时发生了什么的摘要。然后搁置一天或一周，看看重新提交的循环是否已经结束（以及机器人之间是否停止了对话），再去做维护者工作中属于人类的那部分。」</p>
+            <p>—— <a href="https://lwn.net/ml/all/DM7BL6J0WCXU.1I38BKL4RJLFI@gmail.com" target="_blank">Alexei Starovoitov</a></p>
+        </blockquote>
+        <blockquote>
+            <p>「有用与否，并不能改变这样一个事实：我们已经不再拥有 LLM 出现之前的那套社会契约。当一个『新工具』改变了一个项目长久以来的事实社会契约时，这与向内核引入一个静态分析工具、一个新 API、一门新编程语言等，似乎是相当不同的事情。Rust 有助于吸引新的贡献者，但它从未从根本上改变我评审他人工作或与新贡献者合作的方式。它也许为我节省了一些时间，但它从未从根本上改变我对新贡献者出现时的预期。而 LLM 确实改变了这一点。」</p>
+            <p>「这就是 LLM 与其他工具之间的区别，而且这个区别足够大，至少它应当通过更有力的论证和更高程度的尊重来讨论，而不是一句『你就是讨厌新工具，对吧？』。」</p>
+            <p>—— <a href="https://lwn.net/ml/all/b2b0296aaef22f8c4db2ab06ac7a708f8321a313.camel@redhat.com" target="_blank">Lyude Paul</a></p>
+        </blockquote>
+        <blockquote>
+            <p>「在过去一周里，多位活跃的内核开发者问我，他们是否需要另找工作，他们担心维护者们从今以后会无视一切不够完美的补丁，并排斥不使用 LLM 的开发者的贡献。这是一个错误的印象（至少我非常希望如此，而且你也澄清了你并不主张那样做），但这是许多人从维护者峰会以及随后的邮件列表讨论中得到的灾难性印象。」</p>
+            <p>「我希望看到更多维护者像你这样公开澄清这一点。」</p>
+            <p>—— <a href="https://lwn.net/ml/all/20261020211532.GD15441@killaraus.ideasonboard.com" target="_blank">Laurent Pinchart</a></p>
+        </blockquote>
+        <p><a href="https://lwn.net/Articles/1101169/#Comments" target="_blank">评论（12 条）</a></p>
+
+        <h3>发行版</h3>
+
+        <h4><a href="https://lwn.net/Articles/1101057/" target="_blank">GNOME OS Preview 亮相</a></h4>
+        <p><a href="https://gnome.org/" target="_blank">GNOME 项目</a>提供 <a href="https://os.gnome.org/" target="_blank">GNOME OS</a> 已有一段时间；此前，该项目只提供基于最新提交构建、且仅面向 GNOME 开发者的「Nightly」版本。Adrian Vovk 现在<a href="https://blogs.gnome.org/adrianvovk/2026/10/16/gnome-os-preview/" target="_blank">宣布</a>推出面向非开发者受众的 GNOME OS Preview：</p>
+        <blockquote><p>「GNOME OS Preview 就是现在的 GNOME OS Nightly，只是去掉了『nightly』的属性。它改为基于最新的 GNOME 稳定版本构建（截至撰写时为 GNOME 51.1）。GNOME OS Preview 与稳定的 org.gnome.Platform Flatpak 运行时位于 GitLab 上相同的分支中。」</p></blockquote>
+        <blockquote><p>「GNOME OS Preview 面世只有几周时间，因此迄今只经过了有限的实际测试。我们预计人们最初会发现一些问题。尽管如此，Preview 比 Nightly 稳定得多——几十个人已经把 Nightly 作为日常系统使用了一年多而没有出现重大问题。因此，我们相信 Preview 对于非开发者爱好者的日常使用而言已经足够可靠。」</p></blockquote>
+        <blockquote><p>「虽然 Preview 面向非开发者，但对于更广泛的公众而言，它还不被视为完整或稳定的版本。在项目准备好宣布 GNOME OS『已准备好迎接黄金时段』之前，还有 Vovk 文章中列出的一系列特性需要实现。那些不介意在稳定版发布后重新安装操作系统的爱冒险的用户，今天就可以<a href="https://os.gnome.org/" target="_blank">下载</a>并开始使用 GNOME OS Preview。」</p></blockquote>
+        <p><a href="https://lwn.net/Articles/1101057/#Comments" target="_blank">评论（9 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1101536/" target="_blank">OpenBSD 8.0 发布</a></h4>
+        <p><a href="https://www.openbsd.org/80.html" target="_blank">OpenBSD 8.0 已发布</a>。新版本包含许多新特性，包括为 arm64 添加休眠支持、将 amd64 的内核虚拟地址空间增至 512GB、对支持 Qualcomm WiFi 6 设备的 <a href="https://man.openbsd.org/qwx.4" target="_blank">qwx</a> 驱动的大量改进等等。详情请参阅<a href="https://www.openbsd.org/plus80.html" target="_blank">完整变更日志</a>。</p>
+        <p><a href="https://lwn.net/Articles/1101536/" target="_blank">评论（3 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1100786/" target="_blank">Ubuntu 26.10 发布</a></h4>
+        <p>Canonical <a href="https://ubuntu.com/blog/canonical-releases-ubuntu-26-10-stonking-stingray" target="_blank">宣布</a>发布 Ubuntu 26.10（「Stonking Stingray」）：</p>
+        <blockquote><p>「Ubuntu 26.10 推进了企业安全特性，完成了基于 Rust 的 uutils coreutils 的全面铺开，并加强了与 Microsoft Entra ID 的用户身份验证集成。」</p></blockquote>
+        <blockquote><p>「[...] Ubuntu 26.10 还附带 GNOME 51，带来了更流畅、响应更迅速的桌面、更好的显示处理、改进的无障碍支持，以及核心应用的多项打磨。此外，Ubuntu App Center 现在为管理 snap 和 deb 提供了更一致的体验。」</p></blockquote>
+        <p>详情（包括新特性列表以及 26.10 与此前 Ubuntu 版本之间的<a href="https://documentation.ubuntu.com/release-notes/26.10/#backwards-incompatible-changes" target="_blank">不兼容变更</a>）请参阅<a href="https://documentation.ubuntu.com/release-notes/26.10/" target="_blank">发行说明</a>。</p>
+        <p><a href="https://lwn.net/Articles/1100786/#Comments" target="_blank">评论（65 条）</a></p>
+
+        <h3>开发</h3>
+
+        <h4><a href="https://lwn.net/Articles/1100787/" target="_blank">KDE 发布纪录片</a></h4>
+        <p>作为 <a href="https://kde.org/fundraisers/yearend2026/" target="_blank">KDE 30 周年庆典</a>的一部分，该项目发布了《The KDE Documentary — A Story of Free Software Underdogs》（<a href="https://www.youtube.com/watch?v=1Vyzla9mx4g" target="_blank">YouTube 视频</a>）：</p>
+        <p>故事始于 1996 年，当时图宾根大学的学生 Matthias Ettrich 在 Usenet 新闻组上发帖，征求程序员帮助为 Linux 构建一个桌面环境。随后诞生的就是 KDE——如今世界上最大的自由软件社区之一。KDE 让 Linux 成为了非系统管理员用户也能使用的桌面系统，在当时尚无同类产品的情况下，为 Linux 提供了完整、一致的图形环境。</p>
+        <p>这部影片涵盖了 KDE 三十年来的起伏：Qt 许可证之争以及与 GNOME 的竞逐；KHTML 的成功——这一浏览器引擎后来成为 Apple WebKit 和 Google Chrome 的基础；以及争议不断的 KDE 4 发布及其后的重建。</p>
+        <p><a href="https://lwn.net/Articles/1100787/#Comments" target="_blank">评论（6 条）</a></p>
+
+        <h3>其他</h3>
+
+        <h4><a href="https://lwn.net/Articles/1101483/" target="_blank">Linux Plumbers Conference 视频现已发布</a></h4>
+        <p>Mike Rapoport <a href="https://lpc.events/blog/current/index.php/2026/10/19/lpc-2026-video-recordings-are-available/" target="_blank">宣布</a>，2026 年 10 月 5 日至 7 日在布拉格举行的 <a href="https://lpc.events/event/20/" target="_blank">Linux Plumbers Conference（LPC）</a>的视频录像现已发布。完整视频可通过 <a href="https://www.youtube.com/playlist?list=PLd3Gjl51NPg0" target="_blank">YouTube 播放列表</a>查看，或在<a href="https://lpc.events/event/20/timetable/#all" target="_blank">日程表</a>中查找各视频链接。另请参阅 LWN 对 LPC 各场演讲的<a href="https://lwn.net/Archives/ConferenceByYear/#2026-Linux_Plumbers_Conference" target="_blank">报道</a>。</p>
+        <p><a href="https://lwn.net/Articles/1101483/#Comments" target="_blank">评论（暂无）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1101020/" target="_blank">2026 年 TAB 选举结果</a></h4>
+        <p>Linux 基金会技术顾问委员会（TAB）2026 年成员选举的<a href="https://lwn.net/ml/all/9fae8567-0943-47e2-a04d-4e75e1c0cb6d@kernel.org" target="_blank">结果</a>已经公布。Kees Cook、Dave Hansen、Miguel Ojeda 和 Shuah Khan 均获得连任，Laurent Pinchart 将加入委员会。</p>
+        <p><a href="https://lwn.net/Articles/1101020/#Comments" target="_blank">评论（暂无）</a></p>
+
+        <p><em>页面编辑：Daroc Alden</em></p>
+
+    </div>
+</div>
+
+            <div class="article" id="announcements">
+    <div class="article-header">
+        <span class="article-category">公告</span>
+        <h2>📢 Announcements（公告）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for October 22, 2026</span>
+            <span><a href="https://lwn.net/Articles/1100615/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+    <h3>简报与周报（Newsletters）</h3>
+    <p>本周 LWN 共收录 22 份简报与周报。<strong>发行版与系统管理类</strong>（5 份）：DistroWatch Weekly（10-19）、This week in F-Droid（10-16）、This week in Fedora（10-19）、openSUSE Tumbleweed Review of the Week（10-17）、Ubuntu Weekly News（10-13）。<strong>开发类</strong>（15 份）：Emacs News（10-19）、What's cooking in git.git（10-16 与 10-19 两期）、This Week in GNOME（10-16）、GNU Tools Weekly News（10-18）、Last Week in Kubernetes Development（10-15）、LLVM Weekly（10-19）、This Week in Matrix（10-16）、OCaml Weekly News（10-20）、Perl Weekly（10-19）、This Week in Plasma（10-17）、PyCoder's Weekly（10-20）、This month in Radicle CI（10-21）、Ruby Weekly News（10-15）、This Week in Rust（10-14）、Wikimedia Tech News（10-19）。<strong>会议纪要类</strong>（2 份）：Fedora FESCo meeting minutes（10-20）、openSUSE Release Engineering minutes（10-14）。</p>
+
+    <h3>征稿启事（CFP，截止日期 2026-10-22 至 2026-12-21）</h3>
+    <table>
+        <thead>
+            <tr><th>截止日期</th><th>会议日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>2026-10-26</td><td>2026-12-01 至 12-03</td><td>Yocto Project Virtual Summit 2026.12</td><td>线上</td></tr>
+            <tr><td>2026-11-01</td><td>2027-04-01 至 04-04</td><td>Southern California Linux Expo</td><td>Pasadena, CA, US</td></tr>
+            <tr><td>2026-11-02</td><td>2027-02-23</td><td>AlpOSS 2027</td><td>Echirolles (Grenoble), France</td></tr>
+            <tr><td>2026-12-20</td><td>2027-02-01</td><td>OpenEmbedded Workshop 2027</td><td>Brussels, Belgium</td></tr>
+        </tbody>
+    </table>
+
+    <h3>近期活动（2026-10-22 至 2026-12-21）</h3>
+    <table>
+        <thead>
+            <tr><th>日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>10-20 至 10-23</td><td>The Matrix Conference</td><td>Malmö, Sweden</td></tr>
+            <tr><td>10-20 至 10-23</td><td>PostgreSQL Conference Europe</td><td>Valencia, Spain</td></tr>
+            <tr><td>10-30 至 11-01</td><td>Qubes OS Summit</td><td>Berlin, Germany</td></tr>
+            <tr><td>11-03 至 11-04</td><td>Open vSwitch and OVN 2026 Fall Conference</td><td>Heilbronn, Germany</td></tr>
+            <tr><td>11-06 至 11-07</td><td>Texas Linux Festival</td><td>Austin, TX, US</td></tr>
+            <tr><td>11-07 至 11-08</td><td>OpenFest 2026</td><td>Sofia, Bulgaria</td></tr>
+            <tr><td>11-07 至 11-08</td><td>OpenALT</td><td>Brno, Czechia</td></tr>
+            <tr><td>11-12 至 11-13</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+            <tr><td>11-14 至 11-15</td><td>Capitole du Libre 2026</td><td>Toulouse, France</td></tr>
+            <tr><td>11-17 至 11-19</td><td>Open Source Monitoring Conference</td><td>Nuremberg, Germany</td></tr>
+            <tr><td>11-20 至 11-21</td><td>OLF Conference</td><td>Columbus, Ohio, US</td></tr>
+            <tr><td>11-28</td><td>FOSS for All Conference 2026</td><td>Seoul, South Korea</td></tr>
+            <tr><td>12-01 至 12-03</td><td>Yocto Project Virtual Summit 2026.12</td><td>线上</td></tr>
+            <tr><td>12-07 至 12-09</td><td>Open Source Summit Japan</td><td>Tokyo, Japan</td></tr>
+        </tbody>
+    </table>
+
+    <h3>安全更新（2026-10-15 至 2026-10-21）</h3>
+    <p>本周共收录 <strong>773</strong> 条安全公告，各发行版数量如下：</p>
+    <table>
+        <thead>
+            <tr><th>发行版</th><th>公告数</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>SUSE / openSUSE</td><td>258</td><td>涵盖 SLE 与 openSUSE（TW、16.0、15.x），数量居首，含 kernel、busybox、podman、containerd、chromium 等</td></tr>
+            <tr><td>Red Hat</td><td>141</td><td>含大量 kernel / kernel-rt 与多版本 EL 变体更新，以及 sudo、golang、openssh 等</td></tr>
+            <tr><td>Oracle</td><td>112</td><td>与 RHEL 联动的 OL7/OL8/OL9/OL10 更新，含 kernel-uek、openssl、openssh 等</td></tr>
+            <tr><td>Fedora</td><td>103</td><td>覆盖 F43/F44/F45，含 kernel、chromium、bind、xen、thunderbird 等</td></tr>
+            <tr><td>AlmaLinux</td><td>74</td><td>与 RHEL 同步，含 kernel、openssh、glibc、wireshark 等</td></tr>
+            <tr><td>Debian</td><td>28</td><td>DSA 14 则 + DLA 14 则，含 chromium、firefox-esr、kernel、xen、apache2 等</td></tr>
+            <tr><td>Mageia</td><td>24</td><td>含 firefox、openssh、curl、libpng、x11-server 等</td></tr>
+            <tr><td>Ubuntu</td><td>24</td><td>USN 更新，含 openssh、curl、php 全系列、xz-utils、squid 等</td></tr>
+            <tr><td>Slackware</td><td>8</td><td>含 firefox、thunderbird、nss、ca-certificates、libarchive 等</td></tr>
+            <tr><td>Gentoo</td><td>1</td><td>ca-certificates</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的安全更新：<strong>内核</strong>方面，Red Hat（RHSA-2026:83207-01 等十余则）、Oracle（ELSA-2026-83207 等）、AlmaLinux（ALSA-2026:83207 等）、SUSE（SUSE-SU-2026:4668-1 等）与 Debian（DSA-6568-1 / DLA-4841-1）均发布了 kernel 更新；<strong>openssh</strong> 在 AlmaLinux（ALSA-2026:85847）、Red Hat（RHSA-2026:85847-01）、Oracle（ELSA-2026-85847）、SUSE（SUSE-SU-2026:4686-1）、Mageia（MGASA-2026-0521）与 Ubuntu（USN-8928-1、USN-8937-1）同步修复；<strong>openssl</strong> 更新见于 Fedora（FEDORA-2026-93eed17997）、Oracle（ELSA-2026-85968）与 SUSE（openssl-3 / openssl-1_0_0）；<strong>chromium</strong> 方面有 Debian（DSA-6562-1、DLA-4838-1）、Fedora（FEDORA-2026-1710275b63 等多则）与 openSUSE（openSUSE-SU-2026:22124-1 等）；<strong>firefox</strong>/firefox-esr 更新发布于 Debian（DSA-6560-1、DSA-6573-1、DLA-4836-1）、Red Hat（RHSA-2026:83496-01）、SUSE（SUSE-SU-2026:4806-1）、Mageia（MGASA-2026-0522）与 Slackware（SSA:2026-293-03）；此外 <strong>sudo</strong>（RHSA-2026:75579-01 等）、<strong>xen</strong>（DSA-6571-1、FEDORA-2026-839be67202、SUSE-SU-2026:4732-1）、<strong>curl</strong>（USN-8932-1、MGASA-2026-0515）、<strong>php</strong>（USN-8936-1 全版本系列）、<strong>glibc</strong>（ALSA-2026:84753、SUSE-SU-2026:4669-1）与 <strong>ca-certificates</strong>（Debian、Ubuntu、Gentoo、Slackware 多家）也值得留意。</p>
+
+    <h3>内核补丁（Kernel patches）</h3>
+    <p>本周共收录 <strong>128</strong> 条内核动态（含 16 个版本发布与 112 个补丁系列），分类统计如下：</p>
+    <table>
+        <thead>
+            <tr><th>类别</th><th>数量</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Kernel releases（版本发布）</td><td>16</td><td>Linux 7.3 正式版及 7.2.12、6.18.58、6.12.114、6.6.160、6.1.190、5.15.223、5.10.272 等稳定版</td></tr>
+            <tr><td>Architecture-specific（体系结构）</td><td>12</td><td>alpha 自解压内核镜像、Arm Core Local Accelerator 驱动、RISC-V BPF 私有栈等</td></tr>
+            <tr><td>BPF-related（BPF 相关）</td><td>6</td><td>bpf arena percpu 变量支持、UHMUL/SHMUL 指令等</td></tr>
+            <tr><td>Build system（构建系统）</td><td>1</td><td>kbuild 随内核构建用户态工具</td></tr>
+            <tr><td>Core kernel（核心）</td><td>15</td><td>RCU 伪事务、liveupdate 系列推进、sched_ext 改进等</td></tr>
+            <tr><td>Development tools（开发工具）</td><td>8</td><td>自测试扩展、get_maintainer 改进等</td></tr>
+            <tr><td>Device-driver infrastructure（驱动基础设施）</td><td>10</td><td>Ultra Ethernet RDMA verbs、Rust DRM/LED 抽象、PSCRR 框架等</td></tr>
+            <tr><td>Documentation（文档）</td><td>2</td><td>翻译者指南、file_getattr()/file_setattr() 手册页</td></tr>
+            <tr><td>Filesystems and block layer（文件系统与块层）</td><td>15</td><td>btrfs 可变 stripe_len 准备、FUSE DAX extent maps、负 dentry 问题修复等</td></tr>
+            <tr><td>Memory management（内存管理）</td><td>13</td><td>虚拟交换空间、无 folio 引用读页缓存、hugetlb CMA 支持等</td></tr>
+            <tr><td>Networking（网络）</td><td>11</td><td>QUIC 基础设施、WiFi QoS 管理框架、vsock 网络命名空间分配等</td></tr>
+            <tr><td>Security-related（安全相关）</td><td>6</td><td>CAP_SETFCAP 规则加固、Landlock 元数据访问权、IPE 专用密钥环等</td></tr>
+            <tr><td>Virtualization and containers（虚拟化与容器）</td><td>6</td><td>KVM LASS/GICv5 ITS/Hyper-V VSM 支持、guest_memfd 设备 MMIO 等</td></tr>
+            <tr><td>Miscellaneous（其他）</td><td>7</td><td>perf 增强多项、ethtool 7.2 发布等</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的补丁/发布摘选：</p>
+    <ul>
+        <li><strong>Linux 7.3</strong>（Linus Torvalds）—— 内核 7.3 正式版发布，本轮开发周期共纳入 18,533 个变更集。</li>
+        <li><strong>x86, sched, mm: Speed up CPU hotplug on large systems</strong>（Pasha Tatashin）—— 显著加速大规模系统上的 CPU 热插拔。</li>
+        <li><strong>RCU pseudo-transactions</strong>（Mathieu Desnoyers）—— 为 RCU 引入伪事务机制。</li>
+        <li><strong>net: introduce QUIC infrastructure and core subcomponents</strong>（Xin Long）—— 在内核网络子系统引入 QUIC 基础设施。</li>
+        <li><strong>mm: read the page cache without folio references</strong>（Kiryl Shutsemau）—— 读取页缓存时不再持有 folio 引用，降低开销。</li>
+        <li><strong>kbuild: build the userspace tools in tools/ with the kernel</strong>（Sasha Levin）—— 让 tools/ 下的用户态工具随内核一起构建。</li>
+        <li><strong>get_maintainer: stop sending every patch to LKML</strong>（Konstantin Ryabitsev）—— 调整 get_maintainer 脚本，不再默认将每个补丁抄送 LKML。</li>
+        <li><strong>KVM: x86: Hyper-V VSM (Virtual Trust Levels) on VM planes</strong>（David Woodhouse）—— KVM 为 Hyper-V VSM（虚拟信任级别）提供支持。</li>
+        <li><strong>Arm Core Local Accelerator Driver</strong>（Ryan Roberts）—— 新增 Arm Core Local Accelerator 驱动。</li>
+        <li><strong>vfs: add O_CREAT|O_DIRECTORY to open*(2)</strong>（Jori Koolstra）—— VFS 的 open*(2) 系列支持 O_CREAT|O_DIRECTORY 组合。</li>
+        <li><strong>workqueue: OwnedQueue and ScopedWork</strong>（Alice Ryhl）—— Rust workqueue 抽象新增 OwnedQueue 与 ScopedWork。</li>
+        <li><strong>Virtual Swap Space (Swap Table Edition)</strong>（Nhat Pham）—— 基于交换表（Swap Table）的虚拟交换空间设计。</li>
+        <li><strong>capabilities: close the ways around the CAP_SETFCAP rule for uid 0</strong>（Josef Bacik）—— 堵住 uid 0 绕过 CAP_SETFCAP 规则的途径。</li>
+        <li><strong>liveupdate: tmpfs preservation and early freeze</strong>（Pasha Tatashin）—— 内核在线更新（Live Update）支持 tmpfs 保留与早期冻结。</li>
+        <li><strong>more virtio-net csum hardening</strong>（Michael S. Tsirkin）—— 进一步强化 virtio-net 校验和处理。</li>
+    </ul>
+
+    </div>
+</div>
+
+
+        </main>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar bottom" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn" href="2026-10-22.html">📰 最新</a>
+            <a class="nav-btn" href="2026-10-15.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年10月22日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <footer class="footer">
+            <p>内容翻译自 <a href="https://lwn.net" target="_blank">LWN.net</a>，遵循 Creative Commons 协议。</p>
+            <p>本期来源：<a href="https://lwn.net/Articles/1100612/" target="_blank">LWN.net Weekly Edition for October 22, 2026</a></p>
+            <p>更新时间：2026年10月30日</p>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
