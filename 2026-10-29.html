@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LWN 周刊 - 2026年10月29日</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128240;</text></svg>">
+    <script src="toc.js" defer></script>
+</head>
+
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+        <span class="theme-icon">&#127769;</span>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">LWN 周刊中文版</div>
+            <h1>LWN.net Weekly Edition</h1>
+            <p class="edition-date">2026年10月29日</p>
+            <p class="edition-desc">Linux 和自由软件周刊 - 中文翻译</p>
+            <a href="index.html" class="back-link">&larr; 返回期刊列表</a>
+        </header>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn" href="2026-11-05.html">📰 最新</a>
+            <a class="nav-btn" href="2026-10-22.html">&larr; 上一个</a>
+            <a class="nav-btn" href="2026-11-05.html">下一个 &rarr;</a>
+            <span class="nav-current-label">2026年10月29日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <main class="content">
+            <!-- 目录 -->
+            <div class="toc">
+                <h2>📑 目录</h2>
+                <ul>
+                    <li><a href="#article1">Python 实验性 JIT 将被移除</a></li>
+                    <li><a href="#article2">__get_user() 与 __put_user() 的终结</a></li>
+                    <li><a href="#article3">内核代码中 panic 的使用准则</a></li>
+                    <li><a href="#article4">Rust 的未来特性</a></li>
+                    <li><a href="#article5">把 Northstar 推入 Linux 发行版的运动</a></li>
+                    <li><a href="#article6">7.4 合并窗口前半程</a></li>
+                    <li><a href="#article7">追求更小的内核栈</a></li>
+                    <li><a href="#briefs">📝 Brief items（社区简讯）</a></li>
+                    <li><a href="#announcements">📢 Announcements（公告）</a></li>
+                </ul>
+            </div>
+
+            <div class="article" id="article1">
+    <div class="article-header">
+        <span class="article-category">Python</span>
+        <h2>Python 实验性 JIT 将被移除</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年10月26日</span>
+            <span><a href="https://lwn.net/Articles/1102102/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>Python 实验性 JIT 将被移除</h3>
+    <p>2024 年为 Python 3.13 引入 CPython 的实验性即时编译器（JIT）即将退出。今年 6 月，Python 指导委员会宣布暂停 CPython main 分支上的 JIT 工作，直到有一份被接受的 Python 增强提案（PEP）能够回应外界对可维护性、兼容性的担忧，并给出明确的成功指标与完成时间表。JIT 维护者为此起草了 <a href="https://peps.python.org/pep-0836/" target="_blank">PEP 836（"JIT Go Brrr：CPython 受支持 JIT 编译器之路"）</a>试图满足委员会的要求，但经过数月讨论之后，维护者撤回了该 PEP。目前看来，这个一度颇有前景的项目已经走到了尽头。</p>
+    <p>JIT 由 Brandt Bucher 在 2024 年初加入 CPython。按常理，如此重大的特性本应在指导委员会批准一份标准轨道（standards-track）PEP 之后才落地。Bucher 在一次 Python 核心开发者冲刺活动上做过关于 JIT 的<a href="https://www.youtube.com/results?search_query=Brandt+Bucher+JIT+CPython" target="_blank">演讲</a>并附<a href="https://github.com/python/cpython" target="_blank">幻灯片</a>，也宣布了合并该特性的打算——但他并没有撰写或提交 PEP 供审批。是指导委员会成员、同时也是 Python 3.13 发布经理的 Thomas Wouters 督促他补上这一步。</p>
+    <p>Bucher 与 Savannah Ostrowski 起草了 <a href="https://peps.python.org/pep-0744/" target="_blank">PEP 744（"JIT 编译"）</a>，这是一份<strong>信息性 PEP</strong>——只向 Python 社区提供信息，并不代表对推进某项特性或项目形成了正式共识。LWN 曾在 2024 年 4 月报道过 PEP 744 的讨论，此后又报道了 Bucher 在 PyCon US 2024 关于 JIT 的演讲，以及 PyCon US 2025 的后续演讲。</p>
+
+    <h4>补一份 PEP</h4>
+    <p>JIT 工作一直以 PEP 744 为依据推进，直到今年 6 月委员会正式要求 JIT 维护者起草一份标准轨道 PEP。Antoine Pitrou 曾追问，委员会为何偏偏选在这个时候开口要新 PEP。Wouters 说这次请求"并没有某个单一的触发事件"，但委员会已经讨论这个话题一段时间，希望确保 JIT 工作不干扰其他项目。"已有工作在努力让 JIT 与插桩、调试、性能剖析好好相处；此外还有外部 JIT（比如 CinderX）、与 JIT 相邻的东西（如 Numba 和 PyTorch 的 compile），以及关于第三层（tier 3）JIT 的讨论。"委员会特意等到 Python 3.15 beta 发布之后才表态，"以明确我们认可 3.15 维持现状"。</p>
+    <p>委员会要求这份 PEP 论证 JIT"作为 CPython 中受支持的、非实验性组成部分"的理由：它的保证、维护承诺，以及对再分发者的影响。委员会给出六个月的期限，要求 PEP 在该期限内提交并获得接受；否则将要求把 JIT 代码从 CPython main 分支移除。</p>
+    <p>Bucher、Ostrowski 与 Ken Jin 起草了 PEP 836，并于 7 月 3 日发布到 <a href="https://discuss.python.org/" target="_blank">Python 论坛</a>征集社区反馈，引发了不少讨论，有支持也有批评。评论中的一个关键主题——例如 Wouters 的这条、以及 Mark Shannon 的这条——是觉得这份草案应该拆成两份独立的 PEP。Shannon 就认为 PEP 只应涵盖"接受 JIT 工作"的目标，把实现细节留在外面。同时也有不少人要求补充更多信息。</p>
+    <p>Bucher 对"拆成两份"的建议有所保留，Ostrowski 则为 PEP 现有的结构辩护："像我们在 PEP 里那样列出目标，却不能同时把计划和我们想清楚的所有东西一并分享出来，会让我不安。对我来说，背后没有计划的目标根本算不上目标。"</p>
+    <p>LWN 上次在 9 月关注此话题时，围绕 PEP 的讨论已经降温，既没有承诺开发新 PEP，也没有委员会的正式表态。当时委员会最后的声音见于其 <a href="https://github.com/python/steering-council" target="_blank">8 月 6 日会议纪要</a>：他们已与 PEP 作者会面，正在"讨论 PEP 的现状，以及它是否回答了委员会在要求起草 PEP 时提出的问题"。</p>
+
+    <h4>在 main 分支里做实验</h4>
+    <p>9 月 21 日，Wouters 发布了指导委员会的一份声明（Ostrowski 未参与——她目前是委员会成员，但作为 PEP 共同作者回避了），总结了委员会的立场。声明称该 PEP 确实回答了委员会请求中强调的所有问题，"尽管其中一些回答得不如另一些令人信服"。</p>
+    <p>委员会希望澄清：它要判断的并不是"JIT 成为受支持特性应满足哪些标准"，也不是"它是否应被视为受支持特性"；它评估的是<strong>JIT 是否应继续作为一项实验留在 CPython main 分支中</strong>。</p>
+    <blockquote><p>允许在 main 分支里做实验，问题之一在于缺乏统一的设计，以及当实验不断改变行为和 API 表面时，核心开发者、软件包维护者和用户所面对的不确定性。</p></blockquote>
+    <p>委员会说，这份 PEP 在支持计划、性能标准方面不够具体，在其他若干领域又过于含糊或过于乐观。声明附了一份十点清单，列出委员会希望"在 PEP 中写明、或至少经过讨论后明确否决"的事项，这些关切涵盖从内存影响到安全的诸多方面。例如在平台平等方面，委员会希望确保 JIT 的设计便于移植到新平台，希望确认其设计不会与特定平台绑定、也不会要求维护者具备平台专属知识。</p>
+    <p>委员会点出的另一块是用户影响。它说 PEP 对"启用 JIT 后用户可见差异"的判断"过于乐观"：很多情况下用户依赖解释器设计中的各种特有行为，"我们在其他 Python 实现中、甚至仅仅在 Python 各大版本之间就见过这种情况"。委员会要求说明这些差异将如何处理——它们算不算 bug、若行为差异不可避免又该如何处置，等等。</p>
+    <p>按委员会的说法，安全是"PEP 中照顾不足的领域"；它建议与 Python 安全响应团队展开讨论，并认为安全评审也应成为"受支持"地位的评判标准之一。</p>
+    <p>PEP 836 把兼容性评审的里程碑定在 Python 3.17 首个发布候选版（预计在 2028 年 8 月前后），届时会运行 PyPI 头部软件包的测试套件，看 JIT 是否把它们弄坏。委员会希望把这条时间线大幅提前。"我们认为那实在、实在太晚了，兼容性评审应当是一个从现在就尽快开始的、持续不断的过程。"</p>
+    <p>委员会还担心 JIT 的设计决策是"在没有经过最终负责 [CPython] 开发、维护与支持的更大开发者群体严格评审的情况下"做出的。它说，底线是 PEP 836"基本回答了我们提出的问题"、没有缺项，但希望就这些议题展开更多讨论，以便"在要求我们对这份 PEP 表态之前，衡量社区的支持度与共识"。</p>
+    <p>几天后 Jin 回复，感谢委员会详尽的反馈，并表示团队会据此改进。</p>
+
+    <h4>撤回</h4>
+    <p>经过一番考虑，PEP 的作者们看来决定不再继续争取委员会批准。10 月 19 日，Ostrowski（同时也是 Python 3.16 与 3.17 的发布经理）宣布撤回该 PEP：</p>
+    <blockquote><p>指导委员会对这样体量的提案设定很高的门槛是对的，而我们觉得自己没有足够的个人精力把当前版本继续推进下去。我们依然相信 PEP 中勾勒的技术方向，包括自由线程支持与基于方法的前端，也对 JIT 在 CPython 中的潜力保持乐观。我们会把参考实现公开出来，并从已撤回的 PEP 中给出链接，方便有兴趣的人继续探索和在此基础上构建。</p></blockquote>
+    <p>Barry Scott 问这是不是意味着 JIT 工作停了。Brett Cannon 回答说，工作会在主仓库里停下，但是否在别处继续，取决于社区。Dunc Graham 提议，也许还来得及在委员会截止日期前提交一份替代 PEP。Cannon 说不太可能，"因为积极推动 JIT 的人，要么是这份 PEP 的作者，要么是它的贡献者"。</p>
+    <p>随着 PEP 撤回，JIT 很可能很快就会从 CPython main 分支移除，以便在 Python 3.16 开发周期早期就处理掉移除所引发的任何问题。目前尚不清楚 JIT 工作最初的推动者是否打算继续做下去，还是就把它留给后来者——如果社区兴趣足够的话。我已发邮件向 PEP 作者求证，但尚未收到回复。</p>
+    </div>
+</div>
+
+            <div class="article" id="article2">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>__get_user() 与 __put_user() 的终结</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月22日</span>
+            <span><a href="https://lwn.net/Articles/1102061/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>__get_user() 与 __put_user() 的终结</h3>
+    <p>Linus Torvalds 如今很少亲自写大段内核代码，因此他拿出一套 <a href="https://lwn.net/ml/all/" target="_blank">48 部分的补丁系列</a>算是件不寻常的事。这套面向 7.4 内核的补丁做了一次早就该做的内核清理：移除两个用于从内核访问用户空间内存的原语。曾经的最佳实践早已被取代，但在如此庞大的代码库里，让这类改动贯彻到底总是需要时间。</p>
+    <p>内核代码经常必须访问位于用户空间的数据，这些操作当然得格外小心。当内核代表某个用户空间进程行事时，它绝不能执行该进程自身无权执行的访问。为此，用户空间访问原语在编写时就附带了一整套使用规则。</p>
+    <p>对单个变量的访问，内核长期提供 <code>get_user()</code> 与 <code>put_user()</code>。它们是根据传入指针类型改变行为的宏：给 <code>get_user()</code> 传 <code>char *</code> 会执行单字节读取，传 <code>int *</code> 则是更宽的操作。这些宏会检查所给地址是否位于地址空间的用户空间部分；内核也会处理任何表明该地址不可访问的硬件异常。与许多内核函数一样，<code>get_user()</code> 与 <code>put_user()</code> 在访问成功时返回零，否则返回错误码。调用者应当检查这个返回值——毫无疑问，所有内核代码都会一丝不苟地照做。</p>
+    <p>这些函数每次调用都要执行上述检查；如果一个内核函数要读取结构体里的三个字段，就会做三次访问检查。而三者中其实只有第一次是必要的：只要它通过了，另外两次必然也通过。为优化这类模式，内核提供了两个检查更少的变体——<code>__get_user()</code> 与 <code>__put_user()</code>。内核代码可以先用一次 <code>access_ok()</code> 检查结构体的基址，此后便安全地使用不检查的访问函数。</p>
+    <p>不过正如 Torvalds 在合并日志中指出的，这种模式很久以来就不算最优。它确立之初，<code>get_user()</code> / <code>put_user()</code> 所做的检查在整次操作开销中占比可观。此后检查变得便宜了，而访问本身变贵了。具体而言，大多数我们关心的 CPU 早已引入某种形式的<a href="https://en.wikipedia.org/wiki/Supervisor_Mode_Access_Prevention" target="_blank">监管模式访问阻止（SMAP）</a>，它彻底禁止内核访问用户空间内存。SMAP 能抵御各类内核 bug 与利用手段，但也有一点小副作用：它同样妨碍内核去做必需的工作。为了安全，总得做点牺牲。</p>
+    <p>而用户们很固执，往往觉得这份牺牲超出了自己愿意承受的范围。于是内核不得不在每次用户空间访问前关掉 SMAP、访问后再打开——这一对操作事实证明相当昂贵。由于 <code>__get_user()</code> 和 <code>__put_user()</code> 同样得以这种方式操作 SMAP，它们实际上并不比完整检查的版本更省。在现代硬件上加速多次访问的正确做法是：开头关一次 SMAP，所有操作完成后再打开。例如，用 <code>user_read_access_begin()</code> 开启对用户空间的读访问，用 <code>user_read_access_end()</code> 再次关闭。自然，代码必须格外小心，在访问完用户空间内存后调用 <code>user_read_access_end()</code>——即便是从错误路径退出也要调用，否则系统会停留在不安全状态。同样自然的是，这类失误已经发生过不止一次。</p>
+    <p>较近时期，内核加入了作用域式资源管理原语，以确保这类情形下必要的清理一定会发生。Thomas Gleixner 在 2025 年为 6.18 内核加入了一组用户空间访问的作用域守卫（scope guard）。如今，多次访问的场景应该写成这样：</p>
+    <pre><code>scoped_user_read_access(ptr, label) {
+    unsafe_get_user(dest1, ptr-&gt;field1, label);
+    /* ... */
+    unsafe_get_user(destN, ptr-&gt;fieldN, label);
+}</code></pre>
+    <p>这里 <code>ptr</code> 是用户空间访问的基址指针，会在开头被检查；<code>label</code> 是函数内的一个标签，任何一次访问失败都会跳到那里。编译器保证：无论以何种方式离开这段代码块，内核对用户空间的读访问都会被关闭，因此再也不会出现"忘了关闭用户空间访问"的情况。<code>unsafe_get_user()</code>（当然，它没有文档）执行真正的访问，出错时同样跳到 <code>label</code>。</p>
+    <p>说到底，没有任何理由再保留 <code>__get_user()</code> 与 <code>__put_user()</code>——除了一个不大方便的事实：内核里仍有不少地方在用它们。Torvalds 这套补丁的目的就是改掉所有这些调用点。有些情形（<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/" target="_blank">例如这一处</a>）把调用换成普通的 <code>get_user()</code> / <code>put_user()</code>；另一些（比如信号处理代码）则改用作用域式写法。这样就清掉了大部分调用点。</p>
+    <p>不过按合并日志所述，有些地方对这两个函数的使用更为微妙。例如，某些代码用它们访问<strong>内核</strong>空间地址，因为需要它们提供的缺页处理。内核里有个专门干这活的函数 <code>get_kernel_nofault()</code>，因此相应的补丁把这类代码改用该函数。还有些地方本该禁用缺页（fault），而不是依赖这两个函数来处理，也有补丁专门清理。最后，内核中有若干处需要解引用一个"可能在用户空间、也可能在内核空间"的指针，清理起来要复杂一些，可参见<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/" target="_blank">这个补丁</a>作为例子。</p>
+    <p>这整套工作的结果是：为 x86 内核构建的代码再也不使用 <code>__get_user()</code> 或 <code>__put_user()</code>，因此<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/" target="_blank">该补丁</a>在这个架构上把它们彻底删掉。其他一些架构上它们仍然存在；以 64 位 Arm 为例，这两个函数本来就没有提供不同行为，因此不急于移除。当然，用到这些函数的树外模块得跟着调整。</p>
+    <p>或许不必多说：Torvalds 做这件事，并不是突然心血来潮想再亲手折腾底层代码。他当然是在用 LLM"当一个高级版的 coccinelle 脚本"，把这份工作铺到所有需要改动的地方。不管好坏，这类工具正被各层次的内核开发者越来越多地用于改进内核。</p>
+    </div>
+</div>
+
+            <div class="article" id="article3">
+    <div class="article-header">
+        <span class="article-category">Rust</span>
+        <h2>内核代码中 panic 的使用准则</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月27日 · Kangrejos</span>
+            <span><a href="https://lwn.net/Articles/1100873/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>内核代码中 panic 的使用准则</h3>
+    <p>Alexandre Courbot 大部分时间都在做内核代码评审。最近他一直在琢磨：Rust 代码在什么情况下允许 panic？更广义地说，错误处理应该遵循什么标准？与 Kangrejos 2026 的许多其他演讲不同，他并不是来展示某项既成工作的，而是希望向在场的 Rust for Linux 开发者征集意见。他带来了一批自己近期遇到的棘手案例，用来引出讨论。</p>
+    <p>Courbot 说，错误处理存在一道"合意度阶梯"：最优的是根本不会失败的代码，人们应尽可能这样写；其下是在编译期检查出的失败，又细分为"保证能捕获"和"尽力而为地捕获"两档；再往下是用 <code>Result</code> 做的运行期检查；最不得已才是 panic。他随后为每档给了些小例子，确保大家在同一语境下讨论。</p>
+    <p>一般而言，内核开发者与评审者希望代码尽可能处在这道阶梯的高处。比如在评审 Nova 驱动时，就碰到过如何表示虚拟 GPU（vGPU）状态的问题。原代码用一个结构体，里面放着虚拟功能（virtual function，一种拥有自己 PCI 内存空间 virtual device）的计数，以及一个表示 vGPU 是否启用的布尔标志。这导致大量运行期检查，用以确保 vGPU 启用时计数绝不为零。把这段代码改写为 Rust 枚举后，那些运行期检查被彻底消除——因为无效状态根本无法被表示出来了，这正是阶梯最高一档的例子：</p>
+    <pre><code>struct VgpuState {
+    enabled: bool,
+    total_vfs: u16,
+}</code></pre>
+    <p>变成了：</p>
+    <pre><code>enum VgpuState {
+    Disabled,
+    Enabled { total_vfs: NonZero&lt;u16&gt;, },
+}</code></pre>
+    <p>内核的 Rust 代码中到处都用编译期检查，常见形式是 <code>build_assert!()</code>（检查某段代码在最终构建中被优化掉）或 <code>static_assert!()</code>（检查某条件始终成立）。用 <code>Result</code> 类型做运行期检查在 Rust 代码中同样频繁。</p>
+    <p>Rust 里最不受待见的错误处理方式就是 panic。他说 panic 用在两种情形：发生的事情确定是 bug；以及程序员相信某个情况不会发生。内核的 <a href="https://docs.kernel.org/rust/coding-guidelines.html" target="_blank">Rust 编码准则</a>里只有一处提到 panic，仅仅说优先使用 <code>Result</code>——而开发者并不总是照办。</p>
+    <p>Courbot 说，每一处 panic 都是一颗潜在地雷。Linus Torvalds 强烈反对那些可能让内核崩溃的 bug。即便是用于"不可能发生"情形、且常常能被编译器优化掉的 panic，也会给改动的读者增加负担——他们修改邻近代码时不得不想着这个 panic。Ard Biesheuvel 说 panic 是 Rust 语言内置的，不可能完全消除。Courbot 承认要把每一个 panic 都消灭很难，但仍认为减少代码中的 panic 数量是可取的。</p>
+    <p>接着他给出第一个真实案例，问大家正确的准则该是什么。有个 <code>udelay()</code> 函数接受以微秒计的休眠时长，但如果传入的超时超过某个与架构相关的常量，就被视为 bug：</p>
+    <pre><code>/// ... it is considered a bug to call this function with an out-of-range
+/// value.
+pub fn udelay(delta: Delta) {
+    debug_assert!(delta.as_nanos() &gt;= 0);
+    debug_assert!(delta &lt;= MAX_UDELAY_DELTA);
+    let delay = min(max(delta.as_nanos(), 0), MAX_UDELAY_DELTA);
+    ...
+}</code></pre>
+    <p>这里的代码把传入的 delta 钳制（clamp）到合法区间后继续执行。但也有别的做法：可以返回 <code>Result</code>，强制调用者检查 <code>EINVAL</code>；可以用一个受限类型来保证传入的延迟不会太大；也可以改成接受更大的延迟，只是在 C 侧多次调用 <code>udelay()</code>。</p>
+    <p>Miguel Ojeda 指出，代码现在的实现方式（钳制输入后照常继续）其实是 Courbot 先前没有列出的另一种通用错误处理选项。他解释说，在 Rust 世界里这种设计叫"错误行为（erroneous behavior）"：操作本身是错的、依然不好，但它有明确定义的语义，而不是做出某种不安全的事。内核 Rust 绑定里另一个例子是对超出合法 errno 范围的错误码的处理——任何过大的错误码在跨越 C 到 Rust 边界时都会被转成 <code>EINVAL</code>。这仍是 bug，但行为是确定且安全的。</p>
+    <p>Courbot 同意错误行为在这个案例里是个好办法，他在评审中也确实是这样建议的。但另一个表面上相似的案例里，错误行为就不是好的设计选择。下面这段来自 <a href="https://lwn.net/Articles/1102982/" target="_blank">Rust Binder 驱动</a>的代码，把一个参数加入"死亡链表"，用于追踪驱动退出时需要清理的某些资源。和前面一样，用无效参数调用该函数属于错误：</p>
+    <pre><code>pub(crate) fn add_death(&amp;self, death: ...) {
+    assert!(
+        core::ptr::eq(self, &amp;**death.node),
+        "attempt to add NodeDeath to the wrong death list"
+    )
+}</code></pre>
+    <p>具体来说，如果调用者试图把 <code>NodeDeath</code> 结构加到错误的链表上，相关资源就会在错误的时机被清理。Courbot 说，这里不存在一个明确的"虽错但安全"的行为可以引入。Benno Lossin 追问，为什么不能干脆跳过把 <code>NodeDeath</code> 指针插入链表、直接返回？Courbot 猜想那样倒也能跑，但会让 Rust Binder 停留在一种古怪的状态，并不理想。Gary Guo 表示同意，并指出 Android 开发者大概更希望"一旦出事系统就死掉"。</p>
+    <p>Courbot 提议可以让函数返回 <code>Result</code>，但那会带来多少有点无意义的错误处理；或者把函数标成 <code>unsafe</code> 并不做检查，可这也不见得是明显更好的方案。Ojeda 认为这属于可以接受 panic 的情形："如果你是维护者，而你希望它崩，那没问题。"他在编码准则里写"有时允许 panic"时，想到的正是这类情况。</p>
+    <p>Courbot 的下一个例子是一个按 Kconfig 设置条件编译的 panic。内核 Rust bitmap 实现的一位维护者加了个 <code>bitmap_assert_return!()</code> 宏：若设置了 <code>CONFIG_RUST_BITMAP_HARDENED</code>，它等价于 <code>assert!()</code>；否则只在条件不成立时打印错误并返回。它用于检查所给的位索引小于 bitmap 已分配的长度。</p>
+    <p>Ojeda 说，评审这套补丁时他一度拿不准该不该为此争一争。他或许能接受"整个内核有一个全局 Kconfig 设置"的理由，但不确定自己赞成为每个子系统各设一个 Kconfig 项。Biesheuvel 问："bitmap 库抽象的作者到底要怎么决定什么时候该 panic 的策略？"Courbot 认为这是个好问题，转而问在座的内核维护者是否觉得这段代码有问题。Ojeda、Andreas Hindborg 和 Greg Kroah-Hartman 都认为应该修掉。Kroah-Hartman 指出，这里的 Rust 代码是对 C 代码的忠实翻译，C 版做的事一模一样。Guo 觉得两者并不能类比，因为 C 版结构在索引无效时属于未定义行为。最终共识似乎是：按每个子系统的 Kconfig 决定是否 panic 是错的，但这个具体案例因为是在照搬既有 C 代码，勉强可以接受。</p>
+    <p>宏并不是实现条件式 panic 的唯一方式。Courbot 又举了一个函数，它会因调用方式不同而以不同形式 panic：</p>
+    <pre><code>impl Hertz {
+    const GHZ_TO_HZ: c_ulong = 1_000_000_000;
+    pub const fn from_ghz(ghz: c_ulong) -&gt; Self {
+        Self(ghz * Self::GHZ_TO_HZ)
+    }
+}</code></pre>
+    <p>如果 <code>from_ghz()</code> 在编译期被调用（因为它是 const 函数，这是可行的）且传入值会导致算术溢出，结果是构建错误；在运行期调用则触发 panic。可以把函数重定义为返回 <code>Result</code>，或在参数非法时给出其他有文档的行为，但 Courbot 不想压掉构建错误——"东西写错时能得到构建错误是好事"。Ojeda 建议可以做两个版本的函数，一个 const、一个非 const，不过他自己对这前景也不太热心。</p>
+    <p>Guo 说，在他看来，当等价的 C 代码属于未定义行为时，Rust 代码 panic 应该没问题；毕竟若用 C 写这个组件，编译器本就可以把未定义行为变成一次 panic。不过在这个具体案例里，他认为采用某种错误行为（例如安全地回绕或饱和乘法）也可以。Courbot 指出这段代码同样可能被用户空间触发，问这会不会改变大家的看法，看起来并未改变。</p>
+    <p>Alice Ryhl 称这个例子算简单的；她认为更难的是"对动态大小类型做索引"这类情形，Courbot 也同意。Daniel Almieda 问，将来若有办法把函数标注为"无 panic"，对此是否有帮助。Ojeda 觉得没用，因为这个函数确实会 panic；不过他说也许可以用 <code>build_assert!()</code>。Courbot 回应："<code>build_assert!()</code> 听上去像是很多问题的正解，然后你就开始收到 zero-day 通知了。"他没有细说缘由，不过大概是指 <code>build_assert!()</code> 依赖优化器，行为可能不可预测。</p>
+    <p>Guo 建议在 Rust 正式支持<a href="https://rust-lang.github.io/rfcs/" target="_blank">模式类型（pattern types）</a>之前，先用一个宏实现类似模式类型的东西。这引发了一轮关于"自定义类型在此类场景下可用性"的长时间讨论。讨论结束时，大家的共识反而比开始时更少了，Ryhl 就说她不相信 Courbot 提出的这个两难问题存在单一答案。Courbot 接受了这一点，但仍希望有某种指引来帮人做这个决定。</p>
+    <p>还有一个问题：评审代码时，许多 panic 并不显眼。他查看了 Nova 驱动，发现代码里 170 处可能 panic 的地方中，有 140 处与算术上溢/下溢相关。他说只要足够细心，这些本该全部可以避免。不过其中一部分算术 panic 来自从 core crate 内联进来的函数，他承认那些要难修得多。</p>
+    <p>特别让他不舒服的一处，是在"以 null 结尾的字符串"与"Rust 字符串"（后者使用显式长度）之间做转换的代码。该代码为计算出的字符串长度生成了一次溢出检查，尽管一个字符串真要占满整个虚拟内存，系统显然有更大的麻烦了。这是个"人一眼就看出检查没必要、但因为生成的溢出检查不可见，谁也没费心去优化"的典型例子。Ryhl 说她愿意接受 Courbot 提交一个 PR，在 Rust 标准库里修掉它。</p>
+    <p>举例到此为止，Courbot 试图总结讨论的落点。大家一致同意：在编译期处理错误优于运行期，以及"可达的 panic 应当算 bug"。除此之外，内核开发者们几乎没达成什么共识。</p>
+    <p>Ojeda 说，他认为"何时可以接受 panic"的具体选择应由各位维护者自行决定，但总体上他觉得驱动比核心代码更应当仔细论证潜在 panic 的合理性。Courbot 则认为任何从设备驱动调用的代码大概都不该 panic。Kent Overstreet 提醒不要把任何规则执行得过于死板：有人为了满足严苛要求而折腾代码，反而可能比接受偶尔一点凌乱代码弄得更糟。Guo 大体同意，说他认为试图彻底消灭 panic 是个坏主意；他更愿意让自包含的组件在收到错误输入时 panic，而不是通过返回 <code>Result</code> 把复杂性推给调用方。</p>
+    <p>Courbot 说，"自包含"这个词是其中最关键的一点：如果组件是自包含的，panic 就可以接受。Ojeda 补充说，很多组件"在时间维度上"并不自包含，而且 panic 对普通用户来说往往难以察觉、上报和诊断。</p>
+    <p>会议到这里时间用尽，没有取得进一步共识。大会之后，内核的 Rust 编码准则至今没有更新。开发者们显然在 Rust 代码风格的某些方面是一致的，但把这些共识表述成具体的准则，也许会是件难事。</p>
+    <p>[感谢 Linux Foundation 作为 LWN 差旅赞助商支持我参加 Kangrejos。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article4">
+    <div class="article-header">
+        <span class="article-category">Rust</span>
+        <h2>Rust 的未来特性</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月22日 · Kangrejos</span>
+            <span><a href="https://lwn.net/Articles/1099606/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>Rust 的未来特性</h3>
+    <p>有几项 Rust 特性是内核开发者一直盼着稳定的，但 Josh Triplett 想讲的是 Rust 项目<em>当前</em>正在推进的另一大批特性。他在 Kangrejos 2026 上谈了这个话题，给在场的内核开发者留下了不少"如何把这些即将到来的 Rust 特性用进内核"的思路，其中包括类型系统的细化、少量语法改进，以及更聪明的借用检查器。</p>
+    <p>Triplett 开头先提醒大家，这些特性都还在进行中，进度参差不齐。"这意味着你们有更多机会去影响最终形态。"他鼓励任何有兴趣参与或进一步开发这些特性的人与他联系；哪怕只是告诉 Rust 开发者"哪项特性会解决内核里的真实问题"，也有助于排定优先级。</p>
+    <p>他想重点讲的第一项是<a href="https://rust-lang.github.io/rfcs/" target="_blank">视图类型（view types）</a>：一种只借用结构体一部分的方式。借用检查器禁止同时持有一个结构体的可变引用和任何其他引用，但有一个例外：在函数体内部，它能发现某个可变引用只用于访问结构体的部分字段，此时其他字段可以被不可变引用而不触发借用检查错误。问题在于，这让人很难把复杂函数拆成更小的片段——因为那将要求借用检查器跨多个函数推理"按字段访问"，而它做不到。</p>
+    <p>Triplett 说，这是人们对这门语言真实存在的一大挫败感，他初遇 Rust 时差点因此弃坑。视图类型提供了解决方案：允许函数签名明确声明自己会触碰结构体的哪些字段。具体语法尚未定下，目前的工作集中在让它与类型系统协同。</p>
+    <p>Miguel Ojeda 说内核大概率会想要视图类型，只是当时它已经在路线图上，所以没有专门提出要求。Andreas Hindborg 问视图类型的预期时间线。Jana Dönszelmann 说目前只有一人在做，但正在争取资金把它变成全职工作；她估计明年会有该特性的原型可用。</p>
+    <p>Triplett 想讨论的下一项同样是类型系统的扩展。<strong>模式类型（pattern types）</strong>是用类型系统编码程序不变量的又一种方式，在很多方面它是 Rust 现有 <code>NonZero</code> 与 <code>NonNull</code> 类型的推广。模式类型让程序员可以声明：某个值具有特定类型，<em>并且</em>匹配某种模式。例如，可以把合法的错误号限制在 0 到 4096 之间，同时仍保持 <code>u32</code> 的内存布局和 ABI 行为：</p>
+    <pre><code>type Errno = u32 is 0..4096;</code></pre>
+    <p>这并非史无前例的特性，只是不算特别常见：Ada 与 LiquidHaskell 都在类型系统里提供同类细化。Rust 的实现已出现在 nightly 版本中，但尚未集成进标准库，大概还需要一些助力才能真正好用。</p>
+    <p>Hindborg 问，这是不是实现"指针对齐空位（alignment niche）标记"的途径——即自动用指针低位存放额外信息。Triplett 回答说，单靠模式类型做不到这点：它确实允许编译器像如今 <code>NonZero</code> 那样把类型的非法值用作 niche，但目前没有一种模式能表达"某个数总能被某个对齐值整除"。这将来可以加，只是不会出现在模式类型的第一个版本里。</p>
+    <p>Kent Overstreet 问，模式类型当前的语法是否足够灵活、将来能容纳对齐空位。Triplett 说他心里并没有对齐模式的确切语法，但今后加进语言的任何模式语法都会与模式类型兼容；他建议，增加"匹配某些位布局"的模式大概是对的方向。</p>
+    <p>Alastair Francis 想知道模式类型上的运算是否会引入运行期检查：如果定义一个纳秒类型，而值超过十亿会怎样？Triplett 说，<code>u32</code> 实现了 <code>Add</code>，并不代表 <code>u32 is 0..1_000_000_000</code> 也实现了 <code>Add</code>——编译器把它们当作不同类型。所以实践中，不先把它强制转换回更通用的整数类型，就没法对模式类型做加法。而把普通整数转回模式细化的整数需要显式检查，程序员必须处理错误情形。</p>
+    <p>类型系统一个潜在得多的变化，是引入<strong>线性类型（linear types）</strong>或<strong>不可遗忘类型（unforgettable types）</strong>——这两个密切相关的想法仍处在推测性规划阶段。二者共同的核心概念是：应当能创建"无法被隐式丢弃（drop）"的类型。线性类型到此为止，而不可遗忘类型还进一步禁止用 <code>std::mem::forget()</code> 泄漏含有该类型的内存。这样程序员就能定义诸如"数据库事务"这样的类型，它必须被提交或中止，而不能被忘在一边。"听上去应该挺容易，"Triplett 说，结果这个特性给语言的其他部分带来了不少麻烦。</p>
+    <p>例如，栈上带着不可遗忘类型时 panic 是不安全的，因此语言需要某种手段确保一段代码不会 panic。这此前卡在 trait 求解器的一些改进上，而新 trait 求解器的工作已重新推进。Triplett 认为这个特性对内核大概有用，Ojeda 表示同意。</p>
+
+    <h4>Turbofish</h4>
+    <p>暂且离开类型系统细节，Triplett 谈到了在 <code>Into::into()</code> 上使用 Rust 的 turbofish 操作符（<code>::&lt;&gt;</code>）的问题——该 trait 用于（在可能时）无失败地从一种类型转换为另一种。调用带泛型参数的方法时，程序员可以写 <code>::&lt;SomeType&gt;</code> 显式指定参数；因为形状有点像一条大尾巴的鱼，这套语法被戏称为 "turbofish"。</p>
+    <p>问题在于，人们最常想显式指定类型的场景之一，恰恰是用 <code>Into</code> trait 做类型转换时；可惜这个 trait 的写法不允许使用 turbofish。turbofish 只能指定传给某个函数或方法的类型实参，而 <code>into()</code> 本身没有类型实参，它依赖的是定义它的 trait（<code>Into</code>）的泛型参数。</p>
+    <p>Triplett 说，有个只涉及标准库改动的巧妙修法，库团队希望在下一个 Rust edition 中落地。Gary Guo 问起类型标注（type ascription）等几种替代方案，Triplett 解释说这些都试过，但发现解法并不像看上去那么直接。</p>
+    <p>另一项语言易用性改进是拟议中的<strong>中缀模式匹配操作符</strong>。Triplett 解释说，Rust 在条件表达式里已有一定的模式匹配支持，但可能导致条件读起来顺序别扭。例如下面这段代码把 <code>Some(x)</code> 模式与 <code>func().await</code> 的结果匹配，然后继续条件的其余部分，读者得来回扫视才能读懂：</p>
+    <pre><code>while let Some(x) = func().await &amp;&amp; x.some_condition() { ... }</code></pre>
+    <p>加入内联模式匹配后，程序员可以完全从左到右书写，并用一套统一语法取代大量诸如 <code>.is_none()</code> 的小辅助函数：</p>
+    <pre><code>while func().await is Some(x) &amp;&amp; x.some_condition() { ... }</code></pre>
+    <p>拟议中的操作符可用于任何期待布尔值的位置。目前有一个语言实验在验证这个概念，但由于解析不向后兼容，改动语法需要未来的 Rust edition。Tomáš Šedovič 问这是不是意味着 <code>matches!()</code> 宏就没用了；Triplett 说会为兼容性保留，但也同意它会少用很多。</p>
+    <p>Guo 问新语法是否会在编译器内部被转换成类似当前 <code>if let</code> / <code>while let</code> 的形式。Triplett 说不会——新操作符适用于更多上下文，因此会被转换成一种在任何期待布尔值的位置都合法的构造。Guo 又问模式引入的绑定作用域在哪里。"任何你能确定为真的地方。"Triplett 说。有人讨论过用模式把两个值绑定到同一个变量，但尚未列入计划。Guo 说这个新操作符听上去像是通用的<a href="https://rust-lang.github.io/rfcs/" target="_blank">后缀 match</a>，Triplett 表示同意。</p>
+    <p>Triplett 对这项特性很兴奋，因为他相信它能减少普通学习者必须掌握的辅助函数数量：只需学会这一个特性并到处使用，语言就更一致、更易学。他说 Rust 开发者并不总能这样简化语言，但能做到的时候总是好事。</p>
+
+    <h4>借一杯糖</h4>
+    <p>另一项应能让语言更易学的特性是新借用检查器 <a href="https://github.com/rust-lang/polonius" target="_blank">Polonius</a>。在 Rust 1.0 中，作用域完全由词法决定：一切都活到声明它的代码块末尾。这后来被证明不合直觉，于是借用检查器的重写引入了<strong>非词法生命周期</strong>——生命周期可以在最后一次引用变量之后就结束，而不必等到作用域末尾。</p>
+    <p>这有帮助，但仍存在借用检查器拒绝"任何人类一眼就看出合法"的程序的情况，在循环语境里尤其常见，也可能出现在任何"控制流影响哪些引用实际上已不再使用"的地方。例如从循环中间返回，就会让当前的借用检查器搞不清下一次迭代中是否仍持有某个引用。</p>
+    <p>Polonius 通过追踪借用与控制流之间的交互来修这个问题。它还不完美，但"修好了很多让人说'等等，这以前居然不行？'的东西，我们很喜欢"，Triplett 说。Polonius 已开发多年，如今终于在 nightly 编译器上启用；稳定化所需的主要工作是消除几处性能回归。</p>
+    <p>Triplett 问内核是否用 Polonius 测过，Ojeda 说内核同时用稳定版和 nightly 版编译器测试，因此在 Polonius 下应该没问题。不过在最低支持 Rust 版本提高之前，恐怕还无法对全部内核代码无条件开启它——较老编译器里的版本存在后来才修掉的 bug。</p>
+
+    <h4>宏函数</h4>
+    <p>一项更复杂的潜在特性是受 Zig 的 <code>comptime</code> 启发的<strong>编译期执行</strong>。Triplett 解释说，Rust 现有的 const 函数既可在编译期运行、也可在运行期运行，这很方便，但也意味着它们无法访问运行期不存在的编译器 API。如果有一种只允许在编译期运行的新函数类型，语言就可以加上编译期反射 API。</p>
+    <p>Ojeda 问 comptime 函数是否类似 C++ 的 const 求值。Triplett 说相似，但 Rust 团队更多借鉴的是 Zig。Overstreet 问这会不会让 Rust 编译变成像 Scheme 等拥有丰富宏系统的语言那样的多阶段过程。Triplett 说已有应对计划：Rust 编译器本就采用基于查询（query-based）的系统，理论上支持任意阶段，不过原型阶段的 comptime 函数会在最初几个版本里避免引入过多复杂性。</p>
+    <p>一旦 comptime 函数可用，就为新的宏系统打开了可能性：宏不必再作为单独 crate 里的过程宏来写，而是可以直接实现在使用它们的代码旁边。这能简化宏的创建，因为不再需要使用另一门语言（声明宏如此）或另一个编译单元（过程宏如此）。不过改造宏系统目前仍只是个想法。Triplett 说，正在原型开发中的"仅编译期函数"必须先就绪，才能正式开始讨论新的宏系统。</p>
+    <p>时间所剩不多，Triplett 以几项小特性收尾。最后值得留意的是为<strong>保证尾调用</strong>加入语法，这对实现解释器和某些递归算法很有用。让这项特性不那么简单的，是它与 Rust 自动资源清理的交互。我问 Rust 开发者是否打算实现 <a href="https://en.wikipedia.org/wiki/Tail_call" target="_blank">tail recursion modulo cons</a>（允许被调函数替调用方做少量工作，从而让更多调用算作尾调用），Triplett 说他不知道目前有相关计划，但认为作为优化是说得通的。</p>
+    <p>其他未来特性还包括：标注函数不会 panic 的方式、用于优化循环内 match 操作的 <code>#[const_continue]</code> 属性，以及完整的 const 泛型——不过 Triplett 没时间逐一展开。他转而鼓励大家如有更多疑问、或有意帮忙把这些特性带进 Rust，就联系他。</p>
+    <p>[感谢 Linux Foundation 作为 LWN 差旅赞助商支持我前往 Kangrejos。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article5">
+    <div class="article-header">
+        <span class="article-category">安全</span>
+        <h2>把 Northstar 推入 Linux 发行版的运动</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年10月28日</span>
+            <span><a href="https://lwn.net/Articles/1102738/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>把 Northstar 推入 Linux 发行版的运动</h3>
+    <p>可供 Linux 用户选择的成熟开源浏览器引擎并不算多：Linux 上绝大多数浏览器都只基于三个项目之一——Chromium 的 <a href="https://www.chromium.org/blink/" target="_blank">Blink</a>、Firefox 的 <a href="https://developer.mozilla.org/en-US/docs/Glossary/Gecko" target="_blank">Gecko</a>，或 <a href="https://webkit.org/" target="_blank">WebKit</a>。按理说，一个新入局者通常会被当作受欢迎的替代方案；但近期把其中一款由 LLM 编写的 Nordstjernen 系列浏览器推进 Debian 与 Arch Linux 的动作，却让人对该项目的开发与安全流程打上了问号。</p>
+
+    <h4>关于 Nordstjernen</h4>
+    <p>Nordstjernen 项目出现于 2026 年初，6 月 5 日发布了同名的 1.0.0 版浏览器。不过发布公告提到几个可追溯到 5 月下旬的 1.0 之前版本，而它们似乎已从 GitHub 上被抹去。据公告称，其浏览器引擎"约 8.8 万行 C 代码，由 Claude 和 Codex 写成……小到一个人就能从头到尾读完并审计"。这些浏览器的开发看起来几乎完全由 Andreas Røsdal（加上 LLM）驱动，尽管各仓库里也有少数提交署着别人的名字。</p>
+    <p>Nordstjernen 的双重许可方案有些令人困惑。公告明确说它按 <strong>Nordstjernen Source License v1.0</strong> 发布——这是一份禁止"竞争性使用"的非自由自定义许可，10 年后转为 MIT 许可；然而仓库里的 <code>License.md</code> 却说浏览器可按该自定义许可<em>或</em> GPLv3 使用。</p>
+    <p>自 Nordstjernen 浏览器发布以来，又陆续有了两款：<strong>Northstar</strong> 与 <strong>Southstar</strong>。Northstar 仅以 GPLv3 授权，被宣传为"Nordstjernen 的极简兄弟：单窗口、单页面、单进程的桌面浏览器"，去掉了标签页、按标签渲染、WebGL 与 WebGPU。据网站说它与 Nordstjernen 共用浏览器引擎，但同时又声称 Northstar 是从零写起的。Southstar 被描述为 Nordstjernen 的 Rust 版本，沿用同样的双重许可方案。</p>
+
+    <h4>请打包吧</h4>
+    <p>7 月 23 日，Røsdal 向 Debian 提交了一个打包意向（ITP）bug，寻找赞助人帮他让 Northstar 进入 Debian。他的理由是这对 Debian 有用：发行版里现有的浏览器都是 Blink、Gecko 或 WebKit 的衍生品，纳入 Northstar 有助于支撑"真正的浏览器引擎多样性"。他本人不是 Debian 维护者或开发者，无法自行把包推进 Debian。他表示打算长期维护这个包，并称自己的包已验证可在 unstable 及即将发布的 Debian 14（"forky"）上构建。</p>
+    <p>10 月，Jérémy Lal 更新了这个 bug——看来 Røsdal 此前曾直接发邮件游说 Lal 等人把 Northstar 纳入 Debian（为何偏偏选中 Lal 等人并不清楚）。Lal 给了一些正面反馈，但指出"考虑到这个浏览器还很年轻，也许不以下一个 Debian 稳定版为目标比较好"。Røsdal 当天回复，"恳求并乞求"把 Nordstjernen 系列中的一款纳入下一个 Debian 稳定版：</p>
+    <blockquote><p>如果 Northstar 浏览器被纳入 Debian Linux，我会竭尽全力让这个浏览器获得成功、确保它在 Debian 上运转良好，并且我会确保 Debian 项目和像你们这样的 Debian 贡献者、尤其是你们四位，会得到回报。</p></blockquote>
+    <p>他没有说明所承诺回报的性质，但提到自己已申请 <a href="https://nlnet.nl/" target="_blank">NLnet Restack 基金</a>——该基金旨在"帮助交付、成熟并扩展横跨技术栈的运营型互联网公共品"。Røsdal 还声称，如今约 24.5 万行 C 代码的 Nordstjernen 很容易审计。他建议 Debian 专注于打包更成熟的 Nordstjernen，只是沿用英文名 Northstar。</p>
+    <p>Gard Spreemann 说，项目的 Git 仓库让"易于审计"这一说法站不住脚。他统计出该仓库生命周期内共有 2,623,722 行新增、1,527,351 行删除："我很难把你们'更可维护、易于评审和审计'的目标，与人均每月新增约 16 万行、删除约 10 万行代码调和起来。"</p>
+    <p>几番来回之后，Spreemann 直接问 Røsdal："Nordstjernen 的代码到底有没有被（对项目负责的人类）评审过？"他补充说，若负责的人连代码都不看，很难有 Debian 开发者愿意维护一个变动如此剧烈的包。"这太离谱了，无非是个玩具或实验，离适合 Debian 差了十万八千里。"</p>
+    <p>Røsdal 没有理会关于人工代码评审的追问，而是回说他更希望听到别人的反馈："最好是来自 2026 年真正在做实际软件开发、受过计算机科学教育的人，也请考虑到 AI LLM 出现之后软件开发已经变了。"</p>
+
+    <h4>闹到邮件列表</h4>
+    <p>10 月 18 日，Røsdal 向 debian-devel 邮件列表呼吁，请求接受 Nordstjernen 系列中的一款进入 Debian。Andrey Rakhmatullin 问，计划是由 Røsdal 自己打包、还是希望别人来做。Røsdal 回答说自己打算做，但预期发布会很频繁，也欢迎 Debian 社区帮忙打包浏览器的各个变体。</p>
+    <p>Marc Haber 在帖子里澄清了一件他认为常被"只想把自己程序塞进 Debian"的作者误解的事："在 Debian stable 里修复安全问题，不是上传个新版本就行的，你得[构建]一个只修该安全问题、同时把包里其余一切都保持在相应 Debian stable 发布时状态的补丁。"这要求至少三年内有一个受支持的版本。Røsdal 在该讨论串中的回复，似乎没有一处承认需要长期支持版本与安全回溯移植。</p>
+    <p>这个打包请求还引发了围绕浏览器许可的讨论。例如 Andrei Ionuţ Ştefan 问，Røsdal 是否审查过 LLM 生成的输出，以确保没有逐字复制训练数据里受版权保护的代码。Spreemann 说，如果 Røsdal 连 LLM 生成的大部分代码都没有评审，那他能否主张版权就很可疑。几轮交锋后，Røsdal 说对浏览器的每项改进都是小而渐进的改动，他事后会验证结果："就像画家一笔一笔画一幅画。"</p>
+    <p>"LLM 输出是否可受版权保护、需要多少人类输入才够"这个根本问题仍无答案。Ted Ts'o 观察到，讨论参与者似乎在寻找"一个项目要能主张版权，人类生成代码需达到的阈值"。"如果 99% 的代码由人类生成、1% 由 LLM 生成或来自公有领域，我们能把整个代码库视为 GPL 许可吗？如果是 60%/40% 呢？如果 99% 是 LLM 生成或公有领域、1% 是人类写的 GPLv2 改动呢？"他怀疑 Debian 回答不了"多少代码必须由人类生成才可受版权保护"这个问题，但他希望：假如 Debian 真制定了要求某个比例由人类生成的政策，Linux 内核能过关。</p>
+
+    <h4>安全</h4>
+    <p>简短参与完许可讨论后，Ts'o（任职于 Google）又就 Northstar 的安全性跟进。他用 Google 的一个前沿模型做了实验，看 Northstar 是否遵守自己的<a href="https://github.com/" target="_blank">安全策略</a>、以及是否存在刻意植入的后门。LLM 生成的 15 页报告声称，项目所宣称的安全模型与实际代码之间存在若干出入，并发现了一批严重安全缺陷。</p>
+    <p>报告说 LLM 没有发现后门；但它找出了一些没有文档记载的环境钩子，会自动加载扩展、悄悄向所有站点授予摄像头访问权限等等。报告还举例指出 <code>pack-appimage.sh</code> 脚本会下载并执行未经校验的二进制文件（该脚本此后已更新，把构建工具锁定到固定发行版并在执行前校验 SHA-256）。报告总共列出 <strong>8 个严重（critical）与 8 个高危漏洞</strong>。Ts'o 在 bug 中总结发现时说，他不会建议任何在意自身安全的用户依赖 Northstar。</p>
+    <p>他还建议 Northstar 项目考虑收回"禁 AI"政策——该政策是 10 月 22 日加进项目 README 的。项目现在声称，自 2026 年 10 月起 Northstar 的开发不再使用 AI："贡献——代码、文档、翻译、issue 和 pull request——必须由人撰写，不得由 AI 编码助手、大语言模型或类似工具生成。"然而自那之后，已有 70 多个提交把 Claude Opus 5.5 列为共同作者。</p>
+    <p>起初 Røsdal 感谢了 Ts'o 的发现，并表示欢迎后续安全复评以核实问题已修复。但随后他又在该讨论串回复说，他觉得 Ts'o 因供职 Google 而带有偏见。"因此我认为 Nordstjernen 网页浏览器在 Debian 社区没有得到公平的机会，我将把精力转向其他不像 Debian 这次这样带有 Google／企业偏见的 Linux 发行版。"</p>
+
+    <h4>转战 Arch</h4>
+    <p>10 月 24 日，Røsdal 通过 aur-general 列表联系了 Arch Linux 项目——该列表用于讨论 Arch 用户仓库（AUR）。通常用户无需太多审核就能把包上传到 AUR；但由于 AUR 今年大部分时间遭遇持续不断的、试图向不知情的 Arch 用户散播恶意软件的攻击，新用户注册已被关闭。因此 Røsdal 需要别人协助才能创建账号并把包传到 AUR，至少暂时如此。AUR 何时重新开放注册尚不清楚。</p>
+    <p>讨论中有人对浏览器生态出现新入局者表示欢迎，之后 Edmund Lodewijks 提起了 Røsdal 说服 Debian 纳入 Northstar 的尝试，并对打包该浏览器提出警告。Røsdal 声称 Ts'o 生成报告里提出的所有问题都已解决，重申 Northstar 未获公平评价，并说虽然开发浏览器时用过 Claude，"我们会把 [Northstar] 过渡到以传统方式维护"。</p>
+    <p>Jelle van der Waa 回复说，浏览器是涉及重大安全与隐私问题的复杂软件，用户不该把这类东西托付给一个年轻项目。他建议 Røsdal 继续开发、做一次像样的安全评审，并证明自己能长期维护这个浏览器。"也许到那时人们会有兴趣把它打进 AUR，但眼下我只能强烈建议不要这么做。"</p>
+
+    <h4>现状</h4>
+    <p>看样子 Northstar 短期内不会出现在 AUR 或 Debian 仓库里。Røsdal 是否会遵守所声明的禁 AI 政策也仍待观察；就目前而言，Claude 似乎还没给这个浏览器做出最后一次贡献。</p>
+    <p>自 XZ 后门事件之后，发行版开发者多半也会把"一个过分热切地游说把新项目纳入的维护者"当成某种危险信号。一个开发历史不足六个月、也谈不上有什么社区的浏览器项目，用一个词形容就是可疑。Røsdal 的动机完全可能是善意的，但很难责怪 Debian 与 Arch 的维护者谨慎。</p>
+    <p>公平地说，也并不是成熟的浏览器项目就没有自身的安全问题。例如 Debian 于 10 月 22 日为 Debian 13 的 chromium 包发布了安全公告（<a href="https://www.debian.org/security/2026/dsa-6577" target="_blank">DSA-6577-1</a>），一次修复了 <strong>363 个 CVE</strong>；而 10 月 15 日上一份 chromium 公告（<a href="https://www.debian.org/security/2026/dsa-6562" target="_blank">DSA-6562-1</a>）列出的"仅"有 37 个 CVE。Chromium 项目也<a href="https://lwn.net/Articles/1097859/" target="_blank">出了名地难以打包</a>，自身的代码变动同样剧烈。10 月 27 日发布的 <a href="https://www.mozilla.org/en-US/firefox/159.0/releasenotes/" target="_blank">Firefox 159</a> 列出了 100 多个高影响漏洞，包括 72 个释放后使用缺陷与 5 个提权缺陷。不过 Chromium 与 Firefox 背后毕竟有规模大得多的开发者群体，也有相当多的人在审视项目代码。</p>
+    <p>人们对"基于全新开源引擎的新浏览器项目"显然是有兴趣的，例如我们许多人都在密切关注 <a href="https://servo.org/" target="_blank">Servo 项目</a>。然而，一个完全或主要由 vibe coding 生成、且基本由单名开发者推动的浏览器项目，很难在在意隐私、安全或稳定性的 Linux 用户中获得认同。</p>
+    </div>
+</div>
+
+            <div class="article" id="article6">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>7.4 合并窗口前半程</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月23日</span>
+            <span><a href="https://lwn.net/Articles/1101211/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>7.4 合并窗口前半程</h3>
+    <p>7.4 合并窗口开启以来，主线仓库已合入 <strong>6,753 个非合并变更集</strong>，预计还会有更多——尤其考虑到本次合并窗口有可能延长到三周。不过，即便只是这最初一批，除了内核近期持续的常规清理与安全修复之外，也已经带来了不少新特性。</p>
+    <p>本轮最重要的变更包括：</p>
+
+    <h4>体系结构相关</h4>
+    <ul>
+        <li>Alpha 现在支持若干可选的架构特性，例如 gcov 插桩和一个额外的页表位。这些改动应能让 Alpha 与其他架构更一致、性能更好，尽管目前并没有新的 Alpha 硬件在生产。此外还修复了软件浮点仿真，使 Alpha 浮点代码在不同硬件配置下更为一致。</li>
+        <li>Arm 不再支持 supersection 映射——一种把多个 PMD 级大页组合为一个单元的方式。启用它会占用硬件地址中的若干位，对只有 36 位物理内存地址的平台可能造成问题。由于没有已知用户，判定"直接移除"比"设法在地址表示里腾出更多位"更简单。</li>
+        <li>User-mode Linux 现在可用于测试 NOMMU 配置。UML 是在普通进程中运行内核代码的有用方式（通常用于测试），但此前只能测试使用仿真 MMU 的内核配置；如今把相关必需部分改成了可选，UML 就能测试缺少 MMU 的嵌入式配置。</li>
+    </ul>
+
+    <h4>核心内核</h4>
+    <ul>
+        <li>新增 <code>CLOSE_RANGE_EXCEPT</code> 标志，让 <code>close_range()</code> 关闭<strong>所选窗口之外</strong>的所有文件描述符，更便于控制哪些描述符与子进程共享。<code>CLOSE_RANGE_CLOEXEC_ONLY</code> 标志可把某个区间内的关闭操作限制在 close-on-exec 描述符上。按区间关闭文件现在也变成同步的，减少了进程退出时清空文件描述符表所需的原子操作，也简化了内核线程相关代码。</li>
+        <li>内核配置现在为定义字符串、整数和十六进制设置增加了快捷写法。定义布尔与三态设置的对应快捷方式早已存在，因此这项补充让配置语言更一致一些。</li>
+        <li>通过 sysfs 绑定/解绑设备与驱动现在会把内核标记为 tainted（受污染），因为这个接口最初只是为调试设计的。改动的动因是一批 fuzz 报告：把设备绑定到错误的驱动会引发内核问题。虽然只有 root 能这么做，但用户大概也不该依赖这个能力。</li>
+        <li>sched_ext 调度器现在可以<strong>惰性地</strong>抢占运行中的 CPU，这是使能惰性抢占（lazy preemption）长期工作的一部分。借助一组新钩子，sched_ext 调度器现在也能支持处理代理执行（proxy execution）；该补丁集合入前引发了一些讨论。让嵌套子调度器功能更完整的工作也在继续。</li>
+        <li>通过 socket 发送的核心转储现在会把连续的零区间压缩，大幅减少必须传输的字节数，socket 格式也略有变化。核心转储服务器还可使用新选项，获取关于"响应某次核心转储请求的具体线程"的更多信息。</li>
+    </ul>
+
+    <h4>文件系统与块 I/O</h4>
+    <ul>
+        <li>移除了对 <strong>BFS</strong> 的支持——UnixWare 设备用于其引导分区的文件系统。据信该文件系统已无用户，也没有特别理由要从 Linux 访问这些引导分区，希望不会有人想念它。</li>
+        <li>iomap 子系统现在对"带硬件校验和的读取"（例如 XFS 所用）采用<strong>惰性 bounce buffering</strong>。bounce buffer（在内核里另分配缓冲区、先把用户空间数据拷进去再交给存储硬件）用于防范用户空间并发修改；而对于支持在写入时校验块校验和的硬件，内核现在可以在事后检测并发修改。在常见情况（用户空间不篡改正在写入的缓冲区）下，内核就能安全地跳过分配 bounce buffer 与拷贝数据；一旦检测到修改，代码会照旧回退到使用 bounce buffer。</li>
+        <li>Btrfs 新增了一组 backup root 选项，可指定使用哪个备用根槽位。正常情况下用不到，但能让文件系统损坏后的恢复少些头疼。从同一个后端文件多次挂载的 EROFS 文件系统现在共享一个 superblock，内存占用更低。</li>
+    </ul>
+
+    <h4>硬件支持</h4>
+    <ul>
+        <li><strong>时钟</strong>：Renesas RZ/N1 定时器。</li>
+        <li><strong>GPIO 与引脚控制</strong>：ROHM BD73800 PMIC GPIO、Axiado AX3005 SGPIO、Analog Devices AD7768 GPIO、R-Car X5H（R8A78000）以及 Tegra 268 控制器。</li>
+        <li><strong>工业 I/O</strong>：Nuvoton MA35D1 微处理器、Qualcomm QPIC SNAND v2 控制器、Renesas R-Car Gen5 设备、Realtek RTD1625 SoC、Synaptics SL2610 I2C、UltraRISC DP1000 I2C 与 Novatek NT72676 I2C 控制器。</li>
+        <li><strong>中断芯片</strong>：Annapurna Labs FIC 与 Qualcomm Purwa SoC 中断芯片。</li>
+        <li><strong>其他</strong>：MediaTek MT8167 / MT8127、T8140、Exynos 5515 看门狗；Qualcomm SDM670 与 IPQ9650 APCS mailbox；Apple M4 与 A18 Pro 处理器；Google Laguna Tensor G5；Qualcomm SM8950、SM8975、Glymur、Shikra、IPQ5424 处理器；Exynos5515 移动处理器；Tegra264、Tegra410、R8A774A3、MT8167 SoC。</li>
+        <li><strong>网络</strong>：Atari SuperVidel FPGA 扩展卡的 SVEthLANa 以太网接口、Meta Platforms 网卡、X-Powers AC200/AC300 快速以太网 PHY、Qualcomm IPQ5424 以太网网卡、RK4568 SGMII 网卡、Allwinner H616 EMAC1 网卡、UltraRISC DP1000 网卡、Qualcomm sa8255p 网卡、Microchip KSZ8995XA/KS8995XA 以太网交换芯片、Realtek RTL8261CE_CG / RTL8261D_VM 以太网 PHY、Realtek RTL8723BS WiFi 芯片、Mediatek MT7928 与 Qualcomm QCC2072 蓝牙芯片、Synaptics 4384 蓝牙芯片。</li>
+        <li><strong>电源管理</strong>：IPQ9650 CPU 频率控制器、Foxconn WCN7850 上电时序传感器、Maxim MAX20024 SMPS 转换器、MPS MPQ4210 升降压控制器、Nexperia NEX10000UB 双路 LCD 偏置电源、MP8864 同步降压转换器、Qualcomm SM7250 / Kuno / MSM8952 电源域、Renesas r8a774a3 SYSC 电源域。</li>
+        <li><strong>存储</strong>：Altera Agilex5、Cadence、MSM8952 与 Allwinner B288 的 SD6HC/SD 卡。<strong>温控</strong>：Google GS101、Renesas RZ/G3L、Qualcomm MSM8952 TSENS 传感器与 Qualcomm PMAU0102 Master BandGap 温度监测器。</li>
+    </ul>
+
+    <h4>其他</h4>
+    <ul>
+        <li>binfmt_misc 不再接受任意分隔符，用户得老实用标点符号。这又是一个"据信没有用户、却引来不成比例 bug 报告"的特性。</li>
+        <li>为 <code>open_tree()</code> 新增 <code>OPEN_TREE_DROP_MNTNS_MOUNTS</code> 标志，用来绕过"在容器内打开新挂载命名空间"的问题。挂载命名空间不允许成环，其实现方式为确保较旧的挂载命名空间不能挂到较新的之下。创建带新挂载命名空间的容器时，若想暴露一个"已包含来自某挂载命名空间的挂载"的主机目录，就会出问题；新标志把这些挂载从所挂载树的视图中丢弃，从而避免成环。</li>
+    </ul>
+
+    <h4>网络</h4>
+    <ul>
+        <li>现已支持 <strong>TCP ROCCET</strong> 拥塞控制算法。ROCCET 基于 CUBIC，但在蜂窝网络下性能更好，具体而言应比 CUBIC 造成更少的缓冲区膨胀（bufferbloat）。</li>
+    </ul>
+
+    <h4>安全相关</h4>
+    <ul>
+        <li>x86 上"内核中同时可写且可执行的页映射"检测此前是坏的，现已修复。</li>
+        <li>Eric Biggers 把许多架构专用的 AES 实现移进了通用加密库，使库更快并减少算法重复；SipHash 也被移入。</li>
+        <li>新增了用于处理命名空间的<strong>安全模块钩子</strong>，Landlock 现在可以借这些钩子限制能力（capability）与命名空间。</li>
+        <li>密钥环不再泄露内核地址，因此再也不能被用来攻破内核地址空间布局随机化（KASLR）。由于该泄露仅对本地用户可见，补丁没被当成大问题，但修掉总是好事。</li>
+    </ul>
+
+    <h4>虚拟化与容器</h4>
+    <ul>
+        <li>新增了一个面向虚拟机的性能调控器（governor），会把被其他客户机窃取的时间（steal time）纳入考量。</li>
+    </ul>
+
+    <h4>内核内部改动</h4>
+    <ul>
+        <li>Christian Brauner 通过为内核相关部分建立 <strong>TLA+ 模型</strong>，修掉了核心转储与信号交互周边的一批 bug。</li>
+        <li>现在会更积极地把 LLM 引向文档；或许它们从此能可靠地读文档了。</li>
+        <li>Rust 代码可以使用新的 configfs 绑定。</li>
+        <li>Linus Torvalds 已彻底移除 <code>__{get,put}_user()</code>，改用更现代的接口；<a href="https://lwn.net/Articles/1102061/" target="_blank">本期另有文章</a>详述了这次改动的范围与性质。</li>
+        <li>现在可以在任意内核上下文中调用 <code>call_srcu()</code>。</li>
+        <li><code>pin_init</code> 中对安全自引用结构的支持已合入；为 <code>devm_kmalloc()</code> 新增了 <code>kmalloc_obj*()</code> 风格的基于类型的分配 API，提供更安全的分配方式。</li>
+        <li>一套此前引发大量讨论的 <code>seq_buf</code> 辅助函数，作为 <code>seq_buf</code> 及相关代码更大清理的一部分被合入。</li>
+    </ul>
+
+    <p>linux-next 中还有 <strong>11,461 个非合并变更集</strong>在排队，几乎全部有望在本次合并窗口关闭前出现在某个拉取请求里。关于 7.4 内核改动的后续更新敬请期待。</p>
+    </div>
+</div>
+
+            <div class="article" id="article7">
+    <div class="article-header">
+        <span class="article-category">内存管理</span>
+        <h2>追求更小的内核栈</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月23日 · LPC</span>
+            <span><a href="https://lwn.net/Articles/1100271/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>追求更小的内核栈</h3>
+    <p>内存在计算系统里向来是稀缺资源，而这个问题近来似乎更严重了。尤其是全球内存芯片短缺，让系统开发者重新把注意力放到降低内存占用上。在 <a href="https://lpc.events/event/20/" target="_blank">2026 年 Linux Plumbers Conference</a> 的内存管理微型会议上，Will Deacon 讨论了一个正被重新审视的内存消耗项：<strong>内核栈</strong>。</p>
+    <p>在 64 位 Arm 与 x86 系统上，每个线程都有自己的内核栈，占用 16KB 不可换页内存。看起来不算多，但有些系统运行的线程数量极大：例如 Android 设备可能承载 2,000–3,000 个系统线程，再加上数千个应用线程，一台闲置设备上就有 5,000 个线程。结果可能是许多兆字节内存被内核栈占住——而这些内存本可以有更好的用途。云环境也有类似问题：一个数据中心可能承载数百万线程，在大规模机群上，内核栈的内存用量累计可达 PB 级。这些内存的利用率极低，但内核栈溢出对相应系统来说却是致命的。</p>
+    <p>16KB 这个尺寸的出现几乎出于偶然。64 位 Arm 架构在 2012 年随 3.7 版合入时用的是 8KB 栈，Deacon 也说不清这个数字当初是怎么定下来的。2013 年 3 月，GCC 4.8 发布并正式支持 Arm64；不久之后，2013 年 7 月的 3.11 内核把内核栈大小提到了 16KB。他同样不完全清楚原因，也找不到讨论这次改动的邮件列表记录——做出该改动的提交只写了"因运行 SpecWeb 基准测试时遇到的失败而需要"。</p>
+    <p>3.16 版中 x86 跟进，理由仅仅是"Arm64 已经这么做了"。这次相关提交提到"某些 gcc 版本似乎会生成大得多的栈帧，使问题加剧"（LWN 当时报道过这一改动）。2016 年的 4.5 版里，Arm 架构获得了 per-CPU 中断栈；Deacon 说，这项改动把中断处理的栈开销从每线程栈上挪走，可能已经化解了不少栈溢出问题。4.14 版转向虚拟映射内核栈，带来诸多好处，但也迫使内核栈按 32KB 对齐。</p>
+    <p>2024 年，Pasha Tatashin 提出动态分配内核栈以节省内存。Deacon 形容这个想法"吓人"：它意味着内存分配可能发生在内核中的任何位置，进而引发各种意外。这个想法今年早些时候被重新提起，但没有获得多少支持。</p>
+    <p>这段历史的尽头，是数十亿台 Android 设备——它们全都能从更高效的内存使用中受益。已有厂商用树外的动态栈实现应对该问题，但很难交付，因为它们无法在<a href="https://lwn.net/Articles/1098493/" target="_blank">通用内核镜像 + 厂商钩子</a>之上实现。因此，在主线内核里解决这个问题的兴趣比往常更高。</p>
+    <p>作为实验，Deacon 构建了一个 8KB 栈的内核并跑了一整套测试，几乎全部通过——只有一个内存压力测试会失败。他还设法用其他几种方式把这些内核搞崩过；而每当崩溃发生，几乎总有<strong>直接回收（direct reclaim）</strong>参与其中（即内核为了给某个无关任务的分配腾地方，决定自己需要回收内存）。用 4KB 栈构建的内核则根本无法启动。</p>
+    <p>编译器对内核栈用量也有影响：GCC 4.9 加入了 <code>--fconserve-stack</code> 选项，内核一直在用；Clang 有几个已知的问题区域，相关改进正在进行中。</p>
+    <p>Deacon 在结尾提到，近期已有一些工作试图解决这个问题：他自己有一套补丁系列，创建专用的异常栈以减轻每线程栈的压力；Mostafa Saleh 的<a href="https://lwn.net/ml/all/" target="_blank">这套系列</a>允许在内核命令行上设置栈大小，现在就能以 12KB 栈运行；Suren Baghdasaryan 一直在做把直接回收移到专用工作线程的补丁，Deacon 说这也许能让栈大小设到 8KB；Linus Walleij 重新看了动态栈补丁，但担心它们永远无法真正做到健壮；David Stevens 则有一套 RFC 系列，允许内核从阻塞任务的栈中回收内存。</p>
+    <p>Peter Zijlstra 指出 freezer 已经存在，可以用它安全地回收内核栈占用的内存。Matthew Wilcox 说，内核里若有个通用特性、能把正在运行的线程切到一个新栈上会很有用：XFS 有时会把工作推给工作线程以避免栈用量过大，但这会让 lockdep 锁检查器犯迷糊；能干净地把运行中的线程切到新栈上要好得多。Zijlstra 说这个特性实现起来相对直接，至少在 x86 上是如此。</p>
+    <p>Arnd Bergmann 也在研究这个问题。他说大多数栈溢出源自"用户上下文中的内存分配引发的直接回收"。他一直在运行一些系统，把"栈用量超过 1.25KB 就告警"打开，多数时候都跑得很好；不过栈消耗更大的 Rust 代码往往会冲破这个限制，而目前还没有针对 Rust 代码的栈用量检查器。各类 sanitizer 也会带来麻烦。Zijlstra 说，跑 sanitizer 的人可以自己处理由此产生的问题；Bergmann 说他同意，但 Android 团队不同意。</p>
+    <p>Bergmann 建议干脆让 <code>kmalloc()</code> 之类的内存分配函数把直接回收工作交给工作线程。不过 Baghdasaryan 回应说，这种做法会带来优先级、CPU 亲和性等一系列问题；相比之下，直接切换栈更简单。</p>
+    <p>会议时间将尽时，Kyril Shutsemau 说他一直在做以 64KB 页运行的系统，在这些系统上栈空间的利用率极低。他想知道能否从 slab 分配器分配内核栈，从而让栈大小独立于系统页大小来设定。Deacon 回答说，系统确实需要<strong>保护页（guard page）</strong>来防止栈溢出踩到无关数据，而 slab 分配器并不提供保护页；栈 canary 也不够，因为它只能在溢出发生之后检测到，无法阻止溢出。</p>
+    <p>这场会议没有得出明确结论，但如果不久之后就有某种栈切换机制被发到邮件列表上，也不会令人意外。</p>
+    <p>[感谢 Linux Foundation 作为 LWN 差旅赞助商支持我参加此次大会。]</p>
+    <p><em>页面编辑：Joe Brockmeier</em></p>
+    </div>
+</div>
+
+            <div class="article" id="briefs">
+    <div class="article-header">
+        <span class="article-category">社区简讯</span>
+        <h2>📝 Brief items（社区简讯）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for October 29, 2026</span>
+            <span><a href="https://lwn.net/Articles/1102138/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+    <h3>安全（Security）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1102270/" target="_blank">KeePassXC 2.8.0 发布</a></h4>
+    <p>口令管理应用 <a href="https://keepassxc.org/" target="_blank">KeePassXC</a> 发布 2.8.0 版。新版本带来许多期待已久的新特性、大量 bug 修复以及若干安全更新。主要特性包括：从 Qt5 迁移到 Qt6、Linux 上 Wayland 下的自动输入（Auto-Type）、可配置的键盘快捷键、借助外部工具进行远程数据库同步、macOS 上用口令快速解锁，以及 Linux 上通过 Polkit 快速解锁。2.8.0 也是我们首次提供 Windows 原生 ARM64 构建、以及 Linux 上实验性 AArch64（即 ARM64）AppImage 的版本。完整的新特性、重大变更与 bug 修复清单见<a href="https://keepassxc.org/blog/" target="_blank">变更日志</a>。</p>
+
+    <h3>内核开发（Kernel development）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1103382/" target="_blank">内核发布状态</a></h4>
+    <p>7.4 合并窗口<a href="https://lwn.net/Articles/1101211/" target="_blank">仍然开启</a>，预计于 2026 年 11 月 1 日关闭。<strong>稳定版更新</strong>：7.2.13 与 6.18.59 于 10 月 26 日发布。7.3.1、7.2.14、6.18.60、6.12.115、6.6.161、6.1.191、5.15.224 与 5.10.273 都在评审流程中。这些更新相对较小（对较新的内核而言——6.1.191 则很大），看起来是在修复一批与安全相关的 bug，计划于 10 月 30 日发布。</p>
+
+    <h4><a href="https://lwn.net/Articles/1103426/" target="_blank">LPC sched_ext 微型会议报告</a></h4>
+    <p>Linux Plumbers Conference 博客发布了在布拉格举行的 <a href="https://lpc.events/blog/current/index.php/2026/10/" target="_blank">sched_ext 微型会议</a>报告。讨论由三大主题主导：</p>
+    <ul>
+        <li><strong>优先级反转</strong>以及如何在 sched_ext 中处理：锁持有者与锁等待者的抢占、时间片扩展、让代理执行与 BPF 调度器协同工作。</li>
+        <li><strong>半虚拟化调度</strong>：让主机与客户机的调度器跨越虚拟机边界协作，以 sched_ext 作为主机侧的策略引擎。</li>
+        <li><strong>设备与拓扑感知调度</strong>：用硬件反馈（Intel HFI）、设备/加速器局部性与缓存拓扑来驱动任务放置。</li>
+    </ul>
+
+    <h3>发行版（Distributions）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1103212/" target="_blank">Robinson：Fedora 上的 Raspberry Pi 5</a></h4>
+    <p>Peter Robinson <a href="https://lwn.net/Articles/1103212/" target="_blank">撰文</a>介绍了 Fedora 对 Raspberry Pi 5 设备支持的现状。据他说，即将发布的 Fedora 45 在所有 Raspberry Pi Model 5B 变体上都能工作——但有一些附加条件；Compute Module 5 与 Pi 500+ 仍在推进中。Fedora 44 启动时需要一个临时变通办法；如果立刻更新到最新的内核/固件，首次启动之后就不再需要。Fedora 45 不需要这个变通办法，所以想尝鲜的话，建议直接去拿 Fedora 45 发布候选版里你喜欢的版本上手。你会得到带存储/网络/USB 的加速桌面，目前尚无声音等若干功能的支持。制作供 Raspberry Pi 5 使用的 Fedora 镜像的步骤见 Robinson 的原文。</p>
+
+    <h4><a href="https://lwn.net/Articles/1103359/" target="_blank">Redox OS 环形缓冲区项目总结</a></h4>
+    <p><a href="https://www.redox-os.org/" target="_blank">Redox OS</a> 是一个用 Rust 编写的、基于微内核的类 Unix 操作系统；项目发布了一份报告，介绍过去一年为实现<a href="https://lwn.net/Kernel/Index/#io_uring" target="_blank">类 io_uring I/O</a> 所做的工作：</p>
+    <blockquote><p>去年 Redox 团队获得一笔资助，用于在系统任务层面开发类 io_uring 的环形缓冲区（Ring Buffer）支持，作为迈向"应用与大多数系统服务之间通过环形缓冲区通信"的第一步。随着最后几块拼图就位，这一阶段的工作已于 9 月收尾。[……] 除了为能够支持它的系统服务和驱动实现环形缓冲区机制外，还完成并演示了面向应用的、类似 io_uring 与 liburing 的 API。支持性 crate 方面也做了大量工作，包括为驱动提供异步执行器。此外还有一些非常令人兴奋的性能改进工作，让应用与其系统服务之间的切换快得多。不过技术细节还是留给团队自己讲吧。</p></blockquote>
+
+    <h4><a href="https://lwn.net/Articles/1103189/" target="_blank">发行版本周引述</a></h4>
+    <blockquote><p>我对你在这场讨论里把机器和人等量齐观深感不安。人类是我们的同侪，因此我们必须承认他们和自己一样会犯错，给予他们充分的宽容并与他们共事，预期他们有需求、有愿望、也有改进和回馈我们的意愿。而我们在工作中使用的机器，不配得到这些考虑：它们没有需求、没有愿望、没有意图，我们不欠它们宽容，也不欠它们义务。当一台机器不可靠时，我们没有义务忍着它。我们抱怨它被用来强加于我们的工作和注意力之上，是完全正当的。<br><cite>— Ben Finney，谈 Debian NEW 队列处理软件包时加入 LLM 审查</cite></p></blockquote>
+
+    <h3>开发（Development）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1102970/" target="_blank">systemd 加入对 Rust 编写组件的支持</a></h4>
+    <p>Christian Brauner <a href="https://lwn.net/ml/all/" target="_blank">宣布</a>已合入"用 Rust 编写 systemd 叶子组件（leaf component）"的支持。Rust 只用于<strong>新的叶子组件</strong>：既有代码不会移植到 Rust，其他组件所依赖的部分也不会用 Rust 写。Brauner 说项目希望进一步在 systemd 核心推进 Rust 支持，"但 Rust 对动态库的支持还有几处障碍，使得我们若这么做就会把构建出的每个二进制文件都大幅撑大"。若一切顺利，这项工作很可能出现在预计 12 月发布的 <strong>systemd v263</strong> 中。</p>
+
+    <h4><a href="https://lwn.net/Articles/1102425/" target="_blank">开发本周引述</a></h4>
+    <blockquote><p>既然"六指折扣"这个说法就摆在那儿，为什么大家还把用公开网站数据训练 LLM 叫做"AI 侵犯版权"呢？<br><cite>— Matthew Haughey</cite></p></blockquote>
+    <blockquote><p>多年前我为 X Window System 客户端写过 <a href="https://xcb.freedesktop.org/" target="_blank">xcb</a>，而昨天我写了自己的第一个 Wayland 客户端。天哪，我能看到 Wayland 设计者从 X、以及从 XCB 身上学到的每一条经验所产生的效果。说实话，Wayland 协议的设计真的让我印象深刻！前几天看到有人抱怨，Wayland 客户端光是开个窗口就要写那么多代码。我认为事先理解这一点很重要：这是一个<strong>为了让难事成为可能</strong>而设计的协议，不是为了让容易的事变容易；想做容易的事，就该用 Gtk、Qt 或 SDL 这样的工具包。所以我的程序看起来代码多得不配它做的事：它只是开个窗口，周期性在黑白之间闪烁，测一些计时统计，为此我写了 300 多行 Rust（我特意没用 wayland-client crate 绑定全局变量的辅助函数，本来可以更短，但我想体会一下直接跟原始协议打交道是什么感觉）。可我从经验中知道，省掉我不得不做的任何一步，都会砍掉处理更复杂场景的能力。我相信 Wayland 在这里做了正确的复杂度取舍：底层协议非常灵活，而易用性属于更高层的抽象——由它们来挑选要舍弃这份灵活性的哪些方面以换取简洁。<br><cite>— Jamey Sharp</cite></p></blockquote>
+
+    <p><em>页面编辑：Daroc Alden</em></p>
+
+    </div>
+</div>
+
+            <div class="article" id="announcements">
+    <div class="article-header">
+        <span class="article-category">公告</span>
+        <h2>📢 Announcements（公告）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for October 29, 2026</span>
+            <span><a href="https://lwn.net/Articles/1102139/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+    <h3>简报与周报（Newsletters）</h3>
+    <p>本周 LWN 共收录 <strong>27 份</strong>简报与周报。<strong>发行版与系统管理类</strong>（5 份）：DistroWatch Weekly（10-26）、This week in F-Droid（10-25）、This week in Fedora（10-26）、openSUSE Tumbleweed Review of the Week（10-23）、Ubuntu Weekly News（10-19）。<strong>开发类</strong>（19 份）：Emacs News（10-26）、These Weeks in Firefox（10-22）、What's cooking in git.git（10-22 与 10-25 两期）、This Week in GNOME（10-23）、GNU Tools Weekly News（10-25）、Golang Weekly（10-23）、Last Week in Kubernetes Development（10-22）、LLVM Weekly（10-26）、This Week in Matrix（10-23）、OCaml Weekly News（10-27）、Perl Weekly（10-26）、This Week in Plasma（10-24）、PyCoder's Weekly（10-27）、Weekly Rakudo News（10-26）、Ruby Weekly News（10-22 与 10-23 两期）、This Week in Rust（10-21）、Wikimedia Tech News（10-26）。<strong>会议纪要类</strong>（3 份）：openSUSE Release Engineering minutes（10-21、10-28 两期）、This week in the Perl Steering Committee（10-26）。</p>
+
+    <h3>征稿启事（CFP，截止日期 2026-10-29 至 2026-12-28）</h3>
+    <p>本期 CFP 列表取自 <a href="https://lwn.net/Calendar/Monthly/cfp/" target="_blank">LWN.net CFP 日历</a>：</p>
+    <table>
+        <thead>
+            <tr><th>截止日期</th><th>会议日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>2026-11-01</td><td>2027-04-01 至 04-04</td><td>Southern California Linux Expo</td><td>Pasadena, CA, US</td></tr>
+            <tr><td>2026-11-02</td><td>2027-02-23</td><td>AlpOSS 2027</td><td>Echirolles (Grenoble), France</td></tr>
+            <tr><td>2026-12-20</td><td>2027-02-01</td><td><a href="https://pretalx.com/openembedded-workshop-2027/cfp" target="_blank">OpenEmbedded Workshop 2027</a></td><td>Brussels, Belgium</td></tr>
+        </tbody>
+    </table>
+
+    <h3>近期活动（2026-10-29 至 2026-12-28）</h3>
+    <table>
+        <thead>
+            <tr><th>日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>10-30 至 11-01</td><td>Qubes OS Summit</td><td>Berlin, Germany</td></tr>
+            <tr><td>11-03 至 11-04</td><td>Open vSwitch and OVN 2026 Fall Conference</td><td>Heilbronn, Germany</td></tr>
+            <tr><td>11-06 至 11-07</td><td>Texas Linux Festival</td><td>Austin, TX, US</td></tr>
+            <tr><td>11-07 至 11-08</td><td>OpenFest 2026</td><td>Sofia, Bulgaria</td></tr>
+            <tr><td>11-07 至 11-08</td><td>OpenALT</td><td>Brno, Czechia</td></tr>
+            <tr><td>11-12 至 11-13</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+            <tr><td>11-12 至 11-13</td><td>KVM Forum</td><td>Vancouver, Canada</td></tr>
+            <tr><td>11-14 至 11-15</td><td>Capitole du Libre 2026</td><td>Toulouse, France</td></tr>
+            <tr><td>11-17 至 11-19</td><td>Open Source Monitoring Conference</td><td>Nuremberg, Germany</td></tr>
+            <tr><td>11-20 至 11-21</td><td>OLF Conference</td><td>Columbus, Ohio, US</td></tr>
+            <tr><td>11-21</td><td>LocHal Open Source Event 2026</td><td>Tilburg, Netherlands</td></tr>
+            <tr><td>11-28</td><td>FOSS for All Conference 2026</td><td>Seoul, South Korea</td></tr>
+            <tr><td>12-01 至 12-03</td><td>Yocto Project Virtual Summit 2026.12</td><td>线上</td></tr>
+            <tr><td>12-07 至 12-09</td><td>Open Source Summit Japan</td><td>Tokyo, Japan</td></tr>
+        </tbody>
+    </table>
+
+    <h3>安全更新（2026-10-22 至 2026-10-28）</h3>
+    <p>本周共收录 <strong>719</strong> 条安全公告，各发行版分布如下：</p>
+    <table>
+        <thead>
+            <tr><th>发行版</th><th>公告数</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>SUSE / openSUSE</td><td>195</td><td>数量居首，含 kernel、openssl、expat、chromium、glibc、xen 等</td></tr>
+            <tr><td>Fedora</td><td>143</td><td>覆盖 F43/F44/F45，含 firefox、chromium、openssh、git、php 等</td></tr>
+            <tr><td>AlmaLinux</td><td>132</td><td>与 RHEL 同步，含大量 php / python 相关包、bind、firefox、thunderbird、kernel 等</td></tr>
+            <tr><td>Oracle</td><td>104</td><td>OL7/OL8/OL9/OL10 联动更新，含 php、python、expat、openssh 等</td></tr>
+            <tr><td>Red Hat</td><td>51</td><td>含 kernel、sudo、openssl、bind 等</td></tr>
+            <tr><td>Debian</td><td>38</td><td>DSA/DLA 各若干，含 chromium（DSA-6577-1 一次修复 363 个 CVE）、firefox-esr、thunderbird、bind、openssl 等</td></tr>
+            <tr><td>Mageia</td><td>34</td><td>含 sudo、libxml2 等</td></tr>
+            <tr><td>Ubuntu</td><td>17</td><td>USN 更新</td></tr>
+            <tr><td>Arch Linux</td><td>2</td><td>常规安全修复</td></tr>
+            <tr><td>Slackware</td><td>2</td><td>常规安全修复</td></tr>
+            <tr><td>Gentoo</td><td>1</td><td>常规安全修复</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的安全更新：<strong>php 相关包</strong>（约 40 条）与 <strong>python 相关包</strong>（约 46 条）在 AlmaLinux、Oracle、Fedora、SUSE 多家批量发布；<strong>kernel</strong> 相关约 38 条（含 kernel-rt），见于 AlmaLinux（ALSA-2026:88477、87375、89816 等）、Red Hat、SUSE 与 Debian；<strong>ca-certificates</strong>（20 条）在多家同步更新；<strong>firefox</strong>（15 条，含 Debian DLA-4847-1、Fedora）与 <strong>bind</strong>（14 条，含 Debian DSA-6576-1、DLA-4865-1）也较集中；此外 <strong>brotli</strong>（13 条）、<strong>openssh</strong>（10 条）、<strong>golang</strong>（10 条）、<strong>podman</strong>（10 条）、<strong>grafana / grafana-pcp</strong>（20 条）、<strong>thunderbird</strong>（8 条）、<strong>git</strong>（8 条）、<strong>openssl</strong>（7 条）、<strong>expat</strong>（6 条）、<strong>chromium</strong>（5 条）、<strong>sudo</strong>（3 条）、<strong>glibc</strong>（2 条）与 <strong>xen</strong>（1 条）也值得留意。</p>
+
+    <h3>内核补丁（Kernel patches）</h3>
+    <p>本周共收录 <strong>116</strong> 条内核动态（含 3 个版本发布与 113 个补丁系列），分类统计如下：</p>
+    <table>
+        <thead>
+            <tr><th>类别</th><th>数量</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Kernel releases（版本发布）</td><td>3</td><td>Linux 7.2.13、6.18.59 稳定版与 6.6.159-rt82</td></tr>
+            <tr><td>Architecture-specific（体系结构）</td><td>10</td><td>x86 内核影子栈、SEV-SNP 客户机安全中断交付、RISC-V 跟踪与 kexec handover、resctrl 非对称 L2 缓存分配等</td></tr>
+            <tr><td>BPF-related（BPF 相关）</td><td>10</td><td>arena 中的栈与状态合并验证器、标量演进修正、UHMUL/SHMUL 指令、arm64 JIT 改进等</td></tr>
+            <tr><td>Build system（构建系统）</td><td>1</td><td>基于 DWARF 的跨构建符号关联（objtool/klp）</td></tr>
+            <tr><td>Core kernel（核心）</td><td>12</td><td>实时工作队列、liveupdate 系列（tmpfs 保留、FREEZE ioctl、ABI 头）、sched_ext NUMA 均衡、可发现根分区等</td></tr>
+            <tr><td>Development tools（开发工具）</td><td>6</td><td>Clang 源码覆盖与 MC/DC、kcov 早期启动覆盖、dyndbg classmaps 修复等</td></tr>
+            <tr><td>Device-driver infrastructure（驱动基础设施）</td><td>11</td><td>Rust SPDM 实现、Rust SPI 驱动抽象、Rust VFIO PCI 与 NVIDIA vGPU、DMA-buf 映射类型、guest_memfd 导出到 iommufd 等</td></tr>
+            <tr><td>Filesystems and block layer（文件系统与块层）</td><td>18</td><td>btrfs raid56 小于 PAGE_SIZE 的 stripe_len、blk-iocost BPF struct_ops 代价模型、f2fs 大 folio、proc 挂载加固等</td></tr>
+            <tr><td>Memory management（内存管理）</td><td>16</td><td>hugetlb CMA 支持、zram 后端重设计、批量 zswap_store、memfd F_SEAL_PUNCH_HOLE、slab 加固启动选项等</td></tr>
+            <tr><td>Networking（网络）</td><td>9</td><td>内核内 TLS 1.3 KeyUpdate、ipxlat 无状态 IPv4/IPv6 转换、io_uring multishot recvmsg 打包、virtio-net 校验和加固等</td></tr>
+            <tr><td>Security-related（安全相关）</td><td>6</td><td>CAP_SETFCAP 规则加固、Landlock 新建文件与元数据访问权、启动时随机化内核结构布局（Selfpatch-SLR）等</td></tr>
+            <tr><td>Virtualization and containers（虚拟化与容器）</td><td>6</td><td>cells 容器对象、KVM_LINK_GUEST_MEMFD、MSHV 根分区 SEV-SNP、PCI/TSM CTLV 远程证明等</td></tr>
+            <tr><td>Miscellaneous（其他）</td><td>8</td><td>perf 多项增强、usbutils 020、KALLSYMS_QUERY ioctl 等</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的补丁/发布摘选：</p>
+    <ul>
+        <li><strong>cells: a container as one kernel object</strong>（Josef Bacik）—— 把容器做成内核一等对象（"cells"）的提案，<a href="2026-11-05.html#article1">下一期 LWN 有专文详述</a>。</li>
+        <li><strong>bpf: Stack in arena and a verifier that joins states</strong>（Alexei Starovoitov）—— 在 BPF arena 中提供栈，并让验证器合并状态。</li>
+        <li><strong>bpf: Remove BPF_F_ARENA_SCALAR, fix scalar evolution and scalar forks</strong>（Alexei Starovoitov）—— 修正标量演进与标量分叉。</li>
+        <li><strong>x86 Kernel Shadow Stacks</strong>（Dave Hansen）—— x86 内核影子栈支持。</li>
+        <li><strong>capabilities: close the ways around the CAP_SETFCAP rule for uid 0</strong>（Josef Bacik）—— 堵住 uid 0 绕过 CAP_SETFCAP 规则的途径。</li>
+        <li><strong>Selfpatch-SLR: Randomizing Linux Kernel Structure Layouts at Boot</strong>（York Jasper Niebuhr）—— 启动时随机化内核结构布局。</li>
+        <li><strong>blk-iocost: BPF struct_ops cost model</strong>（Tao Cui）—— 为 blk-iocost 引入可自定义的 BPF 代价模型。</li>
+        <li><strong>tls: perform TLS 1.3 KeyUpdate in the kernel</strong>（Martin Belanger）—— 把 TLS 1.3 密钥更新搬进内核。</li>
+        <li><strong>liveupdate: Preserve tmpfs files across Live Update</strong>（David Matlack）—— 内核在线更新期间保留 tmpfs 文件。</li>
+        <li><strong>init: discoverable root partitions</strong>（Vincent Mailhol）—— 可发现的根分区。</li>
+        <li><strong>sched_ext: Add NUMA balancing support</strong>（Andrea Righi）—— sched_ext 加入 NUMA 均衡。</li>
+        <li><strong>rust: spi: add SPI driver abstractions</strong>（Shuai Liu）与 <strong>lib: Rust implementation of SPDM</strong>（alistair23）—— Rust 驱动基础设施继续扩充。</li>
+        <li><strong>Rust VFIO PCI support and NVIDIA vGPU driver</strong>（Simon Song）—— Rust 版 VFIO PCI 与 NVIDIA vGPU 驱动。</li>
+        <li><strong>mm: hugetlb: add CMA support for PMD-sized pages</strong>（Qi Zheng）与 <strong>zram: redesign zcomp and rework backends</strong>（Sergey Senozhatsky）—— 内存管理侧两处重要改进。</li>
+        <li><strong>vfs: add O_CREAT|O_DIRECTORY to open*(2)</strong>（Jori Koolstra）与 <strong>btrfs: raid56: fully support stripe_len &lt; PAGE_SIZE</strong>（Qu Wenruo）—— VFS 与文件系统改动。</li>
+        <li><strong>Unify code coverage and add Clang source-based coverage with MC/DC</strong>（Sasha Levin）—— 统一代码覆盖并引入 MC/DC 支持。</li>
+    </ul>
+
+    <p><em>页面编辑：Joe Brockmeier</em></p>
+
+    </div>
+</div>
+
+        </main>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar bottom" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn" href="2026-11-05.html">📰 最新</a>
+            <a class="nav-btn" href="2026-10-22.html">&larr; 上一个</a>
+            <a class="nav-btn" href="2026-11-05.html">下一个 &rarr;</a>
+            <span class="nav-current-label">2026年10月29日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <footer class="footer">
+            <p>内容翻译自 <a href="https://lwn.net" target="_blank">LWN.net</a>，遵循 Creative Commons 协议。</p>
+            <p>本期来源：<a href="https://lwn.net/Articles/1102136/" target="_blank">LWN.net Weekly Edition for October 29, 2026</a></p>
+            <p>更新时间：2026年11月12日</p>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
