@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LWN 周刊 - 2026年11月5日</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128240;</text></svg>">
+    <script src="toc.js" defer></script>
+</head>
+
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+        <span class="theme-icon">&#127769;</span>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">LWN 周刊中文版</div>
+            <h1>LWN.net Weekly Edition</h1>
+            <p class="edition-date">2026年11月5日</p>
+            <p class="edition-desc">Linux 和自由软件周刊 - 中文翻译</p>
+            <a href="index.html" class="back-link">&larr; 返回期刊列表</a>
+        </header>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-11-05.html">📰 最新</a>
+            <a class="nav-btn" href="2026-10-22.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年11月5日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <main class="content">
+            <!-- 目录 -->
+            <div class="toc">
+                <h2>📑 目录</h2>
+                <ul>
+                    <li><a href="#article1">让容器成为内核认可的一等对象：cells</a></li>
+                    <li><a href="#article2">Debian new queue 的 LLM 审查引发争论</a></li>
+                    <li><a href="#article3">glibc 的系统调用包装器</a></li>
+                    <li><a href="#article4">移除 binder.c：Binder 驱动 Rust 化的终点</a></li>
+                    <li><a href="#article5">应对内核 CVE 洪流：AWS 的实践</a></li>
+                    <li><a href="#article6">Plasma X11 会话移除让部分 Fedora 用户措手不及</a></li>
+                    <li><a href="#article7">7.4 合并窗口后半程</a></li>
+                    <li><a href="#article8">带依赖的可移植 Python 脚本</a></li>
+                    <li><a href="#briefs">📝 Brief items（社区简讯）</a></li>
+                    <li><a href="#announcements">📢 Announcements（公告）</a></li>
+                </ul>
+            </div>
+
+            <div class="article" id="article1">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>让容器成为内核认可的一等对象：cells</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年10月29日</span>
+            <span><a href="https://lwn.net/Articles/1102593/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>让容器成为内核认可的一等对象</h3>
+    <p>内核中容器设计的基础，恰恰在于<strong>没有</strong>这样的设计：内核并不认识任何"容器"抽象。取而代之的是，内核提供了一长串组件——命名空间（namespace）、控制组（cgroup）、沙箱机制等等——外加一句相当于"需自行组装"的说明。多年来曾有人（而且<a href="https://lwn.net/Articles/723477/" target="_blank">不止一次</a>）尝试把容器变成有内核支持的一等对象，但都未能走远。如今 Josef Bacik <a href="https://lwn.net/ml/all/20261026-cells-rfc-v2-b41d7e0c95a3@toxicpanda.com" target="_blank">再次尝试</a>，提出了一个他称之为"cells"（单元）的概念。</p>
+    <p>若干年前，缺少内核级容器对象或许还是正确的选择；关于这个概念该如何融入 Linux，当时还有很多东西要学。也有人至今仍认为这是个好主意。但弊端同样存在，首先就是创建容器的复杂性。除此之外，由于内核对容器毫无概念，它既无法强制容器的属性，甚至无法回答"某个进程属于哪个容器"这样的问题。容器的创建过程是把大系统的某些部分隔离出来：先创建并进入命名空间，再卸载或覆盖挂载文件系统使其在容器内不可见，如此等等。这个顺序意味着任意进程都可能只是<em>部分地</em>处于容器之内，而按 Bacik 的说法，"我们数量多得令人沮丧的 bug 正是由此而来"。当前的容器创建方式还很容易让不想要的资源从外部泄漏进容器。</p>
+
+    <h4>cells 登场</h4>
+    <p>Bacik 的提案正是为了解决这些问题。一个容器（在这套补丁中称为 "cell"）在创建时<strong>内部空无一物</strong>：默认不会有任何进程或文件系统出现在其中。创建者希望 cell 里存在的任何东西，都必须显式地放进去；而在 cell 内创建的进程和其他资源则不被允许离开该 cell。理论上，cells 应该比 Linux 现有的容器更易于管理、也更易于保证安全。</p>
+    <p>cell 的生命周期始于一次 <code>cell_create()</code> 调用：</p>
+    <pre><code>int cell_create(int parent, unsigned int flags);</code></pre>
+    <p><code>parent</code> 参数看起来是用来指定哪个进程作为新 cell 的父体，但在当前实现中唯一允许的值是 <code>CELL_SELF</code>，即创建者自己就是父体。<code>flags</code> 必须为零。一切顺利时返回值是一个 "cellfd"——指向该 cell 的文件描述符。cellfd 很特殊：它是对 cell 执行所有其他操作的唯一句柄，无法复制出一个具备相同能力的 cellfd。创建 cell 是非特权操作。</p>
+    <p>一旦 cellfd 被关闭，该 cell（以及其中的一切）会立即被销毁。也有一个显式杀死 cell 的系统调用：</p>
+    <pre><code>int cell_kill(int cellfd, unsigned int flags);</code></pre>
+    <p>其中 <code>cellfd</code> 标识要杀死的 cell，<code>flags</code> 必须为零。</p>
+    <p>空 cell 既安全又没有 bug，但也相当无趣。另一个系统调用用于设置 cell 的各项属性，让它变得有用：</p>
+    <pre><code>int cell_configure(int cellfd, unsigned int cmd, const char *key,
+                   const void *value, int aux);</code></pre>
+    <p>该系统调用把指定的配置命令 <code>cmd</code> 应用到 <code>cellfd</code> 所标识的 cell 上，<code>key</code> 字符串指明要修改哪一项属性。可用的命令包括：</p>
+    <blockquote><p><strong>CELL_SET_FLAG</strong>：设置 <code>key</code> 所指的标志位；不过当前提案并未定义任何标志。<br>
+    <strong>CELL_SET_STRING</strong>：把 <code>key</code> 所指的字符串属性设为给定的 <code>value</code>。初始补丁集支持两个字符串：<code>hostname</code> 用于设置 cell 内的主机名，<code>net</code> 用于设置 cell 的网络命名空间。默认情况下 cell 没有网络访问能力，内部只能创建 <code>AF_UNIX</code> socket。把 <code>net</code> 设为 <code>new</code> 会创建一个新的网络命名空间，由构建者随后配置；设为 <code>own</code> 则创建由 cell 自身拥有并在内部配置的网络命名空间。在 <code>new</code> 的情形下，还需用另一个新系统调用 <code>cell_open()</code> 取得指向新命名空间的文件描述符。网络命名空间也可以用下述 <code>CELL_SET_FD</code> 显式设置。<br>
+    <strong>CELL_SET_BINARY</strong>：把 <code>key</code> 所指属性设为提供的二进制数据。唯一接受的值是 <code>ids</code>，用于定义 cell 内使用哪些用户 ID。只有两种允许取值：设为 <code>one</code> 会让 cell 内进程使用与创建者相同的用户 ID（root 用户不允许使用此模式）；否则 <code>ids</code> 必须设为 65,536，此时会从 32 位用户 ID 空间的高位分配这么大一块 ID。这些 ID 在运行中的系统里是唯一的，cell 创建者无法控制它们具体是多少，也无法在 cell 之外的任何文件系统中创建由这些 ID 拥有的文件。这部分设计已经引来一些评论，未来可能改变（或许改为给 cell 内的"囚徒"提供完全独立的用户 ID 空间）。<br>
+    <strong>CELL_SET_FD</strong>：设置一个需要文件描述符的值，本补丁集实现了三种：<code>root</code> 是包含 cell 内根文件系统的文件系统命名空间，<code>net</code> 是供 cell 使用的网络命名空间，<code>budget</code> 是一个控制组目录。<code>budget</code> 是必填项，每个 cell 都必须拥有自己的控制组。<br>
+    <strong>CELL_CMD_SEAL</strong>：cell 配置完成后必须发出此命令，它完成 cell 的初始化并阻止后续任何配置变更。</p></blockquote>
+    <p>cell 被密封（seal）之后，会配好文件系统树、控制组成员关系，以及管控它与系统其余部分交互的其余命名空间。但除此之外它依旧是空的，里面没有任何进程在运行。在 Bacik 的设计中，现有进程无法进入 cell：<code>setns()</code> 不能用于进入它的命名空间。相反，进程必须一开始就"出生"在 cell 之内，并且永远无法离开。</p>
+
+    <h4>创建 cell 内的进程</h4>
+    <p>要允许创建被"判无期徒刑"留在 cell 内的进程，又引出了另一份进程构建 API（process-builder API）提案；上一次此类尝试 LWN <a href="https://lwn.net/Articles/1038235/" target="_blank">在 8 月做过报道</a>。这里的第一步是用 <code>pidfd_open()</code> 的一个变体在 cell 内创建进程：创建者不是传入进程 ID，而是传入 cellfd 和 <code>PIDFD_EMPTY</code> 标志。返回值是一个尚未指向运行中任务的 pidfd，此时它处于"胚胎"（embryo）状态。</p>
+    <p>pidfd 创建之后，必须先通过另一个新系统调用配置它，才能运行任何有用的东西：</p>
+    <pre><code>int pidfd_configure(int pidfd, unsigned int cmd, const char *key,
+                    const void *value, int aux);</code></pre>
+    <p>这个接口看起来与 <code>cell_configure()</code> 很像，工作方式也大体相同。要配置的进程（必须处于胚胎状态）由 <code>pidfd</code> 指定，<code>cmd</code> 取值如下：</p>
+    <blockquote><p><strong>PIDFD_SET_STRING</strong>：唯一支持的 <code>key</code> 是 <code>exec</code>，指定该进程将要运行的可执行文件（位于 cell 的挂载命名空间内）。<br>
+    <strong>PIDFD_SET_BINARY</strong>：把某个 <code>key</code> 设为二进制数据。可识别的键包括 <code>argv</code>（设置进程参数向量）、<code>envp</code>（设置环境变量）和 <code>cred</code>（设置进程在 cell 用户命名空间内的用户与组 ID）。<br>
+    <strong>PIDFD_SET_FD</strong>：在胚胎进程中设置一个文件描述符；<code>key</code> 是（以字符串形式给出的）文件描述符编号，<code>aux</code> 参数是调用者文件表中已打开的描述符。该进程将只拥有通过 <code>PIDFD_SET_FD</code> 建立的那些文件描述符，因此不会出现文件描述符意外泄漏进 cell 的问题。<br>
+    <strong>PIDFD_CMD_START</strong>：所有必要参数配置完毕后，此命令让进程开始运行。此后它不再是胚胎，也就不能再对其使用 <code>pidfd_configure()</code>。</p></blockquote>
+    <p>cell 内第一个启动的进程会成为该 cell 的 init 进程；它一旦死亡，cell 也随之消亡。用这套 API 也可以向运行中的 cell 注入其他进程——例如所有者需要时可以在 cell 内起一个 shell。但这必须通过创建新进程完成，现有进程禁止跨越这道边界。</p>
+
+    <h4>其他细节</h4>
+    <p>cell 边界上还有不少其他限制。cell 内每个进程都带有 "no new privileges" 标志，因而无法获得新的能力（capability）；不能通过 Unix 域 socket 跨界（无论哪个方向）传递打开的文件描述符；cell 也不能与任何其他进程共享控制组。诸如此类的规定，目的都是把 cell 的封闭性做得尽可能严密、可控。</p>
+    <p>这份提案还有大量细节本文未及覆盖，它还附带一份很长的未解决问题与缺陷清单。正如 Bacik 所说，其目的并非提供一个完整实现，而是"让它存在，好让大家有代码可以争论"。想了解更多的人应当通读他的完整提案。代码位于一个 <a href="https://github.com/bacik/cells" target="_blank">GitHub 分支</a>，其中包含一份设计文档，涵盖了本文讨论的大部分内容以及更多细节。</p>
+    <p>到目前为止，这份提案几乎没有引发讨论，或许是因为它只发到了 linux-fsdevel 邮件列表。不过自 10 月中旬第一版发布以来，它已经有了一些演进。这不是个小提案，而且它试图做出的改动在过去一直存在争议，因此不难想象讨论终将到来。而在这条路的尽头，内核也许真的会拥有那个社区抵制了如此之久的容器抽象。</p>
+    </div>
+</div>
+
+            <div class="article" id="article2">
+    <div class="article-header">
+        <span class="article-category">发行版</span>
+        <h2>Debian new queue 的 LLM 审查引发争论</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年11月3日</span>
+            <span><a href="https://lwn.net/Articles/1103674/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>Debian new queue 的 LLM 审查引发争论</h3>
+    <p>Debian 项目围绕 LLM 使用问题已经纠结了数年，并在今年 8 月以一次<a href="https://lwn.net/Articles/1087134/" target="_blank">全体决议投票</a>告一段落：项目在八个选项中选了第五项——"<a href="https://lwn.net/Articles/1091231/" target="_blank">负责任地使用生成式 AI</a>"。既然 LLM 使用的大门已经打开，成立不算久的 <a href="https://lwn.net/Articles/1043364/" target="_blank">DFSG、许可与新软件包团队</a>（通常简称 "DFSG team"）便开始用 LLM 给进入 Debian <a href="https://ftp-master.debian.org/new.html" target="_blank">new queue</a> 的软件包发送审查意见。这一做法引来了大量反对与质疑：LLM 生成输出的使用边界究竟该划在哪里？</p>
+
+    <h4>new queue 仪表盘</h4>
+    <p>对 Debian 项目之外的人来说，"new queue" 这个名字可能有点误导。这里的 "new" 不仅指从未由 Debian 分发过的全新软件包，也包括现有软件包的各类更新。</p>
+    <p>DFSG 团队的 Reinhard Tartler 在 2 月<a href="https://lwn.net/Articles/1007261/" target="_blank">宣布了 new queue 仪表盘</a>，称其为"我们在软件包优先级排序与处理方式上的一次根本性转变"。他说，这将是第一次所有人都能从高层视角看到 new queue 里发生了什么；进入队列的软件包会按"一组旨在改善项目整体健康状况的信号"来排定优先级，包括在队列中停留的时间、按 popcon 分数判断的软件包受欢迎程度，以及某次软件包更新是否能解开其他问题的阻塞。例如，new queue 中的一个软件包可能会修复其他软件包的 bug 或安全问题。</p>
+    <p>根据<a href="https://salsa.debian.org/freexian-team/debian-new-queue/-/blob/main/FAQ.md" target="_blank">仪表盘 FAQ</a>，队列中的软件包按优先级分数排序，分数越高越靠前。但这并不保证软件包一定按顺序被审查，DFSG 团队成员<a href="https://salsa.debian.org/freexian-team/debian-new-queue/-/blob/main/FAQ.md" target="_blank">可以挑任意一个软件包来审</a>，不必从列表顶部选。团队成员 Andrew McMillan 在 DebConf26 上关于 DFSG 团队的<a href="https://lwn.net/Articles/1084499/#priorities" target="_blank">报告</a>中谈到了审查的优先级："排在我清单顶部的往往是我更熟悉的语言，比如 Go；沉到清单底部的则往往是我不太熟的语言，比如 Python。"</p>
+    <p>new queue 工具的代码仓库托管在 <a href="https://salsa.debian.org/" target="_blank">Salsa</a>——Debian 项目基于 GitLab 的协作开发服务器上。LLM 审查代理似乎是由 McMillan 于 9 月 29 日<a href="https://salsa.debian.org/freexian-team/debian-new-queue/-/commit/" target="_blank">加入的</a>，随后又有若干启用 LLM 审查的后续工作。</p>
+    <p>上传者会收到一封由 LLM 生成的邮件，其中说明本次审查由 LLM 完成、并非 DFSG 团队成员的审查，并附免责声明称审查结果可能有误或不完整。按 McMillan 的提交信息，如果 LLM 审查声称某次上传存在阻塞性问题或重要许可问题，该上传会在队列中被扣留 24 小时。不过这似乎与 FAQ 有冲突——FAQ 说上传会在"一个多小时多一点"之内出现在仪表盘上。10 月 19 日又加入了一项功能，允许上传者对 LLM 审查作出回应或拒绝：只要上传者留言，扣留即告结束；若无人留言，该上传会在 DFSG 队列评分体系下被扣 50 分，而据<a href="https://salsa.debian.org/freexian-team/debian-new-queue/-/commit/" target="_blank">另一个提交</a>，一次回应会加 25 分。需要说明的是，这套评分体系有些不透明，我没能找到明确列出计分规则的文档。眼下仪表盘顶端的软件包（<code>bucklespring</code>）已在队列中待了三天、得 424 分；板子底部则是只有 23 分的 <code>openbor</code>，入队七小时。</p>
+
+    <h4>这算是在为 LLM 背书吗？</h4>
+    <p>关于在 new queue 流程中加入 LLM 审查，第一份面向全项目的沟通并非来自 DFSG 团队，而是来自 Debian 开发者 Johannes Schauer Marin Rodrigues，时间是 10 月 26 日。他宣布，在得知提交到队列的软件包会由 LLM 处理之后，他将不再向 new queue 上传软件包。在他看来，由一个对贡献 Debian 而言处于核心位置的团队和流程以这种方式采用 LLM，实际上就等于项目在为 LLM 背书。</p>
+    <p>项目所选的"负责任使用"选项写明，Debian"既不认可也不禁止使用生成式 AI 工具"；它转而依赖每位贡献者的判断与责任，但同时告诫贡献者"在设计和实现包含生成式 AI 工具的工作流时应保持适当的谨慎"。该决议还说，具有"广泛影响"的 LLM 相关行动，只应在"通过适当的项目渠道事先讨论并达成共识"之后进行。</p>
+    <p>Schauer 抱怨 DFSG 团队并未公布这一流程变动，并追问团队在哪里做过讨论、在哪里取得过共识：</p>
+    <blockquote><p>我*确实*感激 DFSG 团队所做（大体吃力不讨好）的工作，但我宁愿等上一年让软件包通过 NEW（是的，真发生过这种事），也不愿看到我对 LLM 的强烈反对被无视、我所有的上传都在未经我同意的情况下被自动筛查。我认为事先讨论尤其必要，因为（我希望）我们在 debian-vote 的 GR 讨论中已经了解到，开发者在这个问题上两个方向都有很强烈的意见。为什么不先谈一谈呢？</p></blockquote>
+    <p>他认为打包者应当可以<em>选择加入</em>（opt-in）LLM 审查，并表示在没有退出机制之前他不会向 new queue 上传任何东西。Mathias Gibbens 也注意到了这一变化，并附议 Rodrigues 的担忧。DFSG 团队成员个人在审查软件包时使用 LLM，他没意见，但他希望看到"简明扼要、切中要点"的审查。他指着 DFSG 团队仪表盘上展示的一些审查说，随手挑的一份报告有 734 词，另一份则有 1,535 词。他并没有试着把它们读完，只是想强调"所生成审查的篇幅发生了好几个数量级的变化"。</p>
+    <p>Gibbens 指出，如今这套流程似乎在惩罚忽略 LLM 审查的人、而优待回复了 LLM 审查的人。他担心 DFSG 团队的新做法意味着：每一个向 new queue 上传的人，现在都被迫与 LLM 生成的内容打交道。"据我所知，这是 GR 通过以来 Debian 全项目级流程中第一次出现如此重大的变动。"</p>
+
+    <h4>服务条款呢？</h4>
+    <p>Martin Steigerwald 想更多了解 LLM 生成输出背后的服务与技术。他关心该服务的条款与条件、LLM 是否会被用自动审查过程中的数据来训练，也想知道用的是哪些模型。</p>
+    <p>DFSG 团队用于 LLM 审查的服务是 <a href="https://lists.debian.org/debian-devel-announce/2026/09/msg00002.html" target="_blank">Debian Inference Portal</a>，由 Lucas Nussbaum 于 9 月宣布。该服务让 Debian 贡献者可以自助访问一个 API，供各类编码代理、编辑器及其他工具查询托管在此的 LLM。目前服务由欧洲云厂商 ScaleWay 提供，每月向 Debian 项目捐赠一定额度的算力点数。</p>
+    <p>Steigerwald 的许多疑问在该门户的文档中已有答案。文档说明了<a href="https://salsa.debian.org/debian/inference-portal/-/blob/main/docs/models.md" target="_blank">可用的模型</a>，以及该公司实行零数据留存政策："提示内容不会被存储，且明确不会用于训练、再训练或改进基础模型。数据不会向 LLM 创建者或第三方开放。"据文档称，部分元数据（如 token 计数和 HTTP 状态码）会为性能监控保留最多六个月。</p>
+
+    <h4>讨论</h4>
+    <p>不出所料，围绕 LLM 审查的使用、以及它是否符合全体决议的精神，出现了相当多的讨论。Matthias Geiger 称这是"对维护者时间的公然浪费"，说"把一段生成出来的泛泛审查文本甩给维护者，感觉非常不尊重人"。他之所以贡献并热爱 Debian，是因为这个社区；他不希望"相当于自动答录机的东西"参与审查自己的软件包。</p>
+    <p>不过 Richard Laager 为 LLM 的输出做了辩护。他说那份冗长的审查是因为"有一大堆版权不匹配的具体例子"，他觉得报告"合理、有用、可操作"。Ted Ts'o 则指出，"[不可靠]且非确定性"的人类同样会给出糟糕的审查；他认为自动化报告能节省时间，让维护者在人工审查之前先把问题解掉。"如果它指出的东西后来被人类验证为真，而它能让你的 NEW 包更快被接受，你难道不想第一个看到吗？"但他也说，人们如果愿意，完全可以忽略这些报告。让 Ben Finney 不安的是 Ts'o 在这场讨论里把人和机器相提并论：</p>
+    <blockquote><p>人类是我们的同侪。因此，我们必须承认他们和自己一样会犯错，给予他们充分的宽容并与他们共事，预期他们有需求、有愿望、也有改进和回馈我们的意愿。</p></blockquote>
+    <p>而 LLM 并不配得到同样的体谅。"我们抱怨它被用来强加于我们的工作和注意力之上，是完全正当的。"Finney 说，仅仅建议"报告可以忽略"是不够的。"如果这些消息是由他人的意志单方面强加给我们的，那就是令人反感的，我们有权要求它停止。"</p>
+    <p>Nussbaum 则认为，DFSG 团队反正已经在用 LLM 审查了，把报告提供给维护者"让他们不必等人工审查就能作出反应，就像维护者对待 CI 结果那样"是顺理成章的；他看不出"把这些报告藏起来"有什么意义。如果有些维护者愿意等人工确认结果，那也没问题，"但何必惩罚那些欢迎早期反馈的人呢？"Bill Allombert 则反驳说，开发者会觉得除非照着 LLM 的建议改，否则软件包就会被拒。</p>
+    <p>Marvin Renich 说，这里似乎存在两种截然不同的视角：接收 LLM 反馈的人，以及 DFSG 团队。他认为团队的"意图是把 LLM 的输出当作审查流程中的一个输入"，无论提交者是否使用它。从这个角度看，"提交者觉得自己对上传时是否使用 LLM 拥有任何控制权，其实是不必要的"。但他表示，人们确实有权不看到 LLM 的输出：</p>
+    <blockquote><p>然而，DFSG 团队似乎没有考虑到最近这次 GR 极具争议的性质。我觉得他们本应预料到，会有人真心<em>不想</em>看到 LLM 的直接输出——至少不想在未经人工先行审查的情况下看到。</p></blockquote>
+
+    <h4>请给个退出选项</h4>
+    <p>Chris Hofstaedtler 想知道 DFSG 团队是不是干脆不参与 debian-devel 邮件列表——"也就是我们期望贡献者会读的那个地方"。这番话是在 10 月 27 日、讨论刚开始时说的。截至本文写作时，DFSG 团队没有一人回应 debian-devel 上的讨论，Debian 项目负责人 Sruthi Chandran 也没有——她在 10 月 25 日刚把 DFSG 团队的授权<a href="https://lists.debian.org/debian-devel-announce/2026/10/msg00003.html" target="_blank">续了一年</a>。不过他们确实通过 Salsa 上 new-queue 仓库提交的 issue 吸收了一些反馈。</p>
+    <p>Antonio Terceiro 在 10 月 26 日开了一个 issue，请求允许开发者退出 LLM 审查。他说自己不想争论 LLM 的优劣，但现实是有些项目成员对 LLM 感到不适甚至被冒犯，应当有能力退出。Colin Watson 说选择加入（opt-in）会更好："不过能退出总比什么都没有强。"</p>
+    <p>DFSG 团队没有直接回应，但 Nilesh Patra 指出，这个请求已由 McMillan 的一个提交处理了——该提交允许上传者退出审查。Terceiro 贴出了仪表盘上退出按钮的截图，说"我想这大概是我们目前能拿到的最好结果了"。</p>
+    <p>关于这个话题的讨论仍在继续，不过已明显降温。退出选项未必能让所有不喜欢 LLM 的 Debian 上传者满意，但目前看来，它暂时安抚了许多抱怨"不请自来的 LLM 审查"的人。</p>
+    </div>
+</div>
+
+            <div class="article" id="article3">
+    <div class="article-header">
+        <span class="article-category">开发工具</span>
+        <h2>glibc 的系统调用包装器</h2>
+        <div class="article-meta">
+            <span>作者：Jake Edge</span>
+            <span>2026年10月30日 · LPC</span>
+            <span><a href="https://lwn.net/Articles/1101647/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>glibc 的系统调用包装器</h3>
+    <p>作为 2025 年 Linux Plumbers Conference（LPC）那场会议的后续，Carlos O'Donell 今年再度回到 GNU C 库（glibc）系统调用包装器这个话题，这一次与另一位 glibc 维护者 Florian Weimer 一同出场。目的是汇报过去一年里，在那些缺少 glibc 包装器、因而只能通过 <code>syscall()</code> 访问的 Linux 系统调用上有哪些进展；此外，他们也想听听与会者在这一领域的需求。</p>
+
+    <h4>背景</h4>
+    <p>O'Donell 先描述了"我们试图解决的问题"：让通过系统调用暴露的内核功能，能够方便地从 C 库中使用。一个系统调用既然已经存在，就说明特性已经进了内核，头文件里也有访问它所需的条目。他说，开发者想用新系统调用的理由很多：测试、示例、理清 ABI 问题等等。</p>
+    <p>目前有一些库"把整套系统调用封装起来"，比如 liburing 和 liburcu（它们列在<a href="https://lpc.events/event/20/contributions/2534/" target="_blank">幻灯片</a>里，但当时没有明确点名）；这些库的开发者"在暴露功能方面做得非常好"，只是往往并不直接以系统调用的形式提供。专用库的开发者可以选择给出另一种对程序员更友好的接口。</p>
+    <p>而 O'Donell 想谈的，是除此之外所有除了 <code>syscall()</code> 之外没有任何 glibc 接口的系统调用。创建系统调用包装器相当复杂，"因为 ABI 问题、过程调用规范、参数传递给内核的方式、以及内核特有的参数调用接口等等"。正因如此，很难写出可移植的系统调用包装器，结果它们往往变成"古怪的、与具体体系结构绑定的东西"。他说，创建这些包装器不应该要求开发者把上述一切都弄明白。</p>
+    <p>所以在去年的会议上，他主动提出要"评审、辅导、指导系统调用包装器走完整个流程"。内核开发者新增一个系统调用时，需要与多个社区协作才能真正把特性交到用户手上，比如 <a href="https://musl.libc.org/" target="_blank">musl libc</a>、<a href="https://libc.llvm.org/" target="_blank">LLVM-libc</a> 等等。他的提议是尽量让系统调用包装器进入 glibc 的过程更顺畅一些。</p>
+    <p>"当当当——"他展示了一张幻灯片，上面是 André Almeida 为 <a href="https://lwn.net/Articles/866112/" target="_blank">futex_waitv()</a> 添加包装器的 <a href="https://lwn.net/Articles/1103238/" target="_blank">RFC 补丁集</a>。O'Donell 感谢在场的 Almeida 接受了他的提议，并提到两人一直在与 Adhemerval Zanella 共同推进这套补丁。他说 futex 接口很复杂，是个"带有一堆棘手零件、被多路复用的接口"，但包装器仍在推进中。"我认为这是一系列漂亮补丁的开端，也是与我们协作、把包装器落到实处的开端。"</p>
+
+    <h4>缺了哪些</h4>
+    <p>接着他转向具体缺少包装器的系统调用。以 x86-64 架构为例，Linux 内核树中有 386 个系统调用，其中 glibc 导出了 292 个"同名全局符号"——即 glibc 中存在与系统调用同名的 C 函数，它"大体上完成相应功能；我不是说它完全等价或一模一样"。例如，有些包装器需要把内核类型映射为等价的用户空间 ABI 类型。</p>
+    <p>他说，目前混合使用机械生成的汇编包装器与手工编写的 C 包装器，也许不算理想，但现状就是如此。自 2014 年起，glibc 开发者就在研究机械化生成包装器的方法，"但机械转换的过程实在太琐碎"，需要顾及的细节太多，所以这个项目始终没有完成。</p>
+    <p>除了这 292 个之外，还有 16 个 glibc 调用因行为不同而与系统调用不同名；剩下 77 个系统调用没有任何包装器。工具链专题组织者 Nick Desaulniers 问，这 77 个里有没有"已经死掉、应该列入移除计划"的。O'Donell 兴致勃勃地表示确实有："绝对有"；他还说 Desaulniers 提前猜中了他下一张幻灯片（见下）的内容，那张幻灯片给出了答案。幻灯片上是 O'Donell、Weimer 和 Zanella 共同整理的一份带主观判断的"添加包装器优先级"清单。</p>
+    <p>O'Donell 说他不指望与会者真的去读那张幻灯片，只要大致理解用来给系统调用分类的几个"桶"就行。第一个桶是"核心内核功能"，Weimer 和 O'Donell 曾反复把某些调用在它与"特定领域功能"桶之间来回挪动。"对于'特定领域功能'，我认为我们不想要包装器"，O'Donell 说。那份清单最上面是 <a href="https://lwn.net/Kernel/Index/#io_uring" target="_blank">io_uring</a> 的调用，它们不是包装器的优先目标，因为开发者直接用 liburing 就好。如果事实并非如此、内核与用户空间开发者都来要包装器，glibc 开发者或许日后会加，但眼下还有优先级更高的目标。</p>
+    <p>另一类优先级较低的是实现 C 库自身所需接口的系统调用：它们可以直接从 C 库代码里调用，多数应用开发者并不需要。幻灯片底部则列着"那些已经死掉的东西""我们永远不会去实现"。</p>
+
+    <h4>并发原语</h4>
+    <p>回到优先级最高的系统调用，他指出内核暴露了不少需要包装器的并发原语，例如 <code>futex_waitv()</code>。这正是 Almeida 工作的动因，而这类包装器在别处也需要，比如 libstdc++。O'Donell 说，由于拿不到包装器，"我们只好糊弄一下，让 libstdc++ 直接调用 futex()"，这本来是不该发生的。</p>
+    <p>除并发原语外，还有调度、隔离、内存管理、文件系统等各类调用。"核心内核功能"一节最底下是 <a href="https://lwn.net/Articles/926649/" target="_blank">map_shadow_stack()</a>，O'Donell 说它的优先级可能略低一些。但一旦 <code>futex_waitv()</code> 进来了，就可以顺势作为核心内核功能类别，着手处理更多并发相关调用。</p>
+    <p>O'Donell 提到 Weimer 想为 <a href="https://lwn.net/Articles/728795/" target="_blank">membarrier()</a> 和 <a href="https://lwn.net/Articles/1038235/" target="_blank">rseq_slice_yield()</a> 添加包装器，同时问起 <code>get_robust_list()</code> 与 <code>set_robust_list()</code>（它们曾在 <a href="https://lwn.net/Articles/913505/" target="_blank">Almeida 在 LPC 2025 的会议</a>上被提及）。Weimer 说这些调用不该有 glibc 包装器："它需要更高的效率，因为你不可能在需要它的时候去做一次系统调用。"</p>
+    <p>O'Donell 问 Almeida 是否会把并发原语清单换个排法，Almeida 说看着挺好。他希望先把 <code>futex_waitv()</code> 包起来，因为仿真会用到，"不过最终我也想有某种 pthread_wait_on_multiple()，我认为这是第一步"。O'Donell 提示说，那类似于 Windows 的 <code>WaitForMultipleObjects()</code>，是 Linux 一直缺少的强大原语。Almeida 表示同意，并说最难的部分内核里已经做完了；两人都认为，由 glibc 与内核开发者协作确定该接口该如何设计，是合适的下一步。</p>
+    <p>Steven Rostedt 说，内核里有一批为了继续运行 1990 年代写的代码而必须永久保留的遗留系统调用。但这不意味着它们必须出现在更新、并不需要这些调用的代码库里——考虑到遗留调用受到的审视较少，这样做还可能带来安全收益。他建议收集这样一份系统调用清单，然后加一个内核配置选项，在某些内核构建中把它们移除掉。</p>
+    <p>O'Donell 说 glibc 维护者讨论过加固该库的各种方式，包括从中移除系统调用。"如果你从不调用 exec()，为什么还要让 exec() 作为一个可调用的全局符号存在？"Weimer 指出，已经有人开始从 glibc 里移除 32 位 time 系统调用、改用 64 位版本，但这给 glibc 开发者带来了麻烦，因为 32 位版本在内部仍被使用：glibc 仍需运行在只有 32 位时间值的内核上。"如果出于某些理由关掉这个支持，东西就会坏掉，因为我们实际上是在用它们来兼容旧内核。"</p>
+
+    <h4>符号冲突</h4>
+    <p>早些时候 Almeida 问到了符号冲突，O'Donell 承认这是个难题。他认为处理不同库与头文件之间的符号冲突没有什么银弹，这"可能是个生态系统问题，得跟各个项目逐一协商解决"。他把它比作自己与 Weimer 曾参与的<a href="https://lwn.net/Articles/913505/" target="_blank">把 Fedora 所有软件包迁到 C99</a> 的工作——那是个"横切整个生态系统的项目"，需要大量志愿者逐个修复冒出来的问题。</p>
+    <p>Weimer 说，冲突最常见的情形是：有人想用"官方 libc 功能"，于是包含了相应的 glibc 头文件，但同一个编译单元里又需要内核头文件里的东西，冲突便由此产生。修复这类问题需要 glibc 与内核项目之间更多的协调。</p>
+    <p>Weimer 说他的最高优先级是补齐现有功能的包装器，尤其是<a href="https://lwn.net/Articles/883104/" target="_blank">可重启序列（restartable sequences）</a>；另一个高优先级是"与 C 库有强依赖关系的系统调用"，因为其中有需要以协调方式访问的全局对象。他举的例子是影响线程控制块（TCB）的系统调用——TCB 不应该被两个独立的用户空间库各自操作。眼下 C 库用 TCB 做加锁，而 Web 浏览器用 glibc 的 <code>clone()</code> 系统调用包装器，"然后从那里 longjmp() 出去，再手工修补 TCB，好让 C 库其余部分能工作，这对向后兼容性来说太可怕了"。浏览器得知道 TCB 里各项结构的偏移量才能这么干；他希望借处理依赖 TCB 的系统调用之机，把浏览器迁移到"一个能长期支撑下去的模型"上。</p>
+    <p>他还希望解决签名不可移植的系统调用，<code>futex()</code> 就是典型——因为还有与之不兼容的 <code>futex_time64()</code>。在某些架构上必须用 <code>futex()</code>，另一些则必须用 <code>futex_time64()</code>，但要在每个调用点都写 <code>#ifdef</code> 显然不现实。Arnd Bergmann 说，那些老的、仅 32 位的调用反正会消失，因为内核无法支持 32 位时间。Weimer 似乎还指望 <code>futex()</code> 不被列入内核移除计划，但 Bergmann 态度很明确：会移除。Weimer 建议把时间戳改成无符号数，以延长 32 位时间的寿命（代价是无法表示 1970 年之前的时间），不过这一提议没有得到回应。</p>
+
+    <h4>枚举系统调用</h4>
+    <p>H. Peter Anvin 说，内核需要提供一种枚举系统调用的机制，这样才能使用 GNU 的间接函数（IFUNC）特性。目前，程序要直到拿到 <code>ENOSYS</code> 错误才知道某个系统调用没有实现，而"能用 IFUNC 的时机早就过去了"。Weimer 觉得这帮助不大，因为 <code>seccomp()</code> 过滤器同样会返回 <code>ENOSYS</code>；如果内核能提供一个包含 <code>seccomp()</code> 限制在内的、关于"哪些调用被允许"的完整视图，那才有意思。</p>
+    <p>Anvin 说，让内核为那些简单直接的系统调用提供自己的库，也许说得通。这样可以解耦发行版的发布节奏：一些保守的发行版希望 glibc 的更新频率低于内核。O'Donell 建议参考 BSD 的设计——内核提供一个系统调用动态共享对象（DSO），作为 C 库 DSO 的过滤器：某个调用若不在内核 DSO 中，就用 C 库里的那个；内核一旦实现了新的系统调用，"它们就自动冒出来了"。他认为值得重新审视这套机制，看 Linux 能否从中受益。</p>
+    <p>Kees Cook 回到 <code>seccomp()</code> 过滤器，问究竟需要什么信息。那段代码内部维护着一张系统调用位图，用三种状态表示 <code>seccomp()</code> 是始终允许、始终拒绝、还是"不知道，上面挂了个过滤器"。他说这些信息可以通过某种方式暴露给 C 库。Weimer 觉得或许有用，但"那更像最后的收尾工作，在那之前我们还有多得多的活要干"，引来一阵笑声。</p>
+    <p>比如 Weimer 说 <code>map_shadow_stack()</code> 也受 <code>seccomp()</code> 过滤器问题困扰：glibc 可以用 <code>prctl()</code> 成功启用影子栈，之后尝试创建新的影子栈时，<code>map_shadow_stack()</code> 却因过滤器而失败。他希望把这事儿做成。</p>
+    <p>他说另一个麻烦的系统调用是 <code>membarrier()</code>：他本来有一套把它加进 glibc 的补丁集，结果补丁推进期间，内核开发者给这个系统调用加了一个新参数。"当你连签名是什么都不知道的时候，写包装器实在有点让人泄气。"在参数还在不断加的情况下把签名定死，对 glibc 一侧是个问题。</p>
+    <p>Weimer 说，等高优先级事项处理完，他想通过改进通用系统调用包装器来"基本退出包装这门生意"。会有三个变体：现有的 <code>_syscall()</code>、用于像 <code>vfork()</code> 那样返回两次的系统调用的 <code>_syscallr()</code>，以及允许取消系统调用的 <code>_sycallc()</code>。返回两次的变体需要一个属性，以免 GCC 和 Clang 做出无效优化；现有包装器无法支持可取消的系统调用，而新包装器会安排好让系统调用能被安全地中断、让取消处理函数得以运行、并让线程退出。此外，新包装器将不再用 <code>long</code> 表示寄存器类型——在某些架构上这并不是正确的类型。</p>
+    <p>这些包装器能让新系统调用更容易测试，但不会提供最终完整系统调用包装器所具备的类型安全。O'Donell 说，它能让开发者立刻开始使用新的系统调用。Anvin 担心新的测试特性"有种讨厌的倾向，最后会跑进生产环境"。Weimer 回了一句"反正不比 ioctl() 更糟"，惹来笑声。他担心的是：如果以"必须在 vDSO 或类似机制中自动生成系统调用"的形式给开发者增加更多摩擦，只会把他们推向 <code>ioctl()</code> 风格的接口。</p>
+    <p>Anvin 认为，如果系统调用包装器是从内核构建中生成的，大部分问题都能缓解。O'Donell 表示同意，但觉得那是更长期的方案；在那之前，新包装器实际上会充当"一个蜜罐，用来钓住那些想写 syscall 代码的人"，进而引出"给 glibc 加个正经包装器"的对话。他认为与此同时，关于其他改进路径的讨论也应并行推进。</p>
+    <p>此时 O'Donell 和 Weimer 的时间到了，于是他们快速收尾，留给与会者一个问题思考：还有哪些系统调用可以加进 glibc、让大家的日子更好过？他们建议把 GitHub 上 UAPI 小组的 <a href="https://github.com/uapi-group/kernel-features" target="_blank">kernel-features 仓库</a>作为汇集想法的场所。本场会议的 <a href="https://www.youtube.com/watch?v=" target="_blank">YouTube 视频</a>也可获取。</p>
+    <p>[感谢 LWN 的差旅赞助商 Linux Foundation 支持我前往布拉格参加 LPC。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article4">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>移除 binder.c：Binder 驱动 Rust 化的终点</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年10月30日 · Kangrejos</span>
+            <span><a href="https://lwn.net/Articles/1102982/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>移除 binder.c：Binder 驱动 Rust 化的终点</h3>
+    <p>Kangrejos 2026 的最后一场演讲，讲的是移除 Android <a href="https://en.wikipedia.org/wiki/Binder_(Android)" target="_blank">Binder 驱动</a>的 C 实现——Binder 是 Android 设备上最主要的进程间通信机制。Carlos Llamas 宣布他已删掉那份 C 代码，现场一片掌声；随后他分享了替换 C 实现过程中的一些体会。多年参与 Rust 实现的 Alice Ryhl 也补充了她对这次迁移中最困难、也最有趣的部分的看法。</p>
+    <p>Llamas 介绍说，Binder 于 2008 年进入内核，作为 Android 设备的进程间通信机制；其设计源自 <a href="https://en.wikipedia.org/wiki/BeOS" target="_blank">BeOS</a>，但此后已大幅演化。它提供了一整套丰富的操作，让进程以最小开销通信，因而也为 Android 带来了很大的攻击面。Llamas 解释说，许多针对 Android 的复杂链式攻击，都在某个环节上牵涉到 Binder。Google 内部的"红队"（专门做主动安全研究的团队）认定 Binder 是整个操作系统中漏洞密度最高的组件，按每行代码计算的 CVE 数量超过任何其它地方。</p>
+    <p>所以 Llamas 说，它显然是用 Rust 重写的首选对象。Binder 也是内核中 Rust 的第一个使用者，不过 Ryhl 直到 <a href="https://lwn.net/Articles/953116/" target="_blank">2023 年</a>才公开发布后来演变成 Rust 实现的第一个版本，远晚于 2021 年开始的 Rust 试验。整个工作耗时五年多。Android 上每一次触屏、每一次权限检查、每一条跨应用消息都要经过 Binder，而 Android 运行在超过三十亿台设备上；他补充说，全球加起来相当于每秒数千亿次 Binder 事务。这样的规模意味着，哪怕 C 版与 Rust 版所提供的接口之间存在最细微的差异，也会在某些用例上引发问题和回归。</p>
+    <p>Ryhl 说，一个特别棘手的方面是性能：吞吐量没那么要紧，要紧的是<strong>尾延迟</strong>。她解释说，Android 上大多数屏幕帧的关键路径里都有一次 Binder 事务。因此平均相差两微秒不是真问题，但如果 Binder 哪怕偶尔慢上二十毫秒，用户就会察觉并在意。</p>
+    <p>她接着说，C 实现与 Rust 实现所用的算法其实是一样的，所以吞吐量没有大的差别；但由于 Rust 处理锁的方式不同，锁竞争带来的尾延迟问题让她不得不去调试。例如，一份用户上报的 traceback 显示，Binder 试图获取一个被另一个进程持有的互斥锁，而那个进程被抢占了，二十毫秒后才恢复执行——远远超过渲染一帧所需的十六毫秒预算。</p>
+    <p>这是典型的优先级反转。为在 Binder 中解决这个问题，Ryhl 尽可能把操作移出锁的保护范围，并得以用自旋锁替换它，问题随之消失。而 C 实现里对应的锁本来就是自旋锁："我偏离了 C Binder，然后<em>砰</em>——它有十八年积累下来的各种怪癖。"</p>
+    <p>最终 Rust 实现对大多数用例来说已经足够好，而每当有人想给 C 实现加新特性，它仍在不断产出新的漏洞。于是 Llamas 和 Ryhl 决定只给 Rust 实现添加新特性，既是为了推动大家切换，也是为了避免 C 实现带来的麻烦。这项政策反而让 Rust 版比 C 版更快：Ryhl 得以引入一项减少所需系统调用次数的算法改进，而这个改动此前被认为对 C 实现来说太复杂。她承诺，如今 C 实现已经删掉，类似的改进还会更多。</p>
+    <p>另一个被证明很难处理的领域是跟踪点（tracepoint）。用户本不该依赖大多数内核内部跟踪点的存在或行为，但他们确实依赖。这意味着 Ryhl 必须把 Binder 中既有的跟踪点照搬过来，把它们当成驱动 API 的事实组成部分，甚至延伸到驱动涉及的某些数据结构。她说有一个例子：某个引用计数结构在 Rust 实现中的引用计数略有不同，因为 Rust 代码额外持有了一个指向该结构的指针。结果这给某段特定的客户端代码造成了问题——它依赖通过跟踪点检查引用计数，来判断 C 实现是否已经到达某个特定状态。</p>
+    <p>Ryhl 接着说，工具链方面也需要大量支持：Rust 实现必须能与内核地址空间布局随机化（KASLR）、控制流完整性（CFI）和基于剖析的优化（PGO）协同工作。生产环境中的 Android 内核构建时这些都开着，而且它们会影响代码生成，所以 Rust 代码必须把它们考虑进去。</p>
+    <p>随后 Llamas 更详细地介绍了把用户迁移到 Rust 实施的部署方案。直接铺开 Rust 实现的一大障碍是<a href="https://lwn.net/Articles/1098493/" target="_blank">厂商钩子（vendor hooks）</a>——用来向内核注入厂商特定行为的自定义跟踪点。Rust 版 Binder 并非在所有情况下都能复现它们，因此许多厂商在更新自己的代码之前只能继续停留在 C 实现上，而这将是个缓慢的过程。</p>
+    <p>旧的内核稳定版本仍会保留 C Binder 并获得安全修复，这给了各家 Android 厂商一点缓冲余地，直到被迫升级为止。会议结束后，移除 C 实现的补丁已作为 <strong>7.4 合并窗口</strong>的一部分被合入，因此从该版本起就强制要求使用 Rust 实现；7.3 则是 2026 年指定的长期支持（LTS）版本。</p>
+    <p>有人问，这会不会给用 GCC 编译内核的人带来问题。Miguel Ojeda 回应说，针对目前 GCC 尚不支持 Rust 的现状，许多发行版采用了一种变通做法：用 GCC 编译内核的 C 部分，用 LLVM 编译 Rust 部分。他说自己曾建议不要这样编译内核，因为那是"彻底的 hack"，不过用这套办法的人大概也不会抱怨被强制转到 Clang。Greg Kroah-Hartman 补充说，考虑到 Android 厂商更新内核有多慢，可能要几个月甚至几年才会听说有人在使用 Rust 版驱动时遇到问题。此外，这次移除只是一个可以干净回退的补丁，若有人确实需要继续用 C 版，回退即可。</p>
+    <p>Llamas 认为，值得思考的还有：其他被移植到 Rust 的代码，其移除流程应该是什么样子。他问大家，长期支持分支上那些已被转换的驱动的 C 版本该如何处置。Ojeda 说流程会与现有的"被替换的 C 代码"政策完全一样；在长期支持版本里，Rust 与 C 唯一的区别是 Rust 维护者会回溯移植针对可靠性（soundness）问题的修复。Kroah-Hartman 则叫 Llamas 别为已被替换的代码操心："直接删掉就行。被删掉的子系统我也照样收补丁，没关系的。"</p>
+    <p>随着这句话落地，这场会议、这届大会、以及 C Binder 驱动在内核中的存在，一同画上了句号。Binder 是内核中第一个被移植到 Rust 的非平凡组件，它的历程揭示了若干"从零用 Rust 写新驱动"不会遇到的坑。不过最困难的问题其实并不与 Rust 相关，而是任何重写都要面对的兼容性问题。内核中是否还会有其他组件认为这份折腾值得、又要花多久才能完成，仍待观察。</p>
+    <p>[感谢 Linux Foundation 作为 LWN 差旅赞助商支持我参加 Kangrejos。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article5">
+    <div class="article-header">
+        <span class="article-category">安全</span>
+        <h2>应对内核 CVE 洪流：AWS 的实践</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年11月2日 · LPC</span>
+            <span><a href="https://lwn.net/Articles/1100894/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>应对内核 CVE 洪流：AWS 的实践</h3>
+    <p>我们最近<a href="https://lwn.net/Articles/1096908/" target="_blank">探讨过</a>内核社区如何应对喷涌而来的漏洞报告，但很少谈到内核的<em>使用者</em>是怎么回应的。在 <a href="https://lpc.events/event/20/" target="_blank">2026 年 Linux Plumbers Conference</a> 上，Amazon 的工程师 Dylan Johnson 与 Justinien Bouron 从"面对 CVE 披露风暴、努力让 AWS 保持运行且安全"的视角讨论了这个问题。内核社区长期以来的建议是"跑最新的内核"——事实证明这确实管用，某种程度上。</p>
+    <p>Bouron 先提醒听众：内核社区在 2024 年<a href="https://lwn.net/Articles/961961/" target="_blank">成为自己的 CVE 编号机构（CNA）</a>，直接后果是每年发出数千个 CVE 编号，迫使各家公司重新思考如何处理内核漏洞。运营 AWS 云的工程师也未能置身事外。</p>
+
+    <h4>分类研判（Triage）</h4>
+    <p>他说，Linux 从慢炖锅一路跑到核电站，每类部署都有自己的威胁模型和容错能力，同一个 CVE 的影响在不同场景下可能差别极大。因此 CVE 一到就必须做分类研判，逐个评估它对特定环境的影响；这件工作没人能替你做。</p>
+    <p>研判之后的下一个任务，是决定如何缓解威胁（如果需要的话）。一种可能的回应是什么都不做——比如面对一个影响未使用驱动的 CVE，这完全没问题。通常推荐的做法是等新的长期支持（LTS）内核，但这会让系统在该内核发布、测试、部署完成之前一直处于有风险的状态。择优挑选（cherry-pick）修复补丁可能更快，但有其自身风险。另一些情况下，最好的回应也许是绕开问题，例如禁用有漏洞的代码。对每一条新进来的 CVE，都得单独想清楚恰当的应对。</p>
+    <p>他说，CVE 分类研判能加快缓解响应速度。内部更新计划并不总与内核发布节奏吻合，或者上一版的部署工作还没做完，新的 LTS 更新就到了。如果这个新更新里含有某个严重漏洞的修复，那么直接挑出该修复、而不是走完整套测试流程，可能更合理。</p>
+    <p>还有些时候，重要的漏洞并没有在自己所运行的那个特定 LTS 内核系列里得到修复。修复总是先进入主线内核，随后才回溯移植到稳定版。目标内核较新时回溯移植相对容易，内核越老越难。因此较老的 LTS 内核不会拿到应用到主线的所有修复，缺失的修复数量随时间增长。他说，5.10.267 稳定内核有超过 <strong>1,700 个未解决的 CVE</strong>，其中 1,200 个至少已存在 90 天，而其中大多数大概永远不会被修复。于是运行 5.10 内核的站点就面临一个不愉快的选择：要么继续保持有漏洞的状态，要么自己回溯移植缺失的修复。</p>
+    <p>不过把这 1,700 个修复全数回溯移植并不现实——这正是分类研判的意义所在：帮助判断哪些补丁值得付出这样的代价。2024 年之前，内核 CVE 大约每周两个，人工研判还做得过来；2024 年之后，这个速率涨到了<strong>每天 16 个</strong>。而那还是在 LLM 驱动的海啸到来之前；如今一天之内就可能出现数百个新 CVE。到了这种速率，人工审查根本不可能。</p>
+    <p>所以研判流程至少要部分自动化。朝这个方向迈出的第一步是"自动剪枝（autopruning）"——过滤掉与特定内核配置无关的 CVE。内核 CNA 发布的 CVE 记录附有详尽的 JSON 报告，指出受影响的内核版本和文件。按这些参数过滤，可以剔掉约 <strong>70%</strong> 的 CVE。他称，若进一步精简 AWS 的内核配置（其中大概仍启用了大量不需要的特性与子系统），这个比例还能提高。精简很有效，但也是个难题，需要对部署环境有细致入微的了解；如果不清楚相关系统的每一处用途，就很难知道什么可以去掉。内核有超过 32,000 个配置选项，摆弄它们很容易制造出几个月后才暴露的 bug 或性能回归；对于超大规模运行的环境，这个问题几乎无解。</p>
+    <p>随着 CVE 速率上升，即便剪枝之后的流仍需要过多人工审查。所选的方案——或许不可避免——是引入 LLM。这套系统以剪枝后的 CVE 流、当前生效的内核配置以及威胁模型文档为输入，为每条 CVE 生成一个评分；输出是一张表格，包含每条 CVE 的描述，以及关于它是否（以及在多大程度上）影响 AWS 的判断，作为供人类快速复核的资料。他说，这一复核如今是整个流程中唯一的人工步骤，也是最后的瓶颈，很难再优化，但团队并不打算取消它、完全依赖自动化系统。</p>
+    <p>这套系统是否足以让 AWS 继续停留在较老的 LTS 内核上？不能，他说，那些内核里未打补丁的 CVE 实在太多，站点要么接受漏洞，要么自己回溯移植修复。若走回溯移植这条路，得到的是一个没有任何其他人测试过的内核，意味着部署前需要做更多内部测试；还必须确认打过补丁的系统确实不再受该问题影响。做这件事的人得应付大量棘手的冲突，其中不少可能需要子系统专家才能解决。更"有趣"的是，CVE 报告未必列出解决问题所需的全部补丁。</p>
+    <p>他说，最终结论是这条路不可持续："跟着一个较老的 LTS 内核直到它生命周期结束"这个模型已经过时。要跟上修复流，唯一的办法是升级到更新的内核。</p>
+
+    <h4>跟上稳定版</h4>
+    <p>Johnson 接手讲述升级是如何进行的。2024 年末，AWS 还在跑 5.10 系列内核，必须决定是否升级。他说大多数稳定内核的寿命只有两到三个月，而 AWS 完成一次向新内核的迁移却整整花了一年。随便升级到某个稳定内核，等于部署一个早就停止支持的内核，所以唯一可行的做法是盯住 LTS 内核。</p>
+    <p>升级时机到来时该选哪个 LTS？较新的 LTS 内核修复更快、未解决的 CVE 债务更少——未修复 CVE 的数量在它们身上增长得更慢。他说补丁进入 6.18 的中位时间是 18 天，而 5.10 是 32 天。由于维护 LTS 内核并不轻松，较新的内核往往被优先照顾，向它们做回溯移植也更容易。换句话说，<strong>较新的 LTS 内核更安全</strong>；因为未修复 CVE 更少，它们也远比老内核更不容易迫使你自行回溯移植修复。</p>
+    <p>所以升级到最新的 LTS 内核是最佳选择，但依然不轻松。2021 年从 4.19 升到 5.10 花了约 24 个月，其中很大一部分耗在向前移植树外补丁上；升到 6.12 时缩短到 12 个月，升到 6.18 只用了六个月。升级时间的压缩来自更好的测试和更有经验的团队；减少用户空间依赖的努力也带来了更少的回归，同样让升级更顺畅。</p>
+    <p>升到 6.12 过程中出现的每个问题都被记录在案：<strong>45%</strong> 出在内核自身，主要是"几百个"树外补丁；用户空间问题占 <strong>43%</strong>，配置问题占 <strong>7%</strong>，其余 <strong>5%</strong> 与固件相关。最后一类部分源于硬件问题错误报告的改进，导致错误检出率提高。他说，内核空间的修复中有 15% 提交到了上游（他没说有多少被接受），希望这个比例随时间提高。</p>
+    <p>Johnson 举了几个升级中遇到的问题类型：</p>
+    <ul>
+        <li>内存管理子系统把虚拟内存区的<a href="https://lwn.net/Articles/184495/" target="_blank">红黑树</a>换成<a href="https://lwn.net/Articles/845507/" target="_blank">maple tree</a> 后，<code>mmap()</code> 与 <code>munmap()</code> 变慢了。解决办法是改用户空间，减少这类操作的次数。</li>
+        <li>从完全公平调度器切换到 <a href="https://lwn.net/Articles/969062/" target="_blank">EEVDF 调度器</a>改变了 <code>fork()</code> 的时序：CFS 会在 fork 后优先调度父进程，而用户空间依赖父进程先运行。同样地，解决办法是修用户空间。</li>
+        <li><code>max_sectors_kb</code> 的默认值被调大，导致固件超时。AWS 机群里的硬件种类繁多，其中一些对更大的尺寸反应不佳，通过若干调优解决了该问题。</li>
+    </ul>
+    <p>他总结说，<a href="https://www.hyrumslaw.com/" target="_blank">海勒姆定律（Hyrum's Law）</a>在这里和在别处一样适用：任何可见的变化，总会弄坏某个人的某些东西。</p>
+    <p>理想情况下，最终希望 AWS 始终运行最新的稳定内核。但在迁移时间仍需六个月的情况下，这还做不到：需要更好的工具、更快的内核资格认证。即便如此，很多问题是在新内核测试的"浸泡期（soak time）"里才冒出来的，走得太快就有可能直到部署之后才发现它们。改进局面的一个办法是在测试环境中持续运行当前稳定版，等下一个 LTS 内核可用时再切过去。</p>
+    <p>他最后说，在 AWS 能跑上最新稳定版之前，仍不得不继续做 CVE 研判。但在一个模型能够在修复做出、CVE 发布之前就发现并利用漏洞的世界里，也许连这样都还不够。</p>
+    <p>Ben Herrenschmidt 指出，两位讲者工作在 AWS 机群的 hypervisor 一侧，因此对内核之下运行的一切有牢牢的掌控；而在发行版（用户）一侧，日子远没这么好过——根本看不到用户需要哪些特性。他说，一个可能有帮助的办法是把内核模块拆成独立的软件包，强制在安装每个包之前做出有意识的决定，而不是一股脑把 2,000 个模块倒进系统。</p>
+    <p>Thorsten Leemhuis 问，为什么不测试主线版本、而只测最新的稳定更新。回答是 AWS 的升级流程还不够快，这么做不划算，但这是最终目标。</p>
+    <p>最后一个问题来自一位自称在 Google 工作、"本来可以讲同一场演讲"的听众：基于 LLM 的研判是怎么评估的，结果如何？Johnson 回答说，模型有 5–10% 的时候会做出错误判断，所以人工复核这一步绝对必要；任何开发这类模型的人，都该为信任它之前的大规模评估期做好计划。</p>
+    <p>[感谢 Linux Foundation 作为 LWN 差旅赞助商支持我参加此次大会。]</p>
+    </div>
+</div>
+
+            <div class="article" id="article6">
+    <div class="article-header">
+        <span class="article-category">桌面</span>
+        <h2>Plasma X11 会话移除让部分 Fedora 用户措手不及</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年11月4日</span>
+            <span><a href="https://lwn.net/Articles/1105130/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>Plasma X11 会话移除让部分 Fedora 用户措手不及</h3>
+    <p>KDE 项目在 2025 年宣布，Plasma 6.7 将是最后一个支持 X11 会话的桌面环境版本。一直关注 KDE 公告的人，对 Plasma 6.8 如约移除 X11 支持自然不会意外。真正让不少 Fedora KDE Plasma Desktop 用户意外的，是 <strong>Fedora 44</strong>——这个 4 月随 Plasma 6.6 一起发布的版本——收到了一次升到 Plasma 6.8 的更新，几乎没有预先警示就把 X11 会话一扫而空。尽管出人意料，此事已成定局：Fedora 工程指导委员会（FESCo）已投票否决了在 Fedora 44 与刚发布的 Fedora 45 上回退该更新的请求。</p>
+
+    <h4>更新节奏的错位</h4>
+    <p>Fedora Linux 与 Plasma 的发布节奏对得并不齐。Fedora 大约每六个月发一版，支持到 "Release N+2" 发布后四周，也就是约 13 个月。例如 Fedora 44 于 2026 年 4 月发布，将在 2027 年 4 月 Fedora 46 发布约四周后结束生命周期。Plasma 的功能版本大约每四个月一发：6.6 在 2026 年 2 月，6.7 在 2026 年 6 月，6.8 在 10 月中旬。除长期支持（LTS）版本外，一个功能版本的支持通常随下一个功能版本发布而终止；6.6 是 LTS 版本，计划支持到 2029 年 2 月。</p>
+    <p>由于发布节奏对不上，加上 Fedora KDE SIG 的成员不想同时维护多个 Plasma 版本，其更新策略是在<strong>所有 Fedora 版本上维持单一 Plasma 版本</strong>。这意味着一个 Fedora 版本在其生命周期内大概会经历三次 Plasma 功能版本更新。这对 Fedora 而言有些不寻常：其稳定版更新策略写明"应避免在稳定发行版内对软件包做重大更新"，软件更新应"以修复 bug 为目标，而不是引入新特性"。</p>
+    <p>不过该策略对某些软件包有例外，例如内核、Go 工具链以及 KDE。正如 <a href="https://fedoraproject.org/wiki/SIGs/KDE/Update_Policy" target="_blank">KDE SIG 的策略页面</a>所指出的，随着 Plasma 6.x 近期版本推进，用户可见的变化已经放缓；可以想见，许多 Fedora KDE 用户甚至没察觉自己已经从一个 Plasma 功能版本迁到了另一个。</p>
+
+    <h4>6.8 更新</h4>
+    <p>但当 X11 支持消失时，用户确实注意到了。Tomáš Trnka 发问："有没有什么令人信服的技术原因，使得 -x11 软件包必须被 6.8 废弃（obsolete），哪怕在 [Fedora] 44 上也是如此？"他想知道这项生命周期中段的破坏性变更是否曾有过通知、只是自己恰好错过了，还是说废弃动作只是意外溜进了 Fedora 44。"如果是在 F45 我完全理解，大版本升级常常伴随强制的功能退役；但我实在没料到在 F44 上做一次例行 dnf upgrade 会把 X11 会话吹没。"</p>
+    <p>Adam Williamson 向 KDE SIG 成员兼 FESCo 成员 Neal Gompa 询问：对于这样一个"发布时带 X11 支持"的稳定版，是否讨论过这次更新是否合适。Gompa 说 X11 软件包早已"被明确弃用"，并预计会在 KDE 上游停止支持后立即移除。"自从 Fedora 40 引入 Plasma 6 起，Plasma X11 就已经不受支持了。"那是 2024 年的事：当时 KDE SIG 不仅放弃了对 X11 上 Plasma 会话的支持，还曾试图阻止他人在 Fedora 中提供任何用于 Plasma 的 X11 软件包。FESCo 允许了把 X11 支持重新带回 Fedora 仓库的软件包，但这些包并不由 KDE SIG 维护。由于 Plasma 6.8 与 X11 不兼容，用户升级到 Plasma 6.8 时，<code>kwin-x11</code> 与 <code>plasma-workspace-x11</code> 软件包被 DNF 废弃并移除。</p>
+    <p>另一位用户 "ab cd" 问怎样才能把 X11 会话找回来："我知道 Fedora 很久以来就没正式支持过（KDE 下的）X11，但它一直用得好好的，而现在有些东西在 Wayland 下不行了。"他想知道有没有办法撤销更新、保留 X11 支持。Allen Akin 抱怨"连几个普普通通的 Konsole 窗口，会话恢复都还是不工作"，而且由于不得不从 NVIDIA 专有驱动换到开源的 Nouveau 驱动，他还得绕过一些毛病。他说自己在考虑换发行版、至少换窗口管理器，并称这是"糟糕的发布策略造成的不必要痛苦"。</p>
+    <p>Sérgio Basto 请求 FESCo 在 Fedora 44 和 45 上回退这些改动。FESCo 成员 Timothée Ravier 提到早前允许 X11 软件包的 FESCo 决定，但表示 KDE SIG"并不负责确保这些软件包去适配"。Ravier 说，把 Fedora 44 留在 Plasma 6.7 上并不现实——6.7 的生命终点预计是 2027 年 1 月，而 Fedora 44 要支持到 2027 年 6 月；至于为 Fedora 45 维护 6.7，"连选项都算不上"。他明确反对 Basto 的请求，并建议一个替代方案：在 Copr 仓库里维护 Plasma 6.7 及其依赖。</p>
+    <p>Ravier 引用的那份 FESCo 决定还说过，KDE SIG"应在重大变更前发出通知"。Steve Cossette 确实在 10 月 21 日向 Fedora 的 devel 邮件列表发过通知：</p>
+    <blockquote><p>尽管 X11 子组件已不再由 KDE SIG 支持，但此前有一位独立维护者在单独提供它们。这些组件在 Fedora 中仍属弃用状态、且不受 KDE SIG 支持；如今 Plasma 6.8 已不再包含这些组件的代码，因此 Plasma 6.8 更新会在升级时废弃它们。对于 x11 组件的用户，我们建议运行 <code>dnf offline-upgrade</code> 或使用 Discover，否则更新可能破坏系统。</p></blockquote>
+    <p>回退请求在 <a href="https://meetbot.fedoraproject.org/fedora-meeting-1/2026-11-03/fesco.2026-11-03-15.00.html" target="_blank">11 月 3 日的 FESCo 会议</a>上被讨论并表决：八名成员反对，请求遭否决；Zbigniew Jędrzejewski-Szmek 投了 +0。他在会上说，他认为这次移除令人遗憾，这项更新"本来可以再拖一拖"。</p>
+    <p>对用户来说值得庆幸的是，仍有很多桌面环境和窗口管理器支持 X11——只是 Plasma 不再是其中之一了。有一个保留了 X11 支持的 Plasma 分支叫 <a href="https://sonicde.org/" target="_blank">SonicDE</a>，已为不少发行版打包，但到目前为止项目方还没有提供 Fedora 包。</p>
+    <p>事后看来，Fedora 项目与 KDE SIG 本可以在 Fedora 44 的发布周期里，把"Plasma 的 X11 支持即将移除"传达得更明确一些。虽说部分用户可能早已预料到这次移除、或了解 Fedora 稳定更新策略对 KDE 的例外，但一个安装了操作系统大版本的用户，期待某个重要特性在该版本的整个生命周期内都存在，也并非不讲道理。</p>
+    <p>不过同样合情合理的是：一旦上游项目砍掉了 Plasma X11 支持，KDE SIG 不愿再大费周章（甚至不愿费任何周章）去保留它。SIG 多年前就表明了对 X11 支持的立场，而倒计时一直在走。</p>
+    </div>
+</div>
+
+            <div class="article" id="article7">
+    <div class="article-header">
+        <span class="article-category">内核</span>
+        <h2>7.4 合并窗口后半程</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年11月2日</span>
+            <span><a href="https://lwn.net/Articles/1102739/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>7.4 合并窗口后半程</h3>
+    <p>7.4 合并窗口于 11 月 1 日关闭，共纳入创纪录的 <strong>18,591 个非合并变更集</strong>——几乎相当于整个 7.3 开发周期的总量（18,765，当时同样是纪录）。其中 <strong>11,838 个</strong>是在<a href="https://lwn.net/Articles/1101211/" target="_blank">本系列上半篇</a>发出之后合入的。它们大多数是各种形式的 bug 修复；看起来 bug 修复在某种程度上正把新特性挤出整个开源生态。不过合并窗口尾声里仍有相当数量的新特性加入，也有少量特性被移除。</p>
+    <p>本轮最重要的变更包括：</p>
+
+    <h4>体系结构相关</h4>
+    <ul>
+        <li>Super-H 不再支持 NUMA 或稀疏内存（sparse memory）。稀疏内存支持在多数系统上只额外提供 128KB 内存（shx3 上是 256KB），却让内核通用的 NUMA 处理代码变复杂；移除它所减小的编译后内核体积，几乎足以抵消这项改动本身。</li>
+    </ul>
+
+    <h4>核心内核</h4>
+    <ul>
+        <li>DAMON 子系统新增了更多 DAMOS 过滤器，包括"非访问空闲页"过滤器和"指定大小的大页"过滤器；DAMON 现在也能追踪对 hugetlb 支撑内存的访问，预计对那些在 hugetlb 内存上运行客户虚拟机的机器尤其有帮助。</li>
+        <li>DAMON 的目标指标标志（决定 DAMON 试图把哪些内存指标维持在配置边界内）现在可以取反，使现有的活跃内存指标也能用于控制系统中非活跃内存的数量。每个 DAMOS 过滤器现在都有两种使用方式。</li>
+        <li>未使用大 folio 的 shrinker 现在具备内存控制组感知能力，可避免某个控制组内的内存回收导致 shrinker 去拆散其他控制组里的 folio。</li>
+        <li>BPF 验证器现在可以借助标量演进（scalar evolution）理解更多循环。目前支持还比较有限，但已足以让传统循环更容易写出来并被验证器直接接受。</li>
+        <li>新的 <code>callx</code> 指令允许 BPF 程序对静态 BPF 子程序做间接调用。间接调用支持在 BPF 的路线图上已有时日，它会让那些最适合用函数指针表达的程序好写得多；尤其这为支持 Rust 的动态分发实现打下了基础。</li>
+        <li>另一项对 Rust 友好的改动是新增 <code>unwind_goto</code> 与 <code>unwind_exit</code>，使 Rust panic 或 C++ 异常能在 BPF 中被正确实现。</li>
+    </ul>
+
+    <h4>文件系统与块 I/O</h4>
+    <ul>
+        <li>新增 <code>DM_VERITY_VERIFY_ROOTHASH_SIG_FORCE</code> 配置选项，强制 dm-verity 校验设备上的签名。在启用该选项构建的内核中，将无法再从内核命令行覆盖 dm-verity 的签名检查行为。</li>
+        <li>一组期待已久的修复让使用不可信软盘变得安全得多。</li>
+        <li>用户空间现在可以通过一组新标志控制 NFS 的 RPC 注册。这既让管理守护进程对 NFS 的设置拥有更多控制，也防止无响应的 rpcbind 进程卡住 NFSD 的管理操作。</li>
+        <li>NTFS 现在支持对带有关联命名流的文件执行流操作，<a href="https://docs.kernel.org/filesystems/ntfs3.html" target="_blank">文档</a>说明了正确用法；NTFS 也能查询文件属性了，不过暂不支持写入。NTFS 属性用于把文件标记为不可变、仅追加、或不纳入核心转储等。</li>
+        <li>ext4 增加了对缓冲式 iomap 访问的支持。该特性需用 <code>buffered_iomap</code> 挂载选项启用，启用期间文件系统不支持在线碎片整理、内联数据、fsverify、fscrypt、非 extent inode 或数据日志。尽管有这些限制，用户可能仍想要它——因为它确实让大块写入快得多。</li>
+        <li>CephFS 不再支持内联数据。该特性从未被完整启用，一直被视为实验性，并于 2020 年正式弃用，希望没人在依赖它。</li>
+    </ul>
+
+    <h4>硬件支持</h4>
+    <ul>
+        <li><strong>时钟</strong>：Raspberry Pi 5 实时时钟。</li>
+        <li><strong>GPIO 与引脚控制</strong>：Toshiba TC9563 嵌入式 GPIO 控制器、Qualcomm Hawi SoC TLMM 与 LPASS LPI TLMM 引脚控制器、Qualcomm Kuno / MSM8952 SoC TLMM 引脚控制器、Qualcomm PMAU0102 SPMIO GPIO 控制器、Starfive JHB100、Ambarella CV75、Econet EN7528、Allwinner Sunxi A733 以及 Mediatek MT6735 引脚控制器。</li>
+        <li><strong>硬件监控</strong>：Axiado AX3000 / AX3005 PWM 风扇控制器、AX3000/AX3005 TSADC 控制器、Infineon TDA38740/TDA38725 以及 MAX20826/MAX20855B/MAX20908/MAX20912/MAX20916 电源监控总线。</li>
+        <li><strong>工业 I/O</strong>：Analog Devices LTC3208 I2C LED 驱动器。<strong>其他</strong>：BCM2712 IOMMU。<strong>网络</strong>：Qualcomm CSI2 C-PHY/DPHY 设备。</li>
+        <li><strong>电源</strong>：Texas Instruments bq27z746、bq28z620 电源以及 AB8505 电源。</li>
+        <li><strong>声音</strong>：Qualcomm WCD9378 SDCA 编解码器、ESS ES9039Q2M 编解码器、Nuvoton NAU83G60 放大器、Senary SN624x SoundWire SDCA 编解码器、TI TAS2573 DSP 以及 Pioneer DJ DDJ-SZ USB 音频设备。</li>
+        <li><strong>存储</strong>：Apple M4 ANS2 NVMe 驱动器。</li>
+    </ul>
+
+    <h4>其他</h4>
+    <ul>
+        <li>Moxa 串口驱动被移除——已知的相关硬件已不复存在，生产该硬件的公司也不再使用这个驱动。</li>
+        <li>Binder 驱动的 C 实现被移除，让位于现已视为稳定的 Rust 实现。针对 C 实现的修复应直接发往相应的稳定树，因为今后不可能再把它们标为可回溯移植而提交到主线。</li>
+        <li>CXL 开发者已着手支持具备动态容量的设备，不过在代码可用之前还需要更多后续工作。</li>
+        <li>I3C 子系统加入了支持 I3C 集线器所需的核心代码，具体集线器的驱动仍在开发中。</li>
+    </ul>
+
+    <h4>安全相关</h4>
+    <ul>
+        <li>BPF 安全模块现在可以在文件首次创建时设置其扩展属性，消除了程序可能看到"缺少必要扩展属性的文件"的那一小段窗口期。</li>
+        <li>用户空间现在有了明确定义的方式，用于查询 fs-verity 与 dm-verity 正在使用哪些密钥环，而不必再去解析 <code>/proc/keys</code>。相应地，具备相应权限的用户空间进程可以把密钥加入该密钥环，并将其密封以防后续修改。</li>
+    </ul>
+
+    <h4>工具</h4>
+    <ul>
+        <li><code>tools/mm/page_owner_sort</code> 用于对 <code>/sys/kernel/debug/page_owner</code> 的输出排序、以排查哪些进程让页面滞留在内存中；它现在终于真的能排序了，同时带来更好的过滤器与更清晰的文档。</li>
+        <li><code>rtla osnoise top</code> 命令现在接受 <code>--ipi</code> 标志，用于报告工具跟踪期间观察到的处理器间中断来源。</li>
+        <li>Ftrace 除报告平均值与方差外，现在还能报告内核中某个函数所耗时间的最大值。</li>
+        <li>内核跟踪子系统现在可以按"事件是否发生在某个给定函数的执行期间"来过滤事件。例如，现在可以只搜索 <code>vfs_read()</code> 调用期间发生的跟踪事件，或者反过来搜索除 <code>vfs_read()</code> 调用之外的所有事件。</li>
+        <li><code>perf</code> 命令现在支持对 x86 SIMD 寄存器采样、加权采样，以及按指定的内存范围把内存访问分开统计，另有<a href="https://lwn.net/Articles/1104653/" target="_blank">许多小改进</a>。其中内存范围支持尤其有助于追踪哪些访问落在持久内存、高带宽内存、CXL 附加内存或其他特殊内存区域。</li>
+    </ul>
+
+    <h4>虚拟化与容器</h4>
+    <ul>
+        <li>Arm 主机现在支持 pKVM 状态隔离，可保护客户虚拟机的寄存器状态不被主机读取（处理 VM exit 所必需的部分除外）。这是为机密计算铺路的更大一组改动的一部分，不过工作仍处早期阶段。</li>
+        <li>主机还可以按虚拟机禁用内存属性，主要用途是支持私有/共享客户页之间的原地转换。该设置一旦加载 KVM 就不能再改，因此依赖页面保持私有的客户机可以继续依赖这一行为。</li>
+    </ul>
+
+    <h4>内核内部改动</h4>
+    <ul>
+        <li>内存管理子系统现在在<strong>所有配置下</strong>都使用 per-VMA 锁。这大幅简化了修改内存区域相关的代码，开发者不必再同时考虑两套加锁方案。</li>
+        <li>新增了用于 DMA fence 的 Rust 绑定。这些绑定会自动强制执行正确使用 DMA fence 所需的一系列规则，应能让与之交互的驱动写起来少些头疼。</li>
+        <li>checkpatch 现在更清楚内核仓库中哪些代码运行在用户空间；新增 <code>--userspace</code> 选项，可在加入新的用户空间代码时强制 checkpatch 采用用户空间规则。</li>
+        <li>kselftests 现在可以在没有 MMU 的架构上运行，有助嵌入式内核开发。</li>
+        <li>本合并窗口移除了 202 个导出符号、新增 402 个；开发者还移除了 1 个 kfunc、新增 58 个。<a href="https://lwn.net/Articles/1104653/" target="_blank">完整变更清单见此页</a>。</li>
+    </ul>
+
+    <p>7.4-rc1 中的改动由 <strong>2,678 名开发者</strong>贡献，其中 <strong>625 名</strong>是首次贡献者。接下来进入稳定期，在 7.4 内核发布之前查找并修复 bug。截至本文写作时，Linus Torvalds 仍在考虑少量可能纳入 -rc2 的拉取请求。7.4 内核的发布日期有一定弹性，但大致可以预期在 12 月 21 日前后。如果近来 bug 修复数量不断攀升的势头延续，到那时大概还会有 3,000 多个提交进入内核。</p>
+    </div>
+</div>
+
+            <div class="article" id="article8">
+    <div class="article-header">
+        <span class="article-category">Python</span>
+        <h2>带依赖的可移植 Python 脚本</h2>
+        <div class="article-meta">
+            <span>撰稿：Trey Hunner</span>
+            <span>2026年11月4日</span>
+            <span><a href="https://lwn.net/Articles/1104646/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <h3>带依赖的可移植 Python 脚本</h3>
+    <p>一个基础的 Python 脚本是可移植的：把它从一台机器拷到另一台，基本不用担心兼容性。可一旦脚本依赖第三方包，需要操心的事就多得多。2023 年，<a href="https://peps.python.org/pep-0723/" target="_blank">PEP 723（"内联脚本元数据"）</a>引入了一项标准，允许在脚本自身内部声明它所依赖的包。如今已有若干第三方工具能自动安装并管理这些依赖，但 Python 官方层面对该标准的支持依然很少。</p>
+
+    <h4>一团乱麻</h4>
+    <p>给 Python 脚本安装第三方包，最简单的办法是用 <a href="https://pip.pypa.io/" target="_blank">pip</a>：<code>pip install</code> 可以全局安装，也可以加 <code>--user</code> 做按用户安装。但这会把环境弄得一团糟，尤其当不同脚本需要不同版本的包时；而且某些由外部管理的 Python 安装根本不允许这么做。</p>
+    <p>用标准库 <code>venv</code> 模块创建的<a href="https://docs.python.org/3/library/venv.html" target="_blank">虚拟环境</a>可以避免这团乱麻，但每次把脚本拷到新机器，都得手工重建一次。也可以把脚本做成包，或者连同依赖一起塞进 <a href="https://docs.python.org/3/library/zipapp.html" target="_blank">zipapp</a> 归档，但这两种做法都会让更新脚本代码变得繁琐得多。</p>
+    <p>2022 年，pip 维护者之一 Paul Moore 写道，他通过尽可能使用标准库模块来避免为脚本创建虚拟环境。他宁愿"用 urllib 而不用 requests 或 httpx，只为了让'不假思索地运行脚本'这件事能成立"。</p>
+
+    <h4>自动安装依赖</h4>
+    <p>2024 年 2 月，Astral 发布了用 Rust 编写的 <a href="https://docs.astral.sh/uv/" target="_blank">uv</a> 项目，作为 pip、venv 以及用于锁定依赖的 pip-tools 命令的快速替代品。除此之外，uv 现在还能管理 Python 安装和单文件脚本。Astral 今年早些时候被 OpenAI 收购，但这并没有放慢 uv 的开发节奏：<a href="https://github.com/astral-sh/uv/releases" target="_blank">新版本仍以大约每周两次</a>的频率发布。</p>
+    <p><code>uv init</code> 会创建一个新项目；加上 <code>--script</code> 则改为创建一个带空依赖清单的新脚本。随后 <code>uv add</code> 把包加进这份依赖清单：</p>
+    <pre><code>$ uv init --script pypi-latest.py
+Initialized script at `pypi-latest.py`
+$ uv add --script pypi-latest.py requests
+Resolved 5 packages in 340ms</code></pre>
+    <p>把 uv 生成的占位代码换成自己的脚本、再加一行 <a href="https://en.wikipedia.org/wiki/Shebang_(Unix)" target="_blank">shebang</a> 之后，<code>pypi-latest.py</code> 长这样：</p>
+    <pre><code>#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = "&gt;=3.11"
+# dependencies = [
+#     "requests&gt;=2.34.2",
+# ]
+# ///
+"""Print the latest version of each given PyPI package."""
+import sys
+import requests
+for name in sys.argv[1:]:
+    response = requests.get(f"https://pypi.org/pypi/{name}/json")
+    print(name, response.json()["info"]["version"])</code></pre>
+    <p><code># /// script</code> 与 <code># ///</code> 之间的行是写在注释里的 TOML。<code>requires-python</code> 与 <code>dependencies</code> 这两个键由 PEP 723 定义，而不是 uv 定义的。</p>
+    <p>把脚本设为可执行之后，它就能像其他命令一样运行：</p>
+    <pre><code>$ chmod +x pypi-latest.py
+$ ./pypi-latest.py django flask
+Installed 5 packages in 4ms
+django 6.1.2
+flask 3.1.3</code></pre>
+    <p>首次运行时，uv 会为它创建一个虚拟环境、把 requests 装进去，然后运行脚本。此后每次运行，uv 都会检查所列依赖是否以正确版本安装，并找到、复用同一个虚拟环境。在我的机器上，冷缓存下首次运行约 900ms，依赖已被 uv 缓存时约 370ms；后续运行约 170ms，只比用一台装了 requests 的 Python 解释器直接运行脚本慢 15ms。</p>
+    <p>脚本的环境存放在 uv 的缓存目录（Linux 上是 <code>~/.cache/uv</code>），缓存被清掉后会新建一个。可以用下面的命令找到该环境 Python 解释器的路径：</p>
+    <pre><code>$ uv python find --script pypi-latest.py</code></pre>
+
+    <h4>一点历史</h4>
+    <p>"打包"这个词最常与多文件 Python 项目联系在一起，但有时单文件 Python 脚本同样需要第三方包。无论核心团队还是更广泛的社区，在"为单文件脚本管理这些包"这件事上投入的精力都不多。</p>
+    <p>2016 年，Jason Coombs 发布了 <a href="https://pypi.org/project/pip-run/" target="_blank">pip-run</a> 项目（原名 rwt），让脚本可以指定运行所需的依赖。Coombs 还提了一个 pip issue，请求给 pip 命令加一个 <code>run</code> 子命令。</p>
+    <p>2023 年 7 月，Moore 发出 <a href="https://peps.python.org/pep-0722/" target="_blank">PEP 722（"单文件脚本的依赖规范"）</a>，试图把 pip-run 已支持、且 <a href="https://pipx.pypa.io/" target="_blank">pipx</a>（在隔离环境里安装并运行 Python 应用的工具）正准备采用的格式正式化。Moore 本是打包元数据类 PEP 的常任代表，却不能对自己的 PEP 拍板，于是请 Brett Cannon 担任该 PEP 的代表。2023 年 8 月，Ofek Lev 提交了 <a href="https://peps.python.org/pep-0723/" target="_blank">PEP 723</a>，改用 TOML 格式来指定所需包。Cannon 于 2023 年 10 月有条件地接受了 PEP 723，部分原因在于它的元数据格式与既有的 <code>pyproject.toml</code> 文件格式相似。</p>
+    <p>PEP 723 刻意"不试图定义"运行脚本的工具，也不规定工具该如何运作：它把创建环境、安装依赖、在特定环境中运行脚本这些事留给外部工具。</p>
+    <p>uv 项目于 2024 年 8 月加入了对 PEP 723 风格依赖声明的支持。它并不是第一个支持 PEP 723 的项目——<a href="https://pipx.pypa.io/" target="_blank">pipx</a>、<a href="https://pypi.org/project/pip-run/" target="_blank">pip-run</a>、<a href="https://hatch.pypa.io/" target="_blank">Hatch</a>、<a href="https://pdm-project.org/" target="_blank">PDM</a> 和 <a href="https://pex.readthedocs.io/" target="_blank">pex</a> 都比 uv 更早提供该支持。但 uv 的支持之所以值得注意，是因为它创建环境、安装依赖快到别的项目往往把它当作首选后端：装了 uv 时，pipx 与 pip-run 都用 uv 管理虚拟环境和安装依赖，Hatch 则会装一份自己的 uv 并默认使用。</p>
+
+    <h4>用 pip 配合 PEP 723</h4>
+    <p>虽然 Python 目前并不原生支持"脚本自装依赖"，但即便不用外部工具，也能从 PEP 723 中受益。2026 年 1 月，<strong>pip 26.0</strong> 加入了 <code>--requirements-from-script</code> 标志，可以从脚本文件读取 PEP 723 元数据并安装脚本依赖。</p>
+    <p>用核心 Python 管理脚本依赖大致需要三步。首先，为脚本创建虚拟环境（<code>--upgrade-deps</code> 会把最新版 pip 装进该环境）：</p>
+    <pre><code>$ python3 -m venv --upgrade-deps ~/.venvs/pypi-latest</code></pre>
+    <p>然后加入 PEP 723 元数据，并把 shebang 指向该虚拟环境的 Python 解释器：</p>
+    <pre><code>#!/home/trey/.venvs/pypi-latest/bin/python
+# /// script
+# requires-python = "&gt;=3.11"
+# dependencies = [
+#     "requests&gt;=2.34.2",
+# ]
+# ///</code></pre>
+    <p>最后在该环境里安装依赖，并把脚本设为可执行：</p>
+    <pre><code>$ ~/.venvs/pypi-latest/bin/python -m pip install --requirements-from-script pypi-latest.py
+Collecting requests&gt;=2.34.2
+[... list of packages installed into the virtual environment ...]
+Successfully installed certifi-2026.10.23 charset_normalizer-3.5.2
+idna-3.20 requests-2.34.2 urllib3-2.8.0
+$ chmod +x pypi-latest.py</code></pre>
+    <p>只要在运行 pip 和写 shebang 时都使用解释器的完整路径，虚拟环境就<strong>永远不需要被激活</strong>。与 uv 不同，pip 不会创建虚拟环境、不会运行脚本，也不会在脚本元数据变化时更新环境。</p>
+
+    <h4>究竟有多可移植？</h4>
+    <p>脚本的可移植性取决于它的 shebang，以及让脚本在新机器上跑起来所需的准备步骤。uv 建议的 <code>#!/usr/bin/env -S uv run --script</code> 让 uv 脚本相当可移植，但这条 shebang 并非没有问题。</p>
+    <p>多数内核把 shebang 解析为"一个解释器 + 单个参数"，也就是说以空格分隔的值不会被当作多个参数。<code>-S</code> 选项让 env 把自己的参数按单词拆开，因此 <code>#!/usr/bin/env -S uv run --script</code> 会以 <code>run</code> 和 <code>--script</code> 两个参数去运行 uv。<code>-S</code> 并非标准，但支持得相当广：FreeBSD 于 2005 年（6.0 版）加入，macOS 于 2015 年（OS X 10.11）加入，GNU coreutils 于 2018 年（8.30 版）加入；而 BusyBox（Alpine Linux 的默认实现）、OpenBSD 与 NetBSD 的 env 都不支持 <code>-S</code>。</p>
+    <p>撇开 shebang 不谈，在机器之间拷贝 uv 脚本几乎不费事——<code>uv run --script</code> 会自动管理虚拟环境和依赖；当然，目标机器上得装了 uv 才行。对于手工管理虚拟环境的 PEP 723 脚本，可移植性就是个大得多的难题了：shebang 里写死了虚拟环境路径，所以在脚本拷过去的每台机器上，都得在同一路径手工重建那个环境，或者逐台修改 shebang。</p>
+    <p>自安装的 uv 脚本在每台新机器上还会重新解析依赖。使用 <code>uv add</code> 写出的 <code>&gt;=</code> 下界，可能拉进被投毒的版本，比如 <a href="https://lwn.net/Articles/1104210/" target="_blank">3 月和 10 月的 LiteLLM 发布</a>。pip 也有同样风险，但它只在显式执行 <code>pip install</code> 时才解析依赖。</p>
+    <p>用精确的 <code>==</code> 锁定依赖并不能彻底解决问题，因为传递依赖仍然没有锁定。uv 支持为脚本使用完整的锁文件，但锁文件必须放在脚本旁边，不能写在脚本内部。就"能塞进 uv 脚本里"而言，最接近完整依赖锁定的手段是 <code>exclude-newer</code> 时间戳——它让 uv 忽略该时间之后上传的一切。但只有 uv 认这个时间戳，而且 uv 目前没有自动在脚本里写入或更新 <code>exclude-newer</code> 时间戳的机制（尽管已有 <a href="https://github.com/astral-sh/uv/issues/" target="_blank">相关 open issue</a>）。我自己用 <a href="https://pypi.org/project/uvrs/" target="_blank">uvrs</a> 这个包装工具给脚本里的依赖做时间戳锁定。</p>
+
+    <h4>Python 该原生支持吗？</h4>
+    <p>要给 PEP 723 加内置支持，Python 解释器就得为每个脚本管理一个虚拟环境、把脚本依赖装进去、并在该环境中运行脚本——其中每一项单拎出来都是件大事。理想情况下 pip 安装这些依赖还要更快，以免脚本首次运行耗上好几秒。pip 维护者之一 Damian Shaw 说 pip 正在"慢慢追赶 uv"，他本人正在为 pip 原型开发一个更快的依赖解析器。</p>
+    <p>Python 该不该内置支持 PEP 723？这个问题最终可能会摆到 Python 指导委员会、以及 <a href="https://discuss.python.org/t/" target="_blank">2026 年 9 月选出的新一届 Python 打包委员会</a>面前。2022 年 Moore 曾说，类似 <code>pip run</code> 的东西"属于核心（或者像 runpy 那样属于标准库）"，但"核心团队里大概没人会牵头推动这样一件事"。更近一些，Python 打包委员会成员 Henry Schreiner 表示，"内置一种运行 PEP 723 脚本的方式，对新手会非常友好"。在 Python 加上内置 PEP 723 支持之前，想让脚本自动装好正确依赖再运行，仍然离不开 uv 这样的第三方工具。</p>
+    <p><em>页面编辑：Joe Brockmeier</em></p>
+    </div>
+</div>
+
+            <div class="article" id="briefs">
+    <div class="article-header">
+        <span class="article-category">社区简讯</span>
+        <h2>📝 Brief items（社区简讯）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for November 5, 2026</span>
+            <span><a href="https://lwn.net/Articles/1103482/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+    <h3>安全（Security）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1104192/" target="_blank">开启 multipath TCP 的 Linux 系统存在远程代码执行漏洞</a></h4>
+    <p>10 月 27 日，LLM 服务商 Anthropic <a href="https://www.anthropic.com/research/discovering-vulnerabilities-with-claude" target="_blank">报告了</a>一个影响"开启了 multipath TCP 监听"系统的<a href="https://nvd.nist.gov/vuln/detail/cve-2026-98432" target="_blank">可远程利用的释放后使用（use-after-free）漏洞</a>。漏洞原理是：在另一个线程建立 TCP 连接的同一时刻，触发对重传 SYN 包的响应，导致第一个线程在第二个线程释放连接的 options 结构之后仍去访问它。随后第一个线程可以泄露内核内存，或造成缓冲区溢出、写入攻击者控制的载荷。<a href="https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=e3f33b0a1d89d738e2b913dab519226eaf76e15b" target="_blank">修复方式</a>是只在经过一个 RCU 宽限期之后才释放该结构。10 月 29 日，Go 安全团队<a href="https://lwn.net/ml/all/bdb0066d-471b-4689-bb85-bfcb08774706@oracle.com/" target="_blank">提醒说</a>，所有用 Go 编写的程序默认都会使用 multipath TCP，因此许多系统可能在毫不知情的情况下处于有漏洞状态。当然，TCP 协议栈其他部分也存在相关漏洞的可能性。用户最好在各自发行版提供补丁内核后尽快更新。</p>
+    <p><a href="https://lwn.net/Articles/1104192/#Comments" target="_blank">评论（22 条）</a></p>
+
+    <h4><a href="https://lwn.net/Articles/1104262/" target="_blank">我们本可以给 Bash 植入后门（Hacktron 博客）</a></h4>
+    <p>Hacktron 博客<a href="https://www.hacktron.ai/blog/hacking-gnu-savannah" target="_blank">记录了</a>该团队如何攻陷 GNU Savannah 代码托管平台，以及他们本可以把恶意软件推送到托管在那里的任何一个项目中：</p>
+    <blockquote><p>借助 Hacktron，我们发现形如 <code>a`touch${IFS}/tmp/savane-rce-proof`@attacker.example</code> 的电子邮件地址，能让任何已注册用户在其后端执行代码。由此我们把自己的账号提成了超级用户，冒充了 Bash 的维护者，并确认可以向上游 Bash 仓库添加一个具备推送权限的 SSH 密钥。一台未打补丁的内核又让我们拿到了 root 权限以及对 GNU 备份服务器的访问。我们已于 2026 年 5 月 11 日向 FSF 报告此事。</p></blockquote>
+    <p><a href="https://lwn.net/Articles/1104262/#Comments" target="_blank">评论（24 条）</a></p>
+
+    <h4><a href="https://lwn.net/Articles/1104847/" target="_blank">关上 XCPE 僵尸网络的大门（威胁情报）</a></h4>
+    <p>Google 威胁情报博客<a href="https://cloud.google.com/blog/topics/threat-intelligence/" target="_blank">详尽描述</a>了刚刚被端掉的 XCPE 僵尸网络：</p>
+    <blockquote><p>上周，Google 与行业伙伴拆解了 XCPE 后门——它把超过 130 万台机顶盒纳入了一个僵尸网络。我们高度确信，该后门与僵尸网络是由 Android OEM/ODM 厂商 Videostrong Technology Co. 出于经济收益而有意开发、部署和运营的。Videostrong 通过向犯罪 affiliates 出售访问权限、并把这些 affiliates 的恶意模块加载到受感染设备上变现。这些二级模块从事广告欺诈、悄悄把受感染设备纳入住宅代理网络，并在被 XCPE 攻陷的设备上加载更多恶意软件。</p></blockquote>
+    <p><a href="https://lwn.net/Articles/1104847/#Comments" target="_blank">评论（14 条）</a></p>
+
+    <h3>内核开发（Kernel development）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1105416/" target="_blank">内核发布状态</a></h4>
+    <p>7.4 合并窗口如期于 11 月 1 日关闭，LWN 已有两篇文章介绍本轮纳入的内容。<strong>稳定版更新</strong>：<a href="https://lwn.net/Articles/1105382/" target="_blank">7.3.1</a>、<a href="https://lwn.net/Articles/1105381/" target="_blank">7.2.14</a>、<a href="https://lwn.net/Articles/1105380/" target="_blank">6.18.60</a>、<a href="https://lwn.net/Articles/1105379/" target="_blank">6.12.115</a>、<a href="https://lwn.net/Articles/1105378/" target="_blank">6.6.161</a>、<a href="https://lwn.net/Articles/1105377/" target="_blank">6.1.191</a>、<a href="https://lwn.net/Articles/1105376/" target="_blank">5.15.224</a> 与 <a href="https://lwn.net/Articles/1105375/" target="_blank">5.10.273</a> 稳定内核于 10 月 30 日发布；<a href="https://lwn.net/Articles/1105400/" target="_blank">7.2.15</a>（7.2 系列的最后一个版本）于 11 月 1 日跟进。</p>
+
+    <h4><a href="https://lwn.net/Articles/1103670/" target="_blank">本周引述（Quotes of the week）</a></h4>
+    <blockquote><p>说真的，作为一个已经学会怎么让 LLM 生成像样代码的人，我挺失望的——我竟要如此频繁地告诉那些用 LLM 的陌生人：他们的代码完全是一坨屎。LLM 在人类正确引导下并不会生成坏代码。坏代码是糟糕程序员的标志（也就是人的失败），无论这代码是不是 LLM 生成的。<br><cite>— Dave Chinner</cite></p></blockquote>
+    <blockquote><p>说明一下，我原本假设如果我们走三周的 -rc1 周期，7.4 会在 1 月第一周发布，所以我一直打算把 7.3 作为下一个 LTS 内核——那样的话，如果一切"顺利"，7.4.0 会落在 27 号。[……] 话虽如此，如果有人试图往 7.4 里"硬塞"东西，那恰恰是不该让 7.4 成为下一个 LTS 的最好理由——过去我们遇到过这种情况，吃过大亏。所以除非 7.3.y 出了什么真正离谱的事，就先认定它是下一个 LTS 吧。<br><cite>— Greg Kroah-Hartman</cite></p></blockquote>
+
+    <h3>发行版（Distributions）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1105395/" target="_blank">Bazzite 45 发布</a></h4>
+    <p>基于 Fedora Linux 的镜像式游戏发行版 <a href="https://bazzite.gg/" target="_blank">Bazzite</a> 发布了第 45 版。本版值得注意的变化包括：rebase 到 Fedora 45、更新的 Open Gaming Collective（OGC）内核、对 Logitech TrueWheel 设备的支持等。LWN 曾在 2025 年 12 月<a href="https://lwn.net/Articles/1048751/" target="_blank">报道过 Bazzite</a>。</p>
+
+    <h4><a href="https://lwn.net/Articles/1105121/" target="_blank">Fedora Linux 45 发布</a></h4>
+    <p>Fedora Linux 45 已发布，涵盖所有版本：<a href="https://fedoraproject.org/workstation/" target="_blank">Workstation</a>、<a href="https://fedoraproject.org/kde/" target="_blank">KDE Plasma Desktop</a>、<a href="https://fedoraproject.org/server/" target="_blank">Server</a>、<a href="https://fedoraproject.org/cloud/" target="_blank">Cloud</a>、<a href="https://fedoraproject.org/coreos/" target="_blank">CoreOS</a> 与 <a href="https://fedoraproject.org/iot/" target="_blank">IoT</a>，以及 <a href="https://fedoraproject.org/atomic-desktops/" target="_blank">Atomic Desktops</a> 和 <a href="https://fedoraproject.org/spins/" target="_blank">Spins</a>。本版新增了通过 Anaconda 或 Kickstart 在 Stratis 存储上安装的支持，退役了 NetworkManager 中无人维护的 VPN 插件，并更新了 Fedora 的桌面环境、开发工具链与系统软件包。主要变化清单见 Fedora wiki 的 <a href="https://fedoraproject.org/wiki/Releases/45/ChangeSet" target="_blank">ChangeSet 页面</a>。</p>
+
+    <h4><a href="https://lwn.net/Articles/1105131/" target="_blank">openSUSE Leap 16.1</a></h4>
+    <p>openSUSE 项目宣布发布 openSUSE Leap 16.1。该版本的一大亮点是同时提供传统安装方式与带事务式更新的不可变镜像。不可变镜像此前只在 Leap Micro 上可用，如今覆盖了 Leap 支持的所有平台，包括服务器、桌面和虚拟机。"Leap 的镜像为传统用户和不可变用户各自提供了最好的一面，我们预计当 Agama 也成为 Tumbleweed 的默认安装器时，Tumbleweed 会跟进。"Leap 发布经理 Lubos Kocman 说，"人们所依赖的 Leap Micro 体验依然在，只是现在它与 Leap 其余部分共享同一个版本、同一个生命周期和同一套维护更新，用户只需挑选适合自己工作负载的模式即可。"</p>
+
+    <h3>开发（Development）</h3>
+
+    <h4><a href="https://lwn.net/Articles/1104210/" target="_blank">Haas：PostgreSQL 19 跳票了，这是 AI 的锅</a></h4>
+    <p>PostgreSQL 开发者 Robert Haas <a href="https://rhaas.blogspot.com/2026/10/" target="_blank">撰文</a>谈项目在筹备下一版本时遇到的种种挣扎：</p>
+    <blockquote><p>说到底，我认为 PostgreSQL 19 的延期并不特别令人担忧。放在大格局里这不算长，而且它直接源于项目对质量的重视。长期图景则不那么清晰、在某些方面更令人不安：既然有四十年里人类都没能发现、而 LLM 却相当擅长找出来的 bug，我们究竟要怎么才追得上？PostgreSQL 又该如何继续创新？眼下我不确定。我唯一确定的是，我和其他许多人正在非常努力地寻找答案。</p></blockquote>
+    <p>LWN 曾在 9 月<a href="https://lwn.net/Articles/1093434/" target="_blank">关注过 PostgreSQL 19 的发布及其挑战</a>。</p>
+
+    <h4><a href="https://lwn.net/Articles/1104846/" target="_blank">Tor Browser 16.0 发布</a></h4>
+    <p>Tor Browser 16.0 已发布，这是第一个基于 Firefox ESR 153 的稳定版本。值得注意的变化包括对 64 位 Arm 上 Linux 的支持、重新设计的设置界面，以及一项"通用窗口标题"特性，用于防止其他应用程序窥探浏览器活动。Android 版 Tor Browser 针对 Google 的 Material Design 3 设计语言做了一批界面更新。本版本也跟随 Firefox 终止了对 32 位 x86 Linux 系统的支持。全部更新与 bug 修复见<a href="https://blog.torproject.org/new-release-tor-browser-160/" target="_blank">完整变更日志</a>。</p>
+
+    <p><em>页面编辑：Daroc Alden</em></p>
+
+    </div>
+</div>
+
+            <div class="article" id="announcements">
+    <div class="article-header">
+        <span class="article-category">公告</span>
+        <h2>📢 Announcements（公告）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for November 5, 2026</span>
+            <span><a href="https://lwn.net/Articles/1103483/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+    <h3>简报与周报（Newsletters）</h3>
+    <p>本周 LWN 共收录 <strong>30 份</strong>简报与周报。<strong>发行版与系统管理类</strong>（7 份）：DistroWatch Weekly（11-02）、This week in F-Droid（11-02）、This week in Fedora（11-02）、Linux Mint Monthly News（10 月）、openSUSE Tumbleweed Review of the Week（10-30）、SparkyLinux News（11-01）、Ubuntu Weekly News（10-26）。<strong>开发类</strong>（21 份）：Emacs News（11-02）、What's cooking in git.git（10-28 与 11-02 两期）、Git Rev News（10-31）、This Week in GNOME（10-30）、Golang Weekly（10-30）、Koha Community Newsletter（10 月）、Last Week in Kubernetes Development（10-31）、LibreOffice project and community recap（11-04）、LLVM Weekly（11-02）、This Week in Matrix（10-30）、OCaml Weekly News（11-03）、This week in the Perl Steering Committee（11-02）、Perl Weekly（11-02）、This Week in Plasma（10-31）、PyCoder's Weekly（11-03）、Weekly Rakudo News（11-02）、Ruby Weekly News（10-29）、This Week in Rust（10-28）、Wikimedia Tech News（11-02）。<strong>会议纪要类</strong>（1 份）：Fedora FESCo meeting minutes（11-03）。<strong>其他类</strong>（1 份）：Free Software Supporter（11 月）。</p>
+
+    <h3>征稿启事（CFP，截止日期 2026-11-05 至 2027-01-04）</h3>
+    <p>本期 CFP 列表取自 <a href="https://lwn.net/Calendar/Monthly/cfp/" target="_blank">LWN.net CFP 日历</a>，仅收录 1 项：</p>
+    <table>
+        <thead>
+            <tr><th>截止日期</th><th>会议日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>2026-12-20</td><td>2027-02-01</td><td><a href="https://pretalx.com/openembedded-workshop-2027/cfp" target="_blank">OpenEmbedded Workshop 2027</a></td><td>Brussels, Belgium</td></tr>
+        </tbody>
+    </table>
+
+    <h3>近期活动（2026-11-05 至 2027-01-04）</h3>
+    <table>
+        <thead>
+            <tr><th>日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>11-06 至 11-07</td><td>Texas Linux Festival</td><td>Austin, TX, US</td></tr>
+            <tr><td>11-07 至 11-08</td><td>OpenFest 2026</td><td>Sofia, Bulgaria</td></tr>
+            <tr><td>11-07 至 11-08</td><td>OpenALT</td><td>Brno, Czechia</td></tr>
+            <tr><td>11-12 至 11-13</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+            <tr><td>11-12 至 11-13</td><td>KVM Forum</td><td>Vancouver, Canada</td></tr>
+            <tr><td>11-14 至 11-15</td><td>Capitole du Libre 2026</td><td>Toulouse, France</td></tr>
+            <tr><td>11-17 至 11-19</td><td>Open Source Monitoring Conference</td><td>Nuremberg, Germany</td></tr>
+            <tr><td>11-20 至 11-21</td><td>OLF Conference</td><td>Columbus, Ohio, US</td></tr>
+            <tr><td>11-21</td><td>LocHal Open Source Event 2026</td><td>Tilburg, Netherlands</td></tr>
+            <tr><td>11-28</td><td>FOSS for All Conference 2026</td><td>Seoul, South Korea</td></tr>
+            <tr><td>12-01 至 12-03</td><td>Yocto Project Virtual Summit 2026.12</td><td>线上</td></tr>
+            <tr><td>12-07 至 12-09</td><td>Open Source Summit Japan</td><td>Tokyo, Japan</td></tr>
+        </tbody>
+    </table>
+
+    <h3>安全更新（2026-10-29 至 2026-11-04）</h3>
+    <p>本周共收录 <strong>1,410</strong> 条安全公告，数量约为上一期（773 条）的两倍，各发行版分布如下：</p>
+    <table>
+        <thead>
+            <tr><th>发行版</th><th>公告数</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Fedora</td><td>738</td><td>数量过半，覆盖 F43/F44/F45，含 kernel、chromium、thunderbird、firefox、libX11 系列、curl、ghostscript 等；与 Fedora 45 发布周期叠加有关</td></tr>
+            <tr><td>SUSE / openSUSE</td><td>202</td><td>涵盖 SLE 与 openSUSE 各分支，含 kernel、xen、curl、openssl、ca-certificates 等</td></tr>
+            <tr><td>Red Hat</td><td>177</td><td>含大量 kernel / kernel-rt 与多版本 EL 变体更新，以及 openssl、sudo、php、rhc 等</td></tr>
+            <tr><td>AlmaLinux</td><td>112</td><td>与 RHEL 同步，含 kernel、firefox、thunderbird、curl、python 系列等</td></tr>
+            <tr><td>Oracle</td><td>98</td><td>OL7/OL8/OL9/OL10 联动更新，含 kernel-uek、php、glibc、curl 等</td></tr>
+            <tr><td>Ubuntu</td><td>39</td><td>USN 更新，含 xen、php、firefox 等</td></tr>
+            <tr><td>Debian</td><td>33</td><td>DSA/DLA 各若干，含 chromium、firefox-esr、thunderbird、git 等</td></tr>
+            <tr><td>Mageia</td><td>9</td><td>常规安全修复</td></tr>
+            <tr><td>Slackware</td><td>2</td><td>常规安全修复</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的安全更新：<strong>kernel</strong> 相关共 128 条（kernel 111 + kernel-rt 17），是数量最多的软件包类别，覆盖 AlmaLinux（ALSA-2026:91565、93911、92209 等）、Red Hat、Oracle、SUSE、Fedora 与 Debian；<strong>thunderbird</strong>（17 条）与 <strong>firefox/firefox-esr</strong>（18 条）在 Debian（DSA-6590-1、DSA-6598-1、DLA-4866-1、DLA-4877-1）、AlmaLinux、Fedora、Oracle 等多家同步修复；<strong>chromium</strong>（14 条）见于 Debian（DSA-6592-1、DSA-6605-1、DLA-4878-1）、Fedora 与 openSUSE；<strong>git</strong>（13 条）出现集中更新，含 Debian（DSA-6603-1、DSA-6594-1、DLA-4872-1）与 Fedora 多则；此外 <strong>curl</strong>（10 条，AlmaLinux、Oracle、SUSE、Fedora）、<strong>openssl</strong>（10 条，Red Hat、Fedora、SUSE）、<strong>libXi</strong>（13 条）、<strong>libxml2</strong>（9 条）、<strong>php</strong>（7 条）、<strong>grafana</strong>（7 条）、<strong>sudo</strong>（4 条）、<strong>xen</strong>（3 条，SUSE、Ubuntu）、<strong>glibc</strong>（2 条，Oracle）与 <strong>openssh</strong>（1 条，SUSE）也值得留意。</p>
+
+    <h3>内核补丁（Kernel patches）</h3>
+    <p>本周共收录 <strong>79</strong> 条内核动态（含 10 个版本发布与 69 个补丁系列），分类统计如下：</p>
+    <table>
+        <thead>
+            <tr><th>类别</th><th>数量</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Kernel releases（版本发布）</td><td>10</td><td>Linux 7.4-rc1 及 7.3.1、7.2.14/7.2.15、6.18.60、6.12.115、6.6.161、6.1.191、5.15.224、5.10.273 等稳定版</td></tr>
+            <tr><td>Architecture-specific（体系结构）</td><td>11</td><td>alpha ProfileMe 采样、RISC-V 嵌套翻译与 BPF 私有栈、x86 系统调用分派优化、受保护虚拟机大页映射等</td></tr>
+            <tr><td>BPF-related（BPF 相关）</td><td>6</td><td>arena 中的栈、每次 prog 调用一个 may_goto 时间片、延迟加载 vmlinux BTF 节省约 6MB 内存等</td></tr>
+            <tr><td>Build system（构建系统）</td><td>2</td><td>kbuild 随内核构建用户态工具、KConfig 哈希表修正提速</td></tr>
+            <tr><td>Core kernel（核心）</td><td>7</td><td>LLC 粒度缓存感知聚合、sysctl 类型化边界、Rust kunit 增强、liveupdate 保留 tmpfs 等</td></tr>
+            <tr><td>Development tools（开发工具）</td><td>4</td><td>Rust 库构建基础设施、per-CPU debugfs、kallsyms 嵌入源码行列号、perf sysinfo 等</td></tr>
+            <tr><td>Device-driver infrastructure（驱动基础设施）</td><td>3</td><td>可撤销资源管理、Rust drm::JobQueue、DRM 树合并为单一 drm-for-linux-next</td></tr>
+            <tr><td>Documentation（文档）</td><td>3</td><td>QEMU EDU Rust 示例驱动、Kconfig 语言史、内核最小化指南</td></tr>
+            <tr><td>Filesystems and block layer（文件系统与块层）</td><td>11</td><td>XFS 的 fs-verity 支持、initramfs xattrs、f2fs 小于 PAGE_SIZE 的块、btrfs io_uring 碎片整理接口等</td></tr>
+            <tr><td>Memory management（内存管理）</td><td>4</td><td>vmscan 脏 folio 批量 TLB 刷新、RSS 分层 percpu 计数器、无 folio 引用读页缓存等</td></tr>
+            <tr><td>Networking（网络）</td><td>4</td><td>内核内 TLS 1.3 KeyUpdate、virtio-net 校验和开关、WiFi SCS/MSCS 等</td></tr>
+            <tr><td>Security-related（安全相关）</td><td>4</td><td>按命名空间的能力边界集、MSG_CMSG_SEALED、module_blacklist 扩展到内建模块等</td></tr>
+            <tr><td>Virtualization and containers（虚拟化与容器）</td><td>4</td><td>KVM 内存保护属性、受保护客户机自托管调试、VFIO PCI Live Update 等</td></tr>
+            <tr><td>Miscellaneous（其他）</td><td>6</td><td>perf 惰性符号加载/数据类型剖析、只读 eventfs、fdtfactor 等</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的补丁/发布摘选：</p>
+    <ul>
+        <li><strong>Linus 7.4-rc1</strong>（Linus Torvalds）—— 7.4 合并窗口关闭后的首个 rc，本轮共纳入创纪录的 18,591 个非合并变更集。</li>
+        <li><strong>bpf: A stack in arena</strong>（Alexei Starovoitov）—— 在 BPF arena 中提供栈支持。</li>
+        <li><strong>bpf: More precision, more counted loops, larger limits</strong>（Alexei Starovoitov）—— 提升验证器精度、放宽计数循环与上限。</li>
+        <li><strong>bpf: keep the vmlinux BTF compressed until first use</strong>（Jay Wang）—— 新增 CONFIG_DEBUG_INFO_BTF_LAZY，节省约 6MB 内存。</li>
+        <li><strong>mm: read the page cache without folio references</strong>（Kiryl Shutsemau, Meta）—— 读页缓存不再持有 folio 引用，降低开销。</li>
+        <li><strong>Hierarchical Percpu Counters for RSS</strong>（Mathieu Desnoyers）—— 为 RSS 统计引入分层 per-CPU 计数器。</li>
+        <li><strong>tls: perform TLS 1.3 KeyUpdate in the kernel</strong>（Martin Belanger）—— 把 TLS 1.3 密钥更新搬进内核。</li>
+        <li><strong>liveupdate: Preserve tmpfs files across Live Update</strong>（David Matlack）—— 内核在线更新期间保留 tmpfs 文件。</li>
+        <li><strong>fs-verity support for XFS with post EOF merkle tree</strong>（Andrey Albershteyn）—— 为 XFS 带来 fs-verity 支持。</li>
+        <li><strong>x86/syscall: Dispatch via sys_call_table when Spectre v2 and BHI are off</strong>（Breno Leitao）—— 关闭相关缓解措施时走更直接的系统调用分派路径。</li>
+        <li><strong>Speed up KConfig - fix hashtable confusion</strong>（Linus Torvalds）—— 修正 KConfig 哈希表实现以提速。</li>
+        <li><strong>kallsyms: embed source file:line info in kernel stack traces</strong>（Sasha Levin）—— 内核栈回溯直接带出源码文件与行号。</li>
+        <li><strong>rust: Add drm::JobQueue</strong>（Philipp Stanner）—— Rust DRM 抽象新增任务队列。</li>
+        <li><strong>KVM: x86: Introduce memory protection attributes</strong>（Paolo Bonzini）—— 为 KVM x86 引入内存保护属性。</li>
+        <li><strong>tracefs: Add read-only eventfs filesystem at /sys/kernel/events</strong>（Steven Rostedt）—— 新增只读事件文件系统。</li>
+        <li><strong>userns: per-namespace capability bounding set and opt-in netns loopback</strong>（Hallgrimur H. Gunnarsson）—— 用户命名空间能力边界集与可选 netns loopback。</li>
+    </ul>
+
+    <p><em>页面编辑：Joe Brockmeier</em></p>
+
+    </div>
+</div>
+
+        </main>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar bottom" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-11-05.html">📰 最新</a>
+            <a class="nav-btn" href="2026-10-22.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年11月5日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <footer class="footer">
+            <p>内容翻译自 <a href="https://lwn.net" target="_blank">LWN.net</a>，遵循 Creative Commons 协议。</p>
+            <p>本期来源：<a href="https://lwn.net/Articles/1103480/" target="_blank">LWN.net Weekly Edition for November 5, 2026</a></p>
+            <p>更新时间：2026年11月12日</p>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
