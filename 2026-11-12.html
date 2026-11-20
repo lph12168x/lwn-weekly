@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LWN 周刊 - 2026年11月12日</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128240;</text></svg>">
+    <script src="toc.js" defer></script>
+</head>
+
+<body>
+    <button class="theme-toggle" id="themeToggle" aria-label="切换主题">
+        <span class="theme-icon">&#127769;</span>
+    </button>
+
+    <div class="container">
+        <header class="header">
+            <div class="header-badge">LWN 周刊中文版</div>
+            <h1>LWN.net Weekly Edition</h1>
+            <p class="edition-date">2026年11月12日</p>
+            <p class="edition-desc">Linux 和自由软件周刊 - 中文翻译</p>
+            <a href="index.html" class="back-link">&larr; 返回期刊列表</a>
+        </header>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-11-12.html">📰 最新</a>
+            <a class="nav-btn" href="2026-11-05.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年11月12日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <main class="content">
+            <!-- 目录 -->
+            <div class="toc">
+                <h2>📑 目录</h2>
+                <ul>
+                    <li><a href="#article1">Synaptics 的专利主张让 DisplayLink 驱动开发停摆</a></li>
+                    <li><a href="#article2">Git 考虑通过投票决定其 LLM 政策</a></li>
+                    <li><a href="#article3">为冬季锁住休眠功能</a></li>
+                    <li><a href="#article4">用户命名空间 + 文件能力 = 麻烦</a></li>
+                    <li><a href="#article5">为 glibc 动态链接器增加更多加固</a></li>
+                    <li><a href="#briefs">📝 Brief items（社区简讯）</a></li>
+                    <li><a href="#announcements">📢 Announcements（公告）</a></li>
+                </ul>
+            </div>
+
+<div class="article" id="article1">
+    <div class="article-header">
+        <span class="article-category">驱动 / 法律</span>
+        <h2>Synaptics 的专利主张让 DisplayLink 驱动开发停摆</h2>
+        <div class="article-meta">
+            <span>作者：Joe Brockmeier</span>
+            <span>2026年11月10日</span>
+            <span><a href="https://lwn.net/Articles/1102549/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>Mike Lothian 有一台使用 <a href="https://en.wikipedia.org/wiki/DisplayLink">DisplayLink</a> 芯片组的扩展坞（dock），至少在他看来，这块芯片在 Linux 上的性能表现差强人意。他决定在 LLM（大语言模型）的辅助下尝试改进 Linux 驱动，但遇到了一个自己无法解决的问题——于是他寻求帮助，希望 Synaptics 的开发者能伸出援手。（DisplayLink 于 2022 年<a href="https://www.synaptics.com/company/news/displaylink">被 Synaptics 收购</a>。）然而，Synaptics 的法务团队并没有帮助他改进驱动，而是以专利侵权指控、<a href="https://lists.freedesktop.org/archives/dri-devel/attachments/20261006/d690bb16/attachment-0001.pdf">要求</a>他停止未经授权实现 DisplayLink 技术，以及昂贵法律处罚的威胁作为回应。就目前而言，该公司扩展坞的 Linux 用户看来还得继续忍受无法与其他平台功能对等（feature parity）的状况。</p>
+
+        <h4>Synaptics 与 DisplayLink</h4>
+
+        <p>他试图支持的这款扩展坞是戴尔（Dell）的设备，通过 USB 3 连接到系统，允许用户将多台显示器和其他设备连接到计算机上。该公司通过面向 Ubuntu 的 APT 软件仓库为这些设备提供其 <a href="https://www.synaptics.com/products/displaylink-graphics/downloads/ubuntu">DisplayLink Manager（DLM）Linux 软件</a>。</p>
+
+        <p>该公司只以二进制形式提供 DLM 软件，而且只针对基于 x86 的平台。该软件是专有的，但公司确实维护着一个随 DLM 一起提供的开源、树外（out-of-tree）内核模块，即<a href="https://github.com/DisplayLink/evdi#readme">可扩展虚拟显示接口</a>（Extensible Virtual Display Interface，EVDI）项目。它提供了一个与 <a href="https://docs.kernel.org/gpu/introduction.html">Linux DRM</a> 兼容的驱动，允许用户使用通常用于显示设置的标准工具来管理其外接显示器，例如 <a href="https://linux.die.net/man/1/xrandr"><code>xrandr</code></a>，或 GNOME 和 KDE Plasma 的实用工具。</p>
+
+        <p>一篇<a href="https://support.displaylink.com/knowledgebase/articles/1104056-why-has-displaylink-not-released-source-code-for-t">简短的文章</a>解释了该公司为何没有发布 DLM 的源代码：该软件使用一种名为 DL3 的专有图形技术，将各种通道（例如 USB、DisplayLink 视频、音频）在一条通信通道（本例中为 USB 3）上生成压缩流，然后再将其解码以输出到用户的设备。</p>
+
+        <p>可惜的是，供应商提供的软件在 Lothian 这里运行得并不好。在撰写本文时，我通过 Signal 与他交谈；他说该驱动在 Linux 下不断崩溃，因此他决定利用自己的 Claude 订阅来尝试开发一个新的驱动及配套软件。</p>
+
+        <h4>Vino</h4>
+
+        <p>6 月 17 日，他将 Vino（他基于 Rust 编写的 DRM/KMS 驱动）的<a href="https://lwn.net/ml/all/20260617151249.2937-1-mike%40fireburn.co.uk/">第一组补丁系列</a>以 RFC（征求意见稿）的形式发布到内核的 dri-devel 邮件列表。Lothian 指出该驱动尚处于未完成状态，并就他在尝试与扩展坞的控制平面（control plane）通信时遇到的一个阻碍寻求帮助。“<q>如果你了解 DisplayLink DL3 控制平面的交互时序，或者对如何隔离出逐通道差异（per-channel diff）无法察觉的整总线时序/排序特性有思路，非常欢迎提供帮助。</q>”他收到了几位开发者的反馈，包括 Danilo Krummrich 的<a href="https://lwn.net/ml/all/DJBG3H7N9GS9.7AMMRJIHGHRN@kernel.org/">建议</a>，即重新改造该驱动以使用 Rust 的 <a href="https://lwn.net/Articles/997850/#kms">KMS 绑定（bindings）</a>，但没有收到针对他试图解决的问题的具体建议。</p>
+
+        <p>Lothian 还在 6 月 17 日于 EVDI 的 GitHub 仓库上提交了<a href="https://github.com/DisplayLink/evdi/issues/577">一个 issue</a>。他在其中解释了迄今为止所做的工作，概述了尝试逆向工程 DL3 协议的方法，提供了包含 Vino 代码的 GitHub 仓库链接，并就几个问题请求澄清。他的 issue 没有得到任何回复。</p>
+
+        <p>他还直接通过电子邮件联系了 Synaptics 的 Łukasz Spintzyk；他在 7 月 5 日至 10 月 7 日期间与该公司的往来邮件收录在<a href="/images/pdf/synaptics-correspondence-jul-oct-2026.pdf">这份由 Lothian 整理的 PDF</a> 中。他提到自己在 EVDI 中发现了几个错误并提交了一个 <a href="https://github.com/DisplayLink/evdi/pull/581">pull request</a>（该请求数月无人审核），同时也就在 Vino 上受阻之处请求协助。7 月 20 日，他收到了一封回复——但并非来自 Spintzyk，而是来自 Synaptics 的 Michal Lukaszek：</p>
+
+        <blockquote>
+            <p>我写这封邮件的理由是，DisplayLink 并不是一个开放标准。DisplayLink 设备所使用的协议、编解码器（codec）及其他技术均为 Synaptics 专有，并在包括英国在内的多个司法辖区受到大量专利组合的保护。</p>
+            <p>从你已公开的内容来看，VINO 项目似乎已超越互操作性（interoperability）工作，正朝着实现我们认为受这些专利覆盖的技术方向推进。虽然许多开发者理所当然地专注于避免侵犯受版权保护的源代码，但专利法有所不同。即使是一份独立编写或洁净室（clean-room）实现的作品，如果它实现了获得专利的发明，也不一定能避免专利侵权。</p>
+        </blockquote>
+
+        <p>Lukaszek 表示，Lothian 完全有可能并不了解“<q>DisplayLink 周围的知识产权格局</q>”，因此他想现在就让对方意识到这一点，而不是“<q>让事态日后变得更加正式</q>”。Lothian 住在苏格兰，且拥有一个“.co.uk”电子邮箱地址，这解释了为何该邮件提及英国。</p>
+
+        <h4>停止侵害通知（Cease and desist）</h4>
+
+        <p>8 月 17 日，Synaptics 负责知识产权的副总法律顾问（assistant general counsel）Andrew Bateman 发出了<a href="/images/pdf/Cease_and_Desist_Notice_Mike_Lothian_08-17-2026.pdf">一份停止侵害通知（cease-and-desist notice）</a>。信中称 Lothian 并未对 Lukaszek 的来信作出“<q>实质性回应</q>”，而是继续进行“<q>公开表态和进一步的开发活动</q>”。信中还附有一份包含 125 项专利的附录，称这些专利“<q>覆盖了 DisplayLink 架构与运行的基本方面</q>”，但并未具体指出该工作可能侵犯其中哪些专利。</p>
+
+        <p>Synaptics 列出了八项要求其立即遵守的条件，包括停止开发“<q>任何侵犯 Synaptics 专利的软件或其他实现</q>”，撤回“<q>向 Linux 内核维护者、邮件列表、代码托管平台、软件包维护者、发行版或任何其他个人或组织</q>”提交的材料，并以书面形式列出“<q>相关材料被发布、提交、存储或分发</q>”的每一处位置。它还要求他在 8 月 28 日前向 Synaptics 提供一份签字确认，证明其已遵守这些要求。</p>
+
+        <p>Lothian 则反其道而行之，于 8 月 26 日将他<a href="https://lwn.net/ml/all/20260826163913.7052-1-mike@fireburn.co.uk/">面向 DisplayLink 扩展坞的 Vino 工作第三版</a>发布到 dri-devel 列表。他说前两个版本“<q>从未点亮过屏幕</q>”，但新工作无需任何供应商软件即可控制三代 DL3 扩展坞。发布的补丁系列没有收到实质性审查，不过有来自 Sashiko 的一些自动化审查。</p>
+
+        <p>8 月 27 日，Lothian 回复了 Bateman，请他详细说明 Synaptics 认为遭到侵犯的专利。“<q>如果能提供一份将相关权利要求（claim）映射到相应代码的权利要求对照表（claim chart），将使我更容易理解并妥善回应你们的关切。</q>”</p>
+
+        <p>他还对 Synaptics 将其工作视为专利侵权的立场表示困惑。Synaptics 是<a href="https://openinventionnetwork.com/">开放发明网络（Open Invention Network，OIN）</a>的成员，该组织成立的初衷是<a href="https://lwn.net/Articles/163038/">帮助</a>开源开发者和供应商应对昂贵专利诉讼的威胁。它持有一个庞大的交叉许可专利组合，为个人、开源项目乃至大型供应商提供专利保护。Lothian 表示自己现在也是 OIN 的被许可人，而他认为 OIN 本应“<q>恰恰减少这类围绕 Linux 和开源软件的专利问题</q>”。</p>
+
+        <p>他请 Bateman 解释 Synaptics 的主张如何“<q>与我们各自对 OIN 的承诺相互作用</q>”，并表达了与 Synaptics 建设性地解决问题的愿望。“<q>我认为 Synaptics 与一位个人开源开发者之间的公开争执，对我们双方都不会特别有帮助，尤其是在 Linux 和开源社区之中。</q>”</p>
+
+        <p>Lothian 认为，在不了解对方所指控的是哪些专利权利要求的情况下，自己无法“<q>合理地提供签字保证</q>”以满足 Synaptics 在 8 月 28 日前提出的要求。他请求延长期限。Bateman 没有回复，于是 Lothian 在 9 月 18 日又发了一封跟进邮件。他说自己担心上一封邮件没有得到确认，并想知道是否可以安全地假定自己能够继续工作。他自己运行 Vino 驱动已有相当长一段时间，很希望能在没有专利威胁悬顶的情况下将其推进到上游（upstream）。</p>
+
+        <p>Bateman 在次日回复，说他确实应当担心：</p>
+
+        <blockquote>
+            如你此前所要求的，我们一直在通过将你的 Vino 驱动映射到我们 DisplayLink 专利的具体权利要求，来记录你持续的专利侵权行为。我将在未来两周内把这份权利要求映射文件提供给你。我还将向你发出我们要求巨额金钱赔偿的通知，以收回为整理这些关于你侵权行为的文件所需的成本与精力。此前我给过你停止侵权机会，但你决定反驳并不理会我的警告，因此现在我们正按我们认为适当的方式升级事态。
+        </blockquote>
+
+        <p>该信还继续声称，Lothian 将“<q>通过向我们的竞争对手和其他第三方传授我们如何实现专有技术，单枪匹马地摧毁 DisplayLink 在这个拥挤市场中的竞争优势</q>”。他说 DisplayLink 并非 OIN 成员，其任何技术都无法通过 OIN 或任何其他组织获得许可。</p>
+
+        <p>Bateman 于 10 月 5 日发出一封<a href="/images/pdf/Cease_and_Desist_Notice_Mike_Lothian_10-05-2026.pdf">跟进信</a>，其中包含两份针对英国专利的权利要求对照表：<a href="/images/pdf/GB2484736.pdf">GB2484736B</a>（“显示控制设备”）和 <a href="/images/pdf/GB2485613.pdf">GB2485613B</a>（“图像生成”），两者均于 2010 年提交、2012 年公开。他重申了 Synaptics 上一封信中的要求，并称最后期限现为 10 月 11 日；若未能遵守，公司将寻求“<q>向你索取 25,000 美元的金钱赔偿，以收回制作所附关于你侵权行为文件所需的成本与精力</q>”。在公司的要求得到满足之前，该金额每周将增加 25,000 美元。</p>
+
+        <p>Lothian 于次日通过电子邮件回复，称自己正在度假，要到 10 月 13 日才回家。他请求将最后期限延至返家之后，以便审阅权利要求对照表，“<q>最好能有具备资质的人帮我一起解读</q>”。Bateman <a href="https://lwn.net/ml/all/MW4PR03MB6540F02E3810CC632C82302598952%40MW4PR03MB6540.namprd03.prod.outlook.com/">回复</a>称 Synaptics 同意将期限延至 10 月 18 日，但不会再给予任何进一步的延期。他重申“<q>DisplayLink 并非 OIN 成员</q>”，其任何技术都无法通过 OIN 获得许可。</p>
+
+        <h4>OIN 来救场？</h4>
+
+        <p>Synaptics <em>确实</em>是 OIN 的成员，并列于<a href="https://openinventionnetwork.com/community-directory-alphabetical/">社区名录</a>之中。除了加入 OIN 之外，Lothian 也曾联系该组织试图寻求其帮助，并与其部分工作人员保持沟通。OIN 表示会调查此事，看看他作为 OIN 成员是否受到保护。这一过程比 Lothian 预期的更久，不过 OIN 最终还是给出了结论。</p>
+
+        <p>OIN 的专利组合覆盖了符合其<a href="https://openinventionnetwork.com/linux-system/">Linux 系统定义（Linux System Definition）</a>的广泛软件，但并不涵盖可能为 Linux 系统实现的一切。特别是，其定义明确规定，编解码器（“<q>一种能够对视频、静止图像或音频数据流或信号执行变换的程序组件</q>”）不在覆盖范围内，除非在<a href="https://definition.openinventionnetwork.com/table-0/">这份组件清单</a>中被特别提及。</p>
+
+        <p>在 OIN 工作人员将研究结果告知 Lothian 后不久，我于 10 月 23 日与 OIN 首席执行官 Keith Bergelt 进行了简短交谈。Bergelt 表示，OIN 的结论是：由于编解码器被明确排除在 OIN 的 Linux 系统定义之外，其保护并不延伸到 Lothian 尝试向内核贡献的代码。OIN 建议 Lothian 联系英国的律师，并提供了一份推荐。</p>
+
+        <h4>现状</h4>
+
+        <p>可惜的是，Lothian 说这次推荐并没有下文。他并没有完全放弃，但为了遵守 Synaptics 的要求，他已经撤下了 GitHub 仓库。目前，他或许会继续研究一些不受专利主张影响的组件，但 Vino 的工作将不会提交到内核。“<q>Vino 本身必须保持本地状态，直到此事得到解决；我实在无力承担与 Synaptics 打官司为自己辩护的费用。</q>”</p>
+
+        <p>或许有些讽刺的是，Lothian 告诉我，Synaptics 的人在 10 月 7 日终于<a href="https://github.com/DisplayLink/evdi/pull/581#pullrequestreview-5439551411">回复</a>了那个 pull request。Lothian 告诉我，他不打算对这些意见作出回应：“<q>你不能一边威胁要起诉我，一边又说‘你能更新一下你的 pull request 吗？’</q>”</p>
+
+        <p>就目前而言，Synaptics 已成功叫停了一项改善 DisplayLink 扩展坞在 Linux 上工作方式的努力。这令人不快地提醒我们：尽管当下开源社区的许多讨论都围绕着 LLM 驱动的开发，软件专利依然给自由软件开发者和用户带来问题。</p>
+    </div>
+</div>
+
+<div class="article" id="article2">
+    <div class="article-header">
+        <span class="article-category">开发工具 / AI 治理</span>
+        <h2>Git 考虑通过投票决定其 LLM 政策</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年11月9日</span>
+            <span><a href="https://lwn.net/Articles/1104195/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>2026 年的一个主要主题，是各个开发项目围绕以何种条件接受由 LLM 撰写的贡献而展开的争论——如果这些贡献真的应该被接受的话。<a href="https://git-scm.com/">Git 项目</a>也未能免于这一趋势；在最近的 Git 贡献者峰会上，这一话题曾被<a href="/ml/all/summit-2026.94e33e9ddf234334.06@ttaylorr.com">讨论</a>。在这种情况下，通往解决方案的路径可能有些迂回：这个项目从未以民主方式治理，如今却正在考虑采用投票流程，作为让讨论达成一个可接受结论的方式。</p>
+
+        <p>与大多数项目一样，Git 社区一直在考虑其针对 LLM 撰写贡献的政策。2025 年 10 月，该项目更新了<a href="https://git-scm.com/docs/SubmittingPatches#ai">其 SubmittingPatches 文档</a>，纳入了以下政策：</p>
+
+        <blockquote>
+            <p>开发者原始证书（Developer's Certificate of Origin）要求贡献者证明，他们知道自己贡献的来源，并且有权按照项目的许可证提交这些贡献。目前尚不清楚，当提交大量由 AI 工具生成的内容时，这一点能否在法律上得到满足。</p>
+            <p>AI 生成内容的另一个问题是，即便你指出了它们的错误，AI 仍然经常产生幻觉，或者只是产出糟糕的代码、提交信息、文档或输出。</p>
+            <p>为避免这些问题，我们将拒绝任何看起来像是 AI 生成的内容——那些听起来过于正式或冗长臃肿的内容、看起来像 AI 废料（AI slop）的内容、表面上看着不错却毫无意义的内容，或者发送者自己也不理解或无法解释的内容。</p>
+        </blockquote>
+
+        <p>这项政策在贡献者峰会上被重新审议，但没有得出任何明确的结论。一些参与者似乎愿意放宽这项政策，而另一些人则提出了持续的版权担忧，或者担心接受 LLM 撰写的贡献会削弱一些人对项目的信任。 似乎唯一达成的共识，就是不可能就这个话题达成共识。</p>
+
+        <p>在同一场会议上，有人提出了将这个问题付诸投票的想法，Emily Shaffer 同意承担起制定一项流程的任务，以便在这一流程下举行这样的投票。该流程的一份草案于 10 月 21 日<a href="/ml/all/20261021200341.378978-1-emilyshaffer@google.com">发布</a>，供人们审议。</p>
+
+        <p>这项投票提案似乎在某种程度上受到了 Debian 流程的影响，但并不完全相同。当需要对某个话题进行投票时（何时投票由 Git 维护者决定），提案应以针对项目文档的补丁形式来撰写。每项提案都将被单独发布和讨论，目的是对其进行润色完善，而不是将其彻底改造成截然不同的东西。任何有资格投票的人（资格问题稍后讨论）都可以提出提案；而任何一项提案只有在得到另一位合资格投票者的附议后，才会被列入选票。</p>
+
+        <p>讨论期预计将持续<q>大约 4 周</q>，在此期间提案会被修改成最终形式。在该阶段结束时，各项提案将被汇集到一张选票上，投票将在为期两周的时间内进行。该提案并未说明将如何计票——是直接得票最多的提案获胜，还是采用某种排序选择（ranked-choice）流程。</p>
+
+        <p>按照提案中的描述，投票资格为：</p>
+
+        <blockquote>
+            <p>我们欢迎以下贡献者投票：他们撰写过已被合并到 next 分支的提交，或者提供过 2 次或以上的代码审查，并且未被禁止参与该项目。</p>
+        </blockquote>
+
+        <p>正如随后讨论中所指出的，这一组标准比峰会上讨论的要宽松包容得多；在峰会上，有人抛出过一条要求在 Git 历史中至少有 50 个提交的规定。对于正确的门槛应该是多少，并没有真正的共识：Patrick Steinhardt <a href="/ml/all/at8IBMQZtJP3bQ9-@pks.im">建议</a> 25 或 30 个提交可能比较合理，Jeff King <a href="/ml/all/20261026011731.GA3575069@coredump.intra.peff.net">提出</a>了一条更复杂的规则，对长期贡献者给予一定权重，而 brian m. carlson 只是<a href="/ml/all/atqVZYU3YfuyFdvU@fruit.crustytoothpaste.net">想要</a>一个<q>不会激励人们只是为了投票而贡献</q>的门槛。幸运的是，没有人建议设立一个流程来就这个问题投票。</p>
+
+        <p>Kristoffer Haugsbakk <a href="/ml/all/3fe1dc57-5bb2-4e12-8876-a4969e5201cb@app.fastmail.com">声称</a>，投票流程将导致当前这个问题得出一个预先注定的结论：</p>
+
+        <blockquote>
+            <p>投票会通过的。那些每月至少参与一次 Git 工作的人，都在科技公司工作。而这些科技公司如今都是 AI 公司。选票会不偏不倚地倒向与其管理层一致的方向。</p>
+        </blockquote>
+
+        <p>这引发了 <a href="/ml/all/atoFKhUaM3b38n-b@pks.im">Steinhardt</a> 和 <a href="/ml/all/atqTWKaRQfvH0Xbm@fruit.crustytoothpaste.net">carlson</a> 等开发者的反对，他们坚持认为，他们会根据自己的结论投票，而不是根据雇主的结论。不过，他们两人都同意，投票流程应当是保密的，这样雇主就无法强迫自己的开发者以某种特定方式投票。</p>
+
+        <p>讨论已经放缓，却没有得出任何确定的结论。<a href="/ml/all/CAJoAoZmyADCU8VdVDrvR-OuDKybSnT2pMOKbrofRBg6YdpxZ0A@mail.gmail.com">仍有大量悬而未决的问题</a>，包括资格规则以及用于计票的系统。对于后者，已经有人提议采用 Debian 的 <a href="https://salsa.debian.org/debian/devotee/-/blob/master/README?ref_type=heads">devotee</a> 以及 <a href="https://civs1.civs.us/">Condorcet 互联网投票服务</a>（Condorcet Internet Voting Service，它被用于 Linux 基金会技术顾问委员会的选举）。Git 项目正在考虑增加一项根本性的治理政策，这不是可以轻率行事的事情，因此结论可能还需一段时间才能达成。投票流程本是为了在不太可能形成共识的情况下提供帮助，但这一流程本身在得以采纳之前，几乎也需要背后先有一份共识。</p>
+    </div>
+</div>
+
+<div class="article" id="article3">
+    <div class="article-header">
+        <span class="article-category">安全 / 内核</span>
+        <h2>为冬季锁住休眠功能</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年11月6日</span>
+            <span><a href="https://lwn.net/Articles/1103190/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p>当计算机进入休眠（hibernation）时，内核会把内存中的内容写入磁盘，然后关闭系统。从休眠中恢复，则需要把这些数据读回内存，然后让内核从它先前停下的地方继续执行。遗憾的是，内核没有任何办法知道它读回的数据是否遭到了篡改，这就是为什么 <a href="/Articles/791863/">lockdown</a>（一项试图阻止对运行中内核进行修改的可选内核特性）会禁用休眠功能。多年来一直致力于 lockdown 工作的 Matthew Garrett 分享了<a href="/ml/linux-pm/20261008132532.1155166-1-matthewg@nvidia.com/">一组补丁</a>，旨在解决这个问题。他的方案还必须防范降级攻击（downgrade attack，即攻击者用更旧的内核版本重启计算机，以绕过新的保护），这使得实现变得复杂。</p>
+
+        <p>Garrett 这组补丁的基本思路并不复杂：用一把只有内核才能访问的加密密钥，对保存下来的休眠数据进行签名。问题在于，如何获得这样一把密钥。一个静态的、已知的密钥对此毫无用处，因为它可能被用来伪造签名。把密钥存储在计算机的<a href="https://en.wikipedia.org/wiki/Trusted_Platform_Module">可信平台模块</a>（trusted platform module，TPM）中是更好的选择。内核位于 TPM 和用户空间之间，因此它可以禁止用户空间读取所选的密钥，从而保证其安全。此外，TPM 可以被配置为在从其他内核启动时扣留这把密钥，不过这并不像看上去那么简单，因为例如旧内核仍然会拥有正确的安全启动（secure-boot）签名。</p>
+
+        <p>引入 TPM 的主要动机是为了避免降级攻击。考虑到旧内核并不知道要禁止访问 TPM，理论上攻击者可以这样做：</p>
+
+        <ol>
+            <li>在启用了 lockdown 的新内核上触发休眠。</li>
+            <li>启动一个旧内核，并禁用恢复（resume）和交换（swap）。</li>
+            <li>请求旧内核访问所选的 TPM 密钥。</li>
+            <li>篡改保存下来的休眠数据，并重新签名。</li>
+            <li>重启进入新内核，让系统从被篡改的数据中恢复。</li>
+        </ol>
+
+        <p>TPM 的核心特性之一，是能够锁定秘密（secret），使其只有在硬件处于已知状态时才能被读取。TPM 依靠平台配置寄存器（platform-configuration register，PCR）来跟踪硬件状态。这些寄存器无法被直接写入。相反，TPM 在系统启动时将它们重置为零，然后系统上运行的软件可以提供一些值，这些值与 PCR 的当前状态一起被哈希，从而产生一个新值。</p>
+
+        <p>因此，举例来说，当计算机的固件（firmware）开始执行时，它可以检查引导加载程序（bootloader）上的签名，并向某个特定的 PCR 添加一个标记，表明它已经用某个特定的安全启动密钥验证了该签名。然后引导加载程序可以做同样的事情，检查操作系统和所连接硬件的状态，依此类推。从理论上讲，这确保了只有在操作系统和硬件未被篡改的情况下，PCR 才能达到某个特定状态。</p>
+
+        <p>在实践中，实现要更复杂。有多个 PCR 被用于不同的用途。例如，systemd <a href="https://www.freedesktop.org/software/systemd/man/latest/systemd-pcrphase.service.html">使用 PCR 11</a> 来指示系统处于哪个启动阶段。这可以用来确保存储在 TPM 中的密钥（例如磁盘加密密钥）仅在初始内存盘（initial ramdisk，initrd）运行时才可访问。当系统即将切换到正常的根文件系统时，systemd 会向该 PCR 写入 <code>"leave-initrd"</code>，从而以一种在系统重启前无法撤销的方式改变它的哈希值。向 PCR 写入一段额外信息以使与之关联的密钥失效的过程，被称为对该 PCR 进行“封顶”（capping）。</p>
+
+        <p>如果内核拥有一个它会在启动用户空间之前先行“封顶”的 PCR，它就可以用一个新值去扩展（extend）该 PCR，把一把密钥绑定到由此产生的 PCR 状态上，从而确保这把密钥只能被新版本内核读取，而不能被旧版本读取。然而，内核目前并没有对任何 PCR 进行“封顶”，而是把这件事留给了用户空间。因此，一个运行在旧内核上的恶意用户空间应用程序，仍然可以用新内核所期望的值去扩展某个 PCR，从而即使在旧内核上，也把 TPM 置于“新内核”状态。</p>
+
+        <p>解决方案是 Garrett 想出的<q>某种骇人的东西</q>（something horrifying）。PCR 5 被 <a href="https://uefi.org/">UEFI</a> 固件用于执行硬件度量（measurement），并在调用 <a href="https://uefi.org/specs/UEFI/2.10/07_Services_Boot_Services.html#efi-boot-services-exitbootservices"><code>ExitBootServices()</code></a> 时被“封顶”，以防止后续组件伪造硬件信息。内核在 UEFI 退出之前就开始执行它的引导存根（boot stub），因为它可能需要与固件通信以启动系统。因此，Garrett 在引导存根中加入了代码，在固件对 PCR 5 封顶之前，向其中插入一个标记，表明该内核支持阻止用户空间访问 TPM 密钥。由于用户空间要到那之后才会启动，它没有办法伪造这个标记，即使是在旧内核上也不行。</p>
+
+        <p>然而，仅有这一点还不够。PCR 5 的状态只能证明计算机是用一个足够新的内核启动的；它并不能阻止用户空间创建自己的、绑定到 PCR 5 该状态的密钥，然后用这把密钥对休眠数据进行签名。当休眠后新内核启动时，它会看到一把绑定到 PCR 5 的密钥所做的签名，但它仍然无法证明这把密钥是在内核内部创建的（因而是对用户空间隐藏的）。</p>
+
+        <p>因此，Garrett 的补丁集走得更远。与 TPM 的交互可以划分为一个个会话（session）。他的代码允许对这些会话进行审计（audit），生成一个经过签名的摘要（digest）。这些摘要由 TPM 本身签名，这意味着持有一个已签名的摘要就能证明：在某个时刻，那些命令确实被发送到了那个特定的 TPM，并产生了那些特定的结果。</p>
+
+        <p>结合 PCR 5 的使用，生成一个经过签名的休眠镜像的完整流程变为：</p>
+
+        <ol>
+            <li>新内核启动，向 PCR 5 写入一个标记。</li>
+            <li>固件对 PCR 5 封顶，阻止用户空间模仿内核的标记。</li>
+            <li>内核与 TPM 开启一个新会话，在其中检查 PCR 5 是否处于该状态，然后生成一把新的签名密钥。</li>
+            <li>该会话的记录（transcript）被哈希、由 TPM 签名，并与休眠数据一起存储。</li>
+            <li>休眠数据用新创建的密钥签名。</li>
+        </ol>
+
+        <p>然后，在重启时，内核在加载休眠镜像之前会经过一系列验证步骤：</p>
+
+        <ol>
+            <li>内核检查已签名的记录摘要是否由当前的 TPM 签名。</li>
+            <li>它检查重放（replay）该记录是否产生相同的摘要。</li>
+            <li>它检查记录中是否包含发给 TPM 的正确命令，且仅包含这些命令。</li>
+            <li>它检查记录中读取了 PCR 5，且该值与 PCR 5 的当前值相匹配。</li>
+            <li>最后，它检查记录所产生的密钥是否为用于对休眠数据签名的有效签名密钥。</li>
+        </ol>
+
+        <p>所有这些工作的最终结果是，运行 lockdown 内核的用户应该能够启用休眠功能，并相信在计算机关机与从休眠恢复之间，内核不会被篡改。攻击者无法直接更改数据，因为数据是经过签名的；无法访问用于签名的密钥，因为内核会阻止；无法用旧内核绕过这一限制，因为 TPM 把密钥绑定到只有新内核才能产生的状态上；也无法创建一把会被接受的自己的密钥，因为他们无法伪造密钥创建记录。</p>
+
+        <p>Garrett 的补丁集收到了少量评论。James Bottomley <a href="https://lwn.net/ml/linux-pm/435907614242e82ecde1767a967a3110fca6fb37.camel@HansenPartnership.com/">询问</a>，是否可以使用一种名为“局部性”（locality）的硬件特性（一种将操作限制在特定 CPU 特权级别上的访问控制机制）来更简单地实现类似的功能。Garrett <a href="https://lwn.net/ml/linux-pm/asqthz69ohnMVCye@srcf.ucam.org/">同意</a>，局部性<q>显然是正确的处理之道</q>（are very clearly the Right Way to deal with this），但认为内核无法利用它们，因为硬件支持通常仅限于专用设备。大多数消费级设备都有 TPM，但并不支持所需的扩展。</p>
+
+        <p>Bottomley 还指出，让固件对 PCR 5 封顶并不是普遍现象；他的 XPS-13 9380 Core i7（2019 年发布）<a href="https://lwn.net/ml/linux-pm/f002fc613bf0bdcf895e5be02dfd2524b7608787.camel@HansenPartnership.com/">不会对该寄存器封顶</a>。Garrett 听到这一点感到<a href="https://lwn.net/ml/linux-pm/asty4acE2B94t5q6@srcf.ucam.org/">失望</a>，但仍然认为这组补丁是值得的，因为较新的计算机确实倾向于对 PCR 5 封顶。此外，如果有需要，该实现也有可能替换为其他针对特定硬件的解决方案。</p>
+
+        <p>这组补丁将需要推出第二版以回应评审意见。Garrett <a href="https://lwn.net/ml/all/20210220013255.1083202-1-matthewgarrett%40google.com/">自 2021 年以来</a>一直在致力于在 lockdown 下启用休眠功能，但这一次看来他已经选定了一个能够系统性地防范降级攻击的设计。他的目标最终实现，可能不会太久了。</p>
+
+        <blockquote>
+            <p>LWN 网站目前承受着较高的抓取（scraper）负载，因此已对匿名用户关闭评论显示。如果您是人类，可以点击下方按钮阅读评论：</p>
+            <p><strong>注意</strong>：您将来可以通过登录 LWN 帐户来避免这一步。</p>
+        </blockquote>
+    </div>
+</div>
+
+<div class="article" id="article4">
+    <div class="article-header">
+        <span class="article-category">安全 / 内核</span>
+        <h2>用户命名空间 + 文件能力 = 麻烦</h2>
+        <div class="article-meta">
+            <span>作者：Jonathan Corbet</span>
+            <span>2026年11月5日</span>
+            <span><a href="https://lwn.net/Articles/1103429/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+        <p><a href="/Articles/532593/">用户命名空间（user namespace）</a>是内核用来组装容器的工具集中的关键一环；用户命名空间内的进程看起来可以拥有对系统的完整 root 访问权限，同时在更广泛的系统中并不获得任何额外权限。至少，初衷是这样。但在实践中，把权限限制在用户命名空间内部往往被证明是困难的。举个例子，来看看 Josef Bacik 提交的<a href="/ml/all/20261027-b4-setfcap-userns-v8-0-2674adc63f3c@toxicpanda.com">这个小补丁系列</a>，它试图解决某些场景下用户命名空间内的进程能够提升该命名空间之外进程权限的问题。</p>
+
+        <h4>一些背景知识</h4>
+
+        <p>被放入用户命名空间的第一个进程，其待遇很像是基础系统中的 init 进程；它以用户 ID 0 运行，拥有完整的 root 权限。不过，内核在把任何用户 ID 用于容器之外的访问决策之前，都会对所有用户 ID 做重新映射。默认情况下，比如说在访问挂载于该命名空间之外的文件系统之前，所有用户 ID 都会被映射为"未知用户（unknown user）"的 ID 65534。因此，命名空间内的 root 访问，在外部可能完全转化为无权限访问。如果命名空间被嵌套，那么在抵达系统启动时创建的初始命名空间之前，可能会经历多层的重新映射。</p>
+
+        <p>通过向命名空间内任一进程的 <code>/proc</code> 目录中的 <code>uid_map</code> 或 <code>gid_map</code> 文件写入内容，可以更改该用户命名空间的用户（及组）ID 映射。不过，在没有 root 权限的情况下，无法把 ID 重新映射为创建该命名空间的进程之外的任何 ID。如果一个用户 ID 为 1000 的非特权进程创建了一个用户命名空间，它可以将命名空间内的任意 ID 建立映射，但在外部只能映射到 ID 1000。更改映射也是一次性操作；一旦映射被设定，就无法再次更改。</p>
+
+        <p>另一项重要的背景知识是 <a href="https://man7.org/linux/man-pages/man7/capabilities.7.html">capabilities（能力）</a>，它描述一个给定进程所拥有的权限。root 用户默认拥有全部 capabilities；其他进程则一个都没有。正如我们将看到的，有些情况下，以 root 身份运行的进程会主动丢弃自己的一部分 capabilities，以防止某些操作发生。</p>
+
+        <p>最后，<i>文件</i>能力（file capabilities）可以被看作是一种创建某种 setuid 可执行文件的方式。通过 <a href="https://man7.org/linux/man-pages/man8/setcap.8.html"><code>setcap</code></a> 命令可以把一组给定的 capabilities 附加到某个文件上；此后，任何运行该文件中程序的进程都会被赋予这些指定的 capabilities。不用说，以这种方式把 capabilities 附加到文件上是一项特权操作；具体而言，任何试图这么做的进程都必须拥有 <code>CAP_SETFCAP</code> 这一 capability。内核有一些精心设计的机制，让文件能力能在用户命名空间内部生效，而在外部被忽略。具体来说，"版本 3 扩展属性（version 3 extended attributes）"可以编码一个非 root 用户 ID，该 ID 在由这个 ID 所拥有的命名空间内部可以映射为 root。好奇的读者可以参阅 capabilities 手册页的<a href="https://man7.org/linux/man-pages/man7/capabilities.7.html#:~:text=File%20capability%20extended%20attribute%20versioning">这个小节</a>，了解其中错综复杂的细节。</p>
+
+        <h4>文件能力的麻烦之处</h4>
+
+        <p>用户命名空间的设计初衷，是把内部的 root 用户映射为外部的一个非特权用户。但也可以把命名空间内的 root 映射为包含它的（containing）命名空间中的 root。这样做显然会带来一系列安全挑战，但只要足够小心，一个 root 映射的用户命名空间仍然能够提供相当程度的隔离。如果管理包含命名空间那一方的人，信任在命名空间内作为 init 进程运行的代码，这一点尤其成立。这段代码可以完成所需的各种设置，然后在把控制权移交给容器本应运行的工作负载之前，丢弃特权（capabilities）。</p>
+
+        <p>如果用户命名空间内的 root 用户向一个在包含命名空间中可见的可执行文件添加文件能力，这些 capabilities 通常会受到 root 在包含命名空间中所映射到的那个用户 ID 的限制（qualified）。结果就是，如果非特权用户在包含命名空间中运行该可执行文件，这些 capabilities 将不会生效。然而，如果被包含的（contained）命名空间是 root 映射的，这种限制就不会发生，这些 capabilities 在包含命名空间中就会<i>生效</i>。因此，让 root 以这种方式向文件添加 capabilities，就可能让特权逃逸出命名空间。</p>
+
+        <p>防止这种情况发生的方法，是注意移除命名空间内运行的 root 进程的 <code>CAP_SETFCAP</code>；这样该进程就无法再创建文件能力，特权逃逸也就消失了。至少，在这个 root 进程创建属于它自己的、root 映射的用户命名空间之前是这样。请记住，在新用户命名空间中运行的初始进程拥有全部 capabilities，因此该进程将重新获得 <code>CAP_SETFCAP</code>。随后它可以向包含命名空间中的一个文件添加文件能力，而由于该文件所在的命名空间同样是 root 映射的，这项改动会一路传播到它的包含命名空间。到那时，就又出现了一个拥有提升后 capabilities 的文件，可以从命名空间外部访问，非特权用户能够执行它。</p>
+
+        <p><a href="https://git.kernel.org/linus/db2e718a4798">这个提交</a>在 2021 年 5.12 内核发布前不久被合并，目的是解决这个问题。如果某个进程试图通过写入命名空间的 <code>uid_map</code> 文件来创建 root 到 root 的映射，那么除非该进程拥有 <code>CAP_SETFCAP</code>，否则尝试将失败。不过，仅有这一点还不够，因为新创建的用户命名空间内的 root 进程确实持有该 capability，并且可以写入自己的 <code>uid_map</code> 文件（如果命名空间内外的有效 UID 相同，这项操作是允许的）。因此，那个补丁还记录了相关命名空间的创建者是否拥有 <code>CAP_SETFCAP</code>；在缺少该 capability 的情况下，从命名空间内部创建 root 到 root 映射的尝试就会失败。问题解决了。</p>
+
+        <h4>更多泄漏</h4>
+
+        <p>当然，问题并没有真正解决，否则这个补丁系列（你还记得那个补丁系列吧……这篇文章讲的就是 Bacik 的补丁系列）就不会存在了。事实证明，在某些情况下，仅要求拥有 <code>CAP_SETFCAP</code> 才能创建 root 映射的用户命名空间，并不足以阻止特权泄漏。</p>
+
+        <p>设想一个 root 映射的用户命名空间，其中有两个 root 进程：其中一个（称为"A"）拥有完整的 capabilities 集合，而另一个（"B"）没有 <code>CAP_SETFCAP</code>。如果 A 创建了属于自己的一个用户命名空间，那么这个命名空间就会被设置"创建者持有 CAP_SETFCAP（creator held CAP_SETFCAP）"标志。随后 B 可以通过 <a href="https://man7.org/linux/man-pages/man2/setns.2.html"><code>setns()</code></a> 调用进入该命名空间；由于它的 UID 与该命名空间的创建者相同，这次进入会被允许，B 将在该命名空间中获得完整的 capabilities 集合。到那时，B 就可以把一条 root 映射写入 <code>uid_map</code> 文件，然后开始附加那些在包含命名空间之外可见的文件能力。换句话说，B 重新获得了之前被丢弃的 <code>CAP_SETFCAP</code> capability。</p>
+
+        <p>还有其他一些场景。如果 A 打开了 <code>uid_map</code> 文件但没有写入，然后以某种方式把文件描述符传递给 B，那么 B 就有可能在其中写入一条 root 到 root 的映射。对 <code>CAP_SETFCAP</code> 的检查是在打开 <code>uid_map</code> 文件时进行的，而不是在写入时，因此这条映射会被允许。有人可能会说，A 不该以这种方式把特权文件描述符交出去，但如果 A 恰好在丢弃 <code>CAP_SETFCAP</code> 之前忘了关闭它，这种事就可能发生。</p>
+
+        <p>如果 B 创建一个用户命名空间，<code>CAP_SETFCAP</code> 标志不会被设置，因此 B 无法为该命名空间创建 root 映射。然而 A 拥有该 capability，所以它可以向 B 的新用户命名空间写入一条 root 映射。这样又一次使 B 能够设置那些在包含命名空间中生效的文件能力。在某些情况下，映射可能存在多个层级，中间涉及非 root 的 UID。常与容器一起使用的<a href="/Articles/837566/">ID 映射挂载（ID-mapped mounts）</a>又增添了一层变化，因为底层文件系统上的一个非 root UID，在某个给定的挂载命名空间内部可能看起来是 root。</p>
+
+        <p>最后，B 可以直接用 <a href="https://man7.org/linux/man-pages/man2/ptrace.2.html"><code>ptrace()</code></a> 附加到 A 上——由于有效 UID 相同，这项操作是被允许的——然后让 A 去写入它的 <code>uid_map</code> 文件，或直接设置文件能力。由于 A 持有 <code>CAP_SETFCAP</code>，这些操作都会被允许。</p>
+
+        <h4>堵住漏洞</h4>
+
+        <p>要阻止这些特权泄漏，需要加强对 <code>CAP_SETFCAP</code> 的追踪，并做出一些对用户空间可见的改动。该系列中的<a href="/ml/all/20261027-b4-setfcap-userns-v8-1-2674adc63f3c@toxicpanda.com">第一个补丁</a>用一个整数类型的 <code>setfcap_level</code> 字段替换了 <a href="https://elixir.bootlin.com/linux/v7.3/source/include/linux/user_namespace.h#L79"><code>user_namespace</code> 结构体</a>中的 <code>parent_could_setfcap</code> 布尔值。旧的布尔值记录的是用户命名空间的创建者是否曾经拥有 <code>CAP_SETFCAP</code>，而新的字段记录的是该 capability 在多大范围的上层依然存在——也就是在多少层父用户命名空间中它也同时被持有。这个新变量反映了这样一个事实：当前用户命名空间中的 <code>CAP_SETFCAP</code>，在那么多层父命名空间中同样有效。</p>
+
+        <p><a href="/ml/all/20261027-b4-setfcap-userns-v8-2-2674adc63f3c@toxicpanda.com">这个补丁</a>旨在阻止某个进程通过 <code>setns()</code> 在祖先用户命名空间上获得 <code>CAP_SETFCAP</code>。具体而言，它增加了一项检查，以确保当一个进程调用 <code>setns()</code> 进入某个在更高层级被 root 映射的用户命名空间时，该进程的 <code>setfcap_level</code> 至少要延伸到与目标用户命名空间相同的层级。对 root 映射用户命名空间的判定还包括那些尚未设置任何映射的命名空间，因为它们将来仍<i>有可能</i>变成 root 映射的。如果调用 <code>setns()</code> 的进程所拥有的 <code>CAP_SETFCAP</code> 覆盖范围不够远，调用就会以 <code>EPERM</code> 错误失败。这是一项对用户空间可见的改动；在当前内核中，这样的调用是会成功的。</p>
+
+        <p><a href="/ml/all/20261027-b4-setfcap-userns-v8-3-2674adc63f3c@toxicpanda.com">这个补丁</a>也做了类似的改动，用以控制通过写入 <code>uid_map</code> 文件来设置 root 映射。如果试图写入的内容会在任何一个祖先用户命名空间中创建到 root 用户的映射，那么写入者的 <code>setfcap_level</code> 必须至少延伸到那么远，否则操作就会失败。<a href="/ml/all/20261027-b4-setfcap-userns-v8-4-2674adc63f3c@toxicpanda.com">这个补丁</a>针对的是持有 <code>CAP_SETFCAP</code> 的进程写入 <code>uid_map</code> 文件的情况；它检查写入文件能力的尝试，并确保执行写入的进程拥有足够高的 <code>setfcap_level</code>，能够触及任何一个 root 映射的祖先。最后，<a href="/ml/all/20261027-b4-setfcap-userns-v8-5-2674adc63f3c@toxicpanda.com">这个补丁</a>对 <code>ptrace()</code> 调用施加了类似的检查；如果追踪者（tracer）的 <code>setfcap_level</code> 至少没有延伸到与目标相同的层级，调用就会失败。</p>
+
+        <p>截至本文撰写时，这个补丁系列已经历了八个版本；它发生了相当大的演变，不过最近几个版本主要专注于添加测试。理论上，应用这些补丁之后，利用文件能力把特权泄漏出用户命名空间的能力应该不复存在了。但在实践中，这里的复杂度之高，足以让人仍然有理由心存疑虑。确保用户命名空间真正做到安全，一直是一项历时多年的努力；而把 root 访问映射到这些命名空间之外，只会让这项任务更具挑战性。</p>
+    </div>
+</div>
+
+<div class="article" id="article5">
+    <div class="article-header">
+        <span class="article-category">安全 / 开发工具</span>
+        <h2>为 glibc 动态链接器增加更多加固</h2>
+        <div class="article-meta">
+            <span>作者：Daroc Alden</span>
+            <span>2026年11月11日</span>
+            <span><a href="https://lwn.net/Articles/1105134/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+    <p>
+Node.js <a href="https://nodejs.org/en">项目</a>最近出现了一个影响其 <a href="https://brotli.org/">Brotli</a> 解码器的<a href="https://nodejs.org/en/blog/vulnerability/october-2026-security-releases#nodejs-brotli-decoder-out-of-bounds-write-permits-remote-code-execution-cve-2026-111497---high">安全漏洞</a>。这个 bug <a href="https://project-zero.issues.chromium.org/issues/565308158">是一个缓冲区溢出</a>，但官方 Node.js 二进制文件为 Linux 构建的特殊方式意味着，防止把缓冲区溢出转化为远程代码执行的主要保护措施之一——<a href="https://en.wikipedia.org/wiki/Address_space_layout_randomization">地址空间布局随机化</a>（address space layout randomization，ASLR）——无法开启。如果启用了 ASLR，这个漏洞在理论上仍然可以被利用，但在实践中利用难度会大得多。作为回应，GNU C 库（glibc）<a href="https://lwn.net/ml/all/20261028175613.3779425-1-adhemerval.zanella@linaro.org/">正在考虑</a>一组新的<a href="https://sourceware.org/glibc/manual/latest/html_node/Tunables.html">可调参数（tunable）设置</a>，以允许管理员禁止那些不支持 ASLR 的程序。这些新设置虽然是一项受欢迎的加固（hardening）措施，但可能无法解决根本问题。
+</p>
+
+<h4>背景</h4>
+
+<p>
+当程序中存在缓冲区溢出时，通常可以利用该缓冲区溢出接管程序的执行，把破坏数据的 bug 变成远程代码执行漏洞。一般而言，这是通过覆盖一个程序稍后会跳转到的指针，将程序的控制流重定向到攻击者选定的地址来实现的。从这里开始，例如用攻击者控制的参数调用 <a href="https://man7.org/linux/man-pages/man3/execv.3.html"><code>execv()</code></a> 就轻而易举了。被覆盖的指针通常是栈上的返回地址，但类似的攻击也已经通过回调函数、函数内的间接跳转以及 C++ 虚函数表得到演示。
+</p>
+
+<p>
+有许多缓解措施旨在让攻击者的攻击更加困难，包括<a href="https://en.wikipedia.org/wiki/Control-flow_integrity">控制流完整性</a>（control-flow integrity）、<a href="https://en.wikipedia.org/wiki/Shadow_stack">影子栈</a>（shadow stacks），甚至<a href="https://www.openbsd.org/papers/asiabsdcon2019-rop-paper.pdf">调整代码生成以减少可跳转的有用位置</a>。ASLR 可以说是其中最简单的一种缓解措施。它利用现代编译器能够生成可重定位代码这一事实，把程序放置在虚拟内存中随机选定的位置。想要覆盖函数指针的攻击者必须先弄清程序的基地址，才能将控制流转移到任何有用的地方。
+</p>
+
+<p>
+编译为位置无关代码（position-independent code）确实会带来影响：这类代码通常比位置相关代码略大、略慢。2020 年，Node.js 贡献者"woodfairy"<a href="https://github.com/nodejs/node/issues/33425#issuecomment-711443427">测量</a>了对 Node.js 的影响，根据工作负载不同，性能下降幅度为 5% 到 10%。这种性能下降被判定为<a href="https://github.com/nodejs/node/pull/35704">在 macOS 上可以接受</a>，但在 Linux 上则不行（Android 除外，它禁止位置相关代码，迫使人们做出这一选择）。
+</p>
+
+<p>
+包括 Debian、Ubuntu、Arch、Alpine 和 Gentoo 在内的几个 Linux 发行版默认启用位置无关可执行文件（position-independent executables）。在这些发行版上，从源码编译 Node.js 或安装发行版软件包都会启用 ASLR。而官方的 Node.js 二进制包是在运行 Red Hat Enterprise Linux 8 的系统上编译的，仍然没有启用。
+</p>
+
+<h4>动态链接</h4>
+
+<p>
+动态链接的程序依赖动态链接器（dynamic linker）<a href="/Articles/961117/">来初始化新进程</a>。在 Linux 上，链接器通常由 glibc 项目提供，不过也有发行版采用其他安排。该链接器支持被称为可调参数（tunables）的配置选项来影响其运行。这些选项可以通过环境变量设置，也可以在一个位于 <code>/etc/tunables.conf</code> 的文件中进行系统级设置。
+</p>
+
+<p>
+10 月 26 日，Daniel Colascione 在 glibc 开发邮件列表上<a href="https://lwn.net/ml/all/87v76pq8oj.fsf%40dancol.org/">询问</a>，是否有意义增加一个新的可调参数来禁止位置相关可执行文件。Adhemerval Zanella Netto <a href="https://lwn.net/ml/all/5f6c2165-e7d8-43d8-b821-5bad42453fd8@linaro.org/">回应</a>了一份他希望实现的与加固相关的可调参数清单，称这些都在他的待办事项列表上。他还建议增加一个单一的 <code>glibc.hardened</code> 可调参数来一次性批量启用所有这些选项，类似于 GCC 的 <code>-fhardened</code> 选项。
+</p>
+
+<p>
+Zack Weinberg <a href="https://lwn.net/ml/all/ded92b1a-2079-400e-80ba-edc316893a7b@app.fastmail.com/">指出</a>，由于大多数固定位置的可执行文件都链接在低地址处，用户可以通过把最小 <a href="https://man7.org/linux/man-pages/man2/mmap.2.html"><code>mmap()</code></a> 地址（<a href="https://www.kernel.org/doc/html/latest/admin-guide/sysctl/vm.html#mmap-min-addr"><code>vm.mmap_min_addr</code></a> sysctl）设为更大的数值，来要求内核拒绝它们。他也指出这个想法存在一些问题，而 Maciej Rozycki <a href="https://lwn.net/ml/all/alpine.DEB.2.21.2610262115340.42255@angie.orcam.me.uk/">又指出了更多问题</a>。
+</p>
+
+<p>
+Zanella 在 10 月 28 日发布了他承诺的可调参数的实现。项目的默认行为保持不变，但每个选项都可以设置为 0 或 1（取决于其措辞）以启用新的保护。这些新选项包括：
+</p>
+
+<ul>
+<li><code>glibc.rtld.require_pie=1</code>，要求加载的程序是位置无关的。</li>
+<li><code>glibc.rtld.textrel=0</code>，禁止那些要求链接器针对可执行文件中未被映射为可写的节（section）执行重定位的程序。</li>
+<li><code>glibc.rtld.wx_segments=0</code>，禁止那些要求在启动时将某些段（segment）同时映射为可写和可执行的程序。</li>
+<li><code>glibc.rtld.bind_now=1</code>，禁用延迟的全局偏移表（global offset table，GOT）解析（等同于使用 <code>LD_BIND_NOW</code> 环境变量）。</li>
+<li><code>glibc.rtld.relative_rpath=0</code>，防止通过相对路径查找动态库。</li>
+<li><code>glibc.rtld.relro={1,2}</code>，分别要求使用<a href="https://www.redhat.com/en/blog/hardening-elf-binaries-using-relocation-read-only-relro">只读重定位</a>（relocation read-only，RELRO）或 <code>-z now</code>。</li>
+</ul>
+
+<p>
+使用 <code>glibc.rtld.hardened=1</code> 可以一次性把这六个选项都设置为加固行为。Yury Khrustalev 认为<a href="https://lwn.net/ml/all/auMy3ivznxmfrxGN@arm.com/">其中许多名称过于简短</a>，建议采用更长的名称（例如 <code>allow_textrel</code>）可能会更清晰。Zanella <a href="https://lwn.net/ml/all/32f676ef-73bc-493b-8aa3-617d035dffd4@linaro.org/">同意</a>在下一版补丁集中把它们改长。
+</p>
+
+<p>
+这些改动本身几乎没有引起什么评论。其中大多数应该都能让发行版以极小的干扰启用。特别是，那些已经默认启用位置无关可执行文件的发行版，可以在不影响任何发行版软件包的情况下启用这些可调参数。更困难的问题将来自在发行版之外构建的可执行文件。除非这些可调参数被广泛采用，从而促使像 Node.js 这样的项目放弃位置相关代码，否则用户可能需要针对那些本应由这些可调参数处理的目标程序禁用这些可调参数。
+</p>
+    </div>
+</div>
+
+<div class="article" id="briefs">
+    <div class="article-header">
+        <span class="article-category">社区简讯</span>
+        <h2>📝 Brief items（社区简讯）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for November 12, 2026</span>
+            <span><a href="https://lwn.net/Articles/1105462/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+        <h3>Security（安全）</h3>
+
+        <h4><a href="https://lwn.net/Articles/1105464/" target="_blank">严重安全漏洞影响 Alpine Linux 系统上的 OpenSSH</a></h4>
+        <p><a href="https://openssh.com/releasenotes.html#10.6p2" target="_blank">OpenSSH 10.6p2 版</a>已发布，其中包含一个针对某个严重漏洞的临时解决方案。该漏洞会影响使用 <a href="https://musl.libc.org/" target="_blank">musl libc</a> 且禁用 PAM 的 Linux 系统，例如 <a href="https://www.alpinelinux.org/" target="_blank">Alpine Linux</a>。OpenSSH 开发者 Damien Miller <a href="https://hachyderm.io/@damienmiller/117563026759098135" target="_blank">表示</a>：</p>
+        <blockquote><p>如果你管理着一台使用 musl libc 而未启用 PAM 的 Linux 系统（Alpine Linux 就是一个例子），请立即停止阅读，设置 <tt>PasswordAuthentication=no</tt>，或立刻在这些系统上禁用 SSH。</p>
+        <p>该漏洞不存在于非 Linux 系统、Linux/glibc 系统，以及使用 PAM 进行密码认证的 Linux 系统之上。</p>
+        <p>我们认为这个缺陷的根本原因在 OpenSSH 本身之外，但我们处于有利位置，可以迅速提供一个缓解措施。</p></blockquote>
+        <p>Alpine Linux 项目已<a href="https://fosstodon.org/@alpinelinux/117563196640515820" target="_blank">宣布</a>，将把 OpenSSH 的修复<q>一直向后移植到 Alpine 3.16</q>，而该版本<a href="https://alpinelinux.org/posts/alpine-3.16.0-released/" target="_blank">发布于</a> 2022 年 5 月。</p>
+        <p><a href="https://lwn.net/Articles/1105464/#Comments" target="_blank">评论（28 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1106528/" target="_blank">本周安全语录</a></h4>
+        <blockquote><p>我最近<a href="https://www.openwall.com/lists/oss-security/2026/11/02/1" target="_blank">在 C-Kermit 中发现了一些漏洞</a>，其中一个可追溯到 1984 年。我试图做合乎情理的事情：编写带有 CVE 编号的安全公告。</p>
+        <p>事实证明，对一个小型独立项目来说，这相当困难。[……]</p>
+        <p>现代操作系统和互联网生态系统中有很多组件都是小型项目，背后并没有大型机构支持。</p>
+        <p>在沟通安全问题时，这种偏向大型组织的做法对谁都没有好处。它无益于用户，只会阻碍及时的沟通。并不是每个人都像我这样执着；当发布公告变得如此困难——这些公告似乎都掉进了一个巨大的黑洞——人们很容易说："何必呢？"</p></blockquote>
+        <p>— <a href="https://changelog.complete.org/archives/45097-the-large-project-bias-of-cves" target="_blank">John Goerzen</a></p>
+        <p><a href="https://lwn.net/Articles/1106528/#Comments" target="_blank">评论（暂无）</a></p>
+
+        <h3>Kernel development（内核开发）</h3>
+
+        <h4><a href="https://lwn.net/Articles/1106904/" target="_blank">内核发布状态</a></h4>
+        <p><b>7.4-rc2 预补丁版本</b>于 11 月 9 日<a href="https://lwn.net/Articles/1106300/" target="_blank">发布</a>。7.4 有望在新年前后完成。</p>
+        <p><b>稳定版更新</b>：<a href="https://lwn.net/Articles/1106570/" target="_blank">7.3.4</a>、<a href="https://lwn.net/Articles/1106571/" target="_blank">6.18.63</a>、<a href="https://lwn.net/Articles/1106572/" target="_blank">6.12.117</a>、<a href="https://lwn.net/Articles/1105906/" target="_blank">6.6.162</a>、<a href="https://lwn.net/Articles/1105907/" target="_blank">6.1.192</a>、<a href="https://lwn.net/Articles/1105908/" target="_blank">5.15.225</a> 和 <a href="https://lwn.net/Articles/1105909/" target="_blank">5.10.274</a> 稳定版内核均已发布。本周接连发布了多个修订版本，以修复刚发布后才发现的问题。所有稳定版内核的向后移植补丁数量都多于平常。</p>
+        <p><a href="https://lwn.net/Articles/1106904/" target="_blank">评论（暂无）</a></p>
+
+        <h3>Distributions（发行版）</h3>
+
+        <h4><a href="https://lwn.net/Articles/1105934/" target="_blank">Amutable 基础：技术概览</a></h4>
+        <p>Lennart Poettering、Michael Vogt 和 Joaquim Rocha 共同整理了一份<a href="https://amutable.com/blog/amutable-foundations-technical-overview" target="_blank">详细概述</a>，介绍了 Amutable 操作系统（AOS）及相关基础设施将会是什么样子。</p>
+        <blockquote><p>基于镜像的操作系统方法使我们能够强制实施一些非常严格但强大的安全属性，从而将系统的安全态势大幅提升到远超传统 Linux 系统的水平。具体而言，我们在此重点介绍 AOS 的七项主要基本安全属性：</p>
+        <ol>
+        <li><b>无 Shell + 无 SSH + 无语言解释器</b>。默认情况下，AOS 不安装 UNIX shell，也不在节点上提供通过 SSH 进行远程访问的功能。此外，我们默认不安装任何常见的语言解释器（Python、Perl……）。对大多数节点而言，并不需要 shell 或解释型语言支持，这消除了一整类攻击。</li>
+        <li><b>仅允许签名镜像</b>。在 AOS 上，只有携带由 Verity 密钥环中列出的签名密钥所签名的 Verity 数据的镜像才可以被激活。</li>
+        <li>[……]</li>
+        </ol></blockquote>
+        <p><a href="https://lwn.net/Articles/1105934/#Comments" target="_blank">评论（51 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1105936/" target="_blank">Asahi Linux 7.3 进度报告</a></h4>
+        <p>Asahi Linux 开发者发布了一份<a href="https://asahilinux.org/2026/11/progress-report-7-3/" target="_blank">新的进度报告</a>，介绍他们面向 Apple 设备打造 Linux 发行版的进展。</p>
+        <blockquote><p>不久前，我们注意到有多起试图利用我们宽松许可证来攫取我们工作的行为，其直接目的就是取代该项目，并激进地将 Apple Silicon 上的 Linux 商业化。在某些极端情况下，尚在开发中的功能代码被直接从我们的个人分支中拷贝出来，在未署名的情况下发布，或者借助大语言模型草草改写以掩盖其来源。MIT 许可证明确允许这样做，并且没有任何例外条款来防范恶意行为者。</p>
+        <p>因此，我们做出了一个艰难的决定：开始将所有代码仓库迁移到 GNU 通用公共许可证第 2 版或更高版本。今后所有 Asahi Linux 代码将只采用强 copyleft（著佐权）许可证进行授权。不从历史中吸取教训的人注定会重蹈覆辙。</p></blockquote>
+        <p><a href="https://lwn.net/Articles/1105936/#Comments" target="_blank">评论（60 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1106285/" target="_blank">OpenIndiana 2026.10 发布</a></h4>
+        <p><a href="https://openindiana.org/announcements/openindiana-hipster-2026-10-announcement/" target="_blank">2026.10 版</a>的 <a href="https://docs.openindiana.org/misc/openindiana/" target="_blank">OpenIndiana</a> 操作系统已发布。OpenIndiana 基于 <a href="https://en.wikipedia.org/wiki/Illumos" target="_blank">Illumos</a>，而 Illumos 则源自 Oracle 停止开发后的 <a href="https://en.wikipedia.org/wiki/OpenSolaris" target="_blank">OpenSolaris</a>。</p>
+        <p>本版本的显著变化包括：为即时（live）镜像提供 UEFI 帧缓冲支持，更新了大量应用程序和开发工具，并加入了 TeX Live 2026、Foliate 电子书阅读器等新应用。</p>
+        <p><a href="https://lwn.net/Articles/1106285/" target="_blank">评论（暂无）</a></p>
+
+        <h3>Development（开发）</h3>
+
+        <h4><a href="https://lwn.net/Articles/1106542/" target="_blank">Firefox 160 发布</a></h4>
+        <p>Firefox 网页浏览器<a href="https://www.firefox.com/en-US/firefox/160.0/releasenotes/" target="_blank">160 版</a>已发布。本版本的亮点功能包括：可阻止网站请求处理 "<tt>mailto:</tt>" 链接；支持播放采用 FLAC、MP3 或 PCM 音频的 Matroska 文件；在<a href="https://support.mozilla.org/kb/about-picture-picture-firefox" target="_blank">画中画</a>视频播放器中提供播放速度控制；以及一项尚处于早期开发阶段的全新 <a href="https://connect.mozilla.org/t5/discussions/mini-window-beta-is-going-live-in-firefox-160-and-we-want-your/m-p/144137#M59048" target="_blank">Mini Window（迷你窗口）功能</a>。</p>
+        <p><a href="https://lwn.net/Articles/1106542/" target="_blank">评论（1 条）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1105913/" target="_blank">XDC 2026 视频已上线</a></h4>
+        <p><a href="https://indico.freedesktop.org/event/12/" target="_blank">2026 年 X.Org 开发者大会</a>（XDC）的视频现已<a href="https://www.youtube.com/@XOrgFoundation/videos" target="_blank">在 YouTube 上线</a>。XDC 于 9 月 28 日至 30 日在加拿大安大略省多伦多举行。</p>
+        <p><a href="https://lwn.net/Articles/1105913/" target="_blank">评论（暂无）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1106903/" target="_blank">Zellij 0.46 发布</a></h4>
+        <p><a href="https://github.com/zellij-org/zellij/releases/tag/v0.46.0" target="_blank">0.46 版</a>的 <a href="https://zellij.dev/" target="_blank">Zellij</a> 终端工作区已发布。</p>
+        <blockquote><p>本版本为 Zellij 带来了一项重大新增功能：Zellij 现在也是一款桌面终端。运行方式为：<tt>zellij terminal</tt>。它可在 Linux、mac 和 Windows 上运行。</p>
+        <p>对于普通的多路复用器用法没有任何改变——Zellij 仍然可以在另一个终端中运行。两种会话是相同的，并且可以共享。</p></blockquote>
+        <p>本版本的其他功能包括 GUI 设置界面、会话预览和右键菜单。有关 0.46 版本的更多信息，请参阅<a href="https://zellij.dev/news/terminal-inbox-session-previews/" target="_blank">这篇演示指南</a>。</p>
+        <p><a href="https://lwn.net/Articles/1106903/" target="_blank">评论（暂无）</a></p>
+
+        <h4><a href="https://lwn.net/Articles/1106071/" target="_blank">本周开发语录</a></h4>
+        <blockquote><p>最重要的是：我认为我们能够迈向这样一个世界——大多数用户真正有能力去利用<a href="https://www.gnu.org/philosophy/free-sw.html" target="_blank">自由 1（Freedom 1）</a>——即研究程序如何运作，并将其改为按照<i>你</i>的意愿运行的自由。</p>
+        <p>四十年来，这项自由在法律上是真实的，但在实践中大多只是理论上的。只有当你还能构建该软件、在代码库中游刃有余并维护一个补丁时，你才真正拥有它。即便拥有计算机科学学位，除了最微不足道的改动之外，我基本上从未真正拥有过这种能力。如今，我日常使用的桌面是经过深度定制的 GNOME，我通过一个大幅改分支的 <a href="https://github.com/cheeaun/phanpy" target="_blank">phanpy</a> 来阅读社交网络，可能还有其他我一时想不起来的东西。这正是我们一直想要的承诺，而我现在正亲历其中。</p></blockquote>
+        <p>— <a href="https://lu.is/2026/11/what-ride-specifically/" target="_blank">Luis Villa</a></p>
+        <blockquote><p>自由软件运动并不追求"全人类的自由"这一目标。如果你以为它追求，那你就大错特错了。我们的目标不同，并且在其他地方已有清晰的阐述。</p></blockquote>
+        <p>— <a href="https://lwn.net/ml/all/86mrrmknn7.fsf@gnu.org/" target="_blank">Eli Zaretskii</a></p>
+        <p><a href="https://lwn.net/Articles/1106071/#Comments" target="_blank">评论（14 条）</a></p>
+
+        <h3>Miscellaneous（杂项）</h3>
+
+        <h4><a href="https://lwn.net/Articles/1106901/" target="_blank">悼念：Tim Peters（1952–2026）</a></h4>
+        <p>Guido van Rossum <a href="https://discuss.python.org/t/in-memoriam-tim-peters-1952-2026/110028" target="_blank">传达了 Tim Peters 去世的噩耗</a>（消息有些延迟）。</p>
+        <blockquote><p>Tim 对 Python 的影响怎么估计都不为过。他或许最以撰写<a href="https://peps.python.org/pep-0020/" target="_blank">《Python 之禅》（PEP 20）</a>而闻名，但对我来说，早在那时之前，他就是我的导师和语言共同设计者。</p>
+        <p>Tim 在 Python 最初发布后不久就发现了它。他做的第一件事就是说服我，Python 应当支持 int 与 float 之间的混合运算，因为大多数用户都会期望它们能以这种方式工作。而他的贡献从未停止。</p></blockquote>
+        <p><a href="https://lwn.net/Articles/1106901/" target="_blank">评论（1 条）</a></p>
+
+    </div>
+</div>
+
+<div class="article" id="announcements">
+    <div class="article-header">
+        <span class="article-category">公告</span>
+        <h2>📢 Announcements（公告）</h2>
+        <div class="article-meta">
+            <span>LWN.net Weekly Edition for November 12, 2026</span>
+            <span><a href="https://lwn.net/Articles/1105463/" target="_blank">英文原文</a></span>
+        </div>
+    </div>
+    <div class="article-body">
+
+    <h3>简报与周报（Newsletters）</h3>
+    <p>本周 LWN 收录的简报与周报按主题延续三大分组：<strong>发行版与系统管理类</strong>、<strong>开发类</strong>与<strong>会议纪要类</strong>，集中覆盖 11 月 5 日至 11 月 11 日这一周。发行版与系统管理类汇总各主要发行版的每周动态；开发类覆盖内核及各大开源项目的开发周报；会议纪要类则整理各项目指导委员会与发布工程的会议要点。</p>
+
+    <h3>征稿启事（CFP，截止日期 2026-12-20 至 2027-01-11）</h3>
+    <table>
+        <thead>
+            <tr><th>截止日期</th><th>会议日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>2026-12-20</td><td>2027-02-01</td><td>OpenEmbedded Workshop 2027</td><td>Brussels, Belgium</td></tr>
+            <tr><td>2027-01-04</td><td>2027-03-20 至 03-21</td><td>Chemnitzer Linux Tage 2027</td><td>Chemnitz, Germany</td></tr>
+        </tbody>
+    </table>
+
+    <h3>近期活动（Upcoming Events）</h3>
+    <table>
+        <thead>
+            <tr><th>日期</th><th>活动</th><th>地点</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>11-12 至 11-13</td><td>Ubuntu Summit 26.10</td><td>线上</td></tr>
+            <tr><td>11-12 至 11-13</td><td>KVM Forum</td><td>Vancouver, Canada</td></tr>
+            <tr><td>11-14 至 11-15</td><td>Capitole du Libre 2026</td><td>Toulouse, France</td></tr>
+            <tr><td>11-17 至 11-19</td><td>Open Source Monitoring Conference</td><td>Nuremberg, Germany</td></tr>
+            <tr><td>11-20 至 11-21</td><td>OLF Conference</td><td>Columbus, Ohio, US</td></tr>
+            <tr><td>11-21</td><td>LocHal Open Source Event 2026</td><td>Tilburg, Netherlands</td></tr>
+            <tr><td>11-28</td><td>FOSS for All Conference 2026</td><td>Seoul, South Korea</td></tr>
+            <tr><td>12-01 至 12-03</td><td>Yocto Project Virtual Summit 2026.12</td><td>线上</td></tr>
+            <tr><td>12-07 至 12-09</td><td>Open Source Summit Japan</td><td>Tokyo, Japan</td></tr>
+        </tbody>
+    </table>
+
+    <h3>安全更新（2026-11-05 至 2026-11-11）</h3>
+    <p>本周共收录 <strong>870</strong> 条安全公告，各发行版数量如下：</p>
+    <table>
+        <thead>
+            <tr><th>发行版</th><th>公告数</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Fedora</td><td>293</td><td>数量居首，覆盖多个 Fedora 版本</td></tr>
+            <tr><td>SUSE</td><td>194</td><td>涵盖 SUSE Linux Enterprise 与 openSUSE 多个版本</td></tr>
+            <tr><td>Red Hat</td><td>148</td><td>含多版本 RHEL 及其变体更新</td></tr>
+            <tr><td>Oracle</td><td>71</td><td>与 RHEL 联动的 Oracle Linux 系列更新</td></tr>
+            <tr><td>AlmaLinux</td><td>59</td><td>与 RHEL 保持同步的社区发行版更新</td></tr>
+            <tr><td>Ubuntu</td><td>57</td><td>USN 安全公告更新</td></tr>
+            <tr><td>Debian</td><td>23</td><td>DSA 与 DLA 安全公告</td></tr>
+            <tr><td>Mageia</td><td>17</td><td>Mageia 发行版安全更新</td></tr>
+            <tr><td>Slackware</td><td>5</td><td>Slackware 安全公告</td></tr>
+            <tr><td>Gentoo</td><td>3</td><td>Gentoo 安全公告</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的安全更新：<strong>内核（kernel）</strong>以 32 条居首，是各发行版最集中的修复对象；DNS 服务器软件 <strong>bind</strong> 有 20 条；<strong>tesseract</strong> 与 <strong>pcs</strong> 各 12 条；<strong>glibc</strong>、<strong>firefox</strong>、<strong>git-lfs</strong>、<strong>delve</strong>、<strong>xdg-dbus-proxy</strong> 各 8 条；<strong>xen</strong>、<strong>grafana</strong>、<strong>dpdk</strong> 以及多个版本的 <strong>.NET</strong>（8.0 / 9.0 / 10.0）也各有若干条更新。此外 thunderbird、util-linux、rsyslog、valkey、brotli、fuse-overlayfs、squid、rsync、nginx 等软件包同样值得留意。</p>
+
+    <h3>内核补丁（Kernel patches）</h3>
+    <p>本周共收录 <strong>79</strong> 条内核动态（含 9 个版本发布与 70 个补丁系列），分类统计如下：</p>
+    <table>
+        <thead>
+            <tr><th>类别</th><th>数量</th><th>说明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td>Kernel releases（版本发布）</td><td>9</td><td>Linux 7.3.3、7.3.2 及各稳定版 6.18.62、6.18.61、6.12.116、6.6.162、6.1.192、5.15.225、5.10.274</td></tr>
+            <tr><td>Architecture-specific（体系结构）</td><td>7</td><td>共享系统调用表、SEV-SNP 安全中断注入、RISC-V 硬件断点、TDX 扩展等</td></tr>
+            <tr><td>BPF-related（BPF 相关）</td><td>12</td><td>状态合并验证器、BPF kthreads 与等待队列、网络命名空间边界检查 kfunc 等</td></tr>
+            <tr><td>Build system（构建系统）</td><td>1</td><td>显著加速内核构建</td></tr>
+            <tr><td>Core kernel（核心）</td><td>10</td><td>liveupdate 系列推进、hazptr、调度与追踪改进等</td></tr>
+            <tr><td>Development tools（开发工具）</td><td>7</td><td>Rust 库构建基础设施、内核配置检查器、栈追踪去重等</td></tr>
+            <tr><td>Device-driver infrastructure（驱动基础设施）</td><td>1</td><td>Rust 实现的 SPDM</td></tr>
+            <tr><td>Documentation（文档）</td><td>1</td><td>内核最小化指南</td></tr>
+            <tr><td>Filesystems and block layer（文件系统与块层）</td><td>2</td><td>移除 omfs 文件系统、基于范围的 DIO 准入控制</td></tr>
+            <tr><td>Memory management（内存管理）</td><td>8</td><td>PMD 级交换项、可扩展交换设备（xswap）、vmemmap 优化等</td></tr>
+            <tr><td>Networking（网络）</td><td>5</td><td>QUIC 基础设施、TLS 1.3 KeyUpdate、psp 重密钥等</td></tr>
+            <tr><td>Security-related（安全相关）</td><td>3</td><td>KEYS 垃圾回收清理、模块黑名单扩展、pkeys 页表加固</td></tr>
+            <tr><td>Virtualization and containers（虚拟化与容器）</td><td>8</td><td>cells 容器对象、guest_memfd 设备 MMIO、SEV-SNP 与 KVM 改进等</td></tr>
+            <tr><td>Miscellaneous（其他）</td><td>5</td><td>perf 增强、arpd 移除、kallsyms 符号搜索优化等</td></tr>
+        </tbody>
+    </table>
+    <p>本周值得关注的补丁摘选：</p>
+    <ul>
+        <li><strong>Linux 7.3.3</strong> —— Linux 7.3 稳定系列的最新补丁版本发布。</li>
+        <li><strong>cells: a container as one kernel object</strong> —— 将容器实现为单一内核对象，简化容器管理模型。</li>
+        <li><strong>net: introduce QUIC infrastructure and core subcomponents</strong> —— 在内核网络子系统引入 QUIC 协议基础设施与核心组件。</li>
+        <li><strong>bpf: A verifier that joins states</strong> —— 改进 BPF 验证器，通过合并状态提升验证效率。</li>
+        <li><strong>bpf: BPF kthreads and waitqueues</strong> —— 为 BPF 程序引入内核线程与等待队列支持。</li>
+        <li><strong>mm: PMD-level swap entries for anonymous THPs</strong> —— 为匿名透明大页（THP）引入 PMD 级别的交换项。</li>
+        <li><strong>mm, swap: extendable swap devices (xswap phase I)</strong> —— 可扩展交换设备（xswap）第一阶段，改善交换子系统可扩展性。</li>
+        <li><strong>mm/vmalloc: Speed up ioremap, vmalloc and vmap with contiguous memory</strong> —— 利用连续内存加速 ioremap、vmalloc 与 vmap 操作。</li>
+        <li><strong>kbuild: significantly speed up kernel builds</strong> —— 显著加速内核构建过程。</li>
+        <li><strong>tls: perform TLS 1.3 KeyUpdate in the kernel</strong> —— 在内核中执行 TLS 1.3 密钥更新（KeyUpdate）。</li>
+        <li><strong>liveupdate: Preserve tmpfs files across Live Update</strong> —— 内核在线更新（Live Update）期间保留 tmpfs 文件内容。</li>
+        <li><strong>hazptr: shared-scan kthread, drain-assist, and stall detector</strong> —— 危险指针机制新增共享扫描内核线程、排空辅助与停滞检测。</li>
+        <li><strong>KVM: arm64 on s390 System Register Handling</strong> —— KVM 处理 s390 平台上 arm64 客户机的系统寄存器。</li>
+        <li><strong>pkeys-based page table hardening</strong> —— 基于保护密钥（pkeys）加固页表安全性。</li>
+        <li><strong>tools: Add Rust library build infrastructure and prefer zlib-rs</strong> —— 新增 Rust 库构建基础设施，并优先采用 zlib-rs。</li>
+    </ul>
+
+    <p><em>页面编辑：Daroc Alden</em></p>
+
+    </div>
+</div>
+
+        </main>
+
+        <!-- 期刊导航 NAV-START -->
+        <nav class="nav-bar bottom" aria-label="期刊导航">
+            <a class="nav-btn" href="index.html">🏠 主页</a>
+            <a class="nav-btn nav-current" href="2026-11-12.html">📰 最新</a>
+            <a class="nav-btn" href="2026-11-05.html">&larr; 上一个</a>
+            <span class="nav-btn nav-disabled">下一个 &rarr;</span>
+            <span class="nav-current-label">2026年11月12日</span>
+        </nav>
+        <!-- 期刊导航 NAV-END -->
+
+        <footer class="footer">
+            <p>内容翻译自 <a href="https://lwn.net" target="_blank">LWN.net</a>，遵循 Creative Commons 协议。</p>
+            <p>本期来源：<a href="https://lwn.net/Articles/1105460/" target="_blank">LWN.net Weekly Edition for November 12, 2026</a></p>
+            <p>更新时间：2026年11月20日</p>
+        </footer>
+    </div>
+
+    <script>
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = themeToggle.querySelector('.theme-icon');
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateIcon(currentTheme);
+
+        themeToggle.addEventListener('click', () => {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateIcon(newTheme);
+        });
+
+        function updateIcon(theme) {
+            themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
+        }
+    </script>
+</body>
+</html>
